@@ -544,7 +544,7 @@ class AdOptimizerApp(ctk.CTk):
         fs_title = 15; fs_guide = 10; fs_ann = 8; fs_label = 10; fs_tick = 8; fs_leg = 9
         ms = 4; lw = 2
         
-        fig = Figure(figsize=(18, 12), dpi=100)
+        fig = Figure(figsize=(18, 18), dpi=100)
         fig.patch.set_facecolor('#0B0B1A')
         
         def add_legend(ax, ax2):
@@ -559,7 +559,7 @@ class AdOptimizerApp(ctk.CTk):
             ax.grid(True, axis='y', color='#1F2937', linestyle='--', alpha=0.4)
         
         # ─── 1. 매출(막대) + ROAS(선) [좌상] ───
-        ax1 = fig.add_subplot(221); setup_ax(ax1)
+        ax1 = fig.add_subplot(321); setup_ax(ax1)
         ax1.set_title("매출 및 ROAS 추이", color='white', pad=30, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
         ax1.text(0.5, 1.01, '매출 상승 시 ROAS도 유지되는지 확인', transform=ax1.transAxes,
                 ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, style='italic')
@@ -585,7 +585,7 @@ class AdOptimizerApp(ctk.CTk):
         add_legend(ax1, ax1_2)
 
         # ─── 2. 광고비(막대) + 클릭수(선) [우상] ───
-        ax2 = fig.add_subplot(222); setup_ax(ax2)
+        ax2 = fig.add_subplot(322); setup_ax(ax2)
         ax2.set_title("광고비 및 클릭 효율", color='white', pad=30, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
         ax2.text(0.5, 1.01, '광고비 대비 클릭수 동반 상승이 핵심', transform=ax2.transAxes,
                 ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, style='italic')
@@ -611,7 +611,7 @@ class AdOptimizerApp(ctk.CTk):
         add_legend(ax2, ax2_2)
 
         # ─── 3. CTR(막대) + CVR(선) [좌하] ───
-        ax3 = fig.add_subplot(223); setup_ax(ax3)
+        ax3 = fig.add_subplot(323); setup_ax(ax3)
         ax3.set_title("CTR 및 CVR 분석", color='white', pad=30, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
         ax3.text(0.5, 1.01, 'CTR=썸네일 매력도, CVR=구매 전환력', transform=ax3.transAxes,
                 ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, style='italic')
@@ -638,7 +638,7 @@ class AdOptimizerApp(ctk.CTk):
         add_legend(ax3, ax3_2)
 
         # ─── 4. CPC(막대) + CPA(선) [우하] ───
-        ax4 = fig.add_subplot(224); setup_ax(ax4)
+        ax4 = fig.add_subplot(324); setup_ax(ax4)
         ax4.set_title("CPC 및 CPA", color='white', pad=30, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
         ax4.text(0.5, 1.01, 'CPC와 CPA가 낮을수록 효율적!', transform=ax4.transAxes,
                 ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, style='italic')
@@ -665,11 +665,63 @@ class AdOptimizerApp(ctk.CTk):
                            color='#8B5CF6', weight='bold', fontsize=fs_ann, path_effects=pe)
         add_legend(ax4, ax4_2)
 
+        # ─── 5. 클릭수(막대) + 전환건수(선) [좌하] ───
+        ax5 = fig.add_subplot(325); setup_ax(ax5)
+        ax5.set_title("클릭수 및 전환건수", color='white', pad=30, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+        ax5.text(0.5, 1.01, '클릭이 실제 주문으로 이어지는지 확인', transform=ax5.transAxes,
+                ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, style='italic')
+        ax5.bar(df['date_s'], df['click'], color='#F59E0B', alpha=0.35, label='■ 클릭수')
+        ax5.set_ylabel('클릭수 (회)', color='#F59E0B', weight='bold', fontsize=fs_label)
+        ax5.tick_params(axis='y', labelcolor='#F59E0B', labelsize=fs_tick)
+        for i, v in enumerate(df['click']):
+            if i % step != 0 or v == 0: continue
+            ax5.annotate(f"{int(v):,}", (df['date_s'].iloc[i], v),
+                         xytext=(0, 4), textcoords="offset points", ha='center',
+                         color='#F59E0B', weight='bold', fontsize=fs_ann, path_effects=pe)
+        ax5_2 = ax5.twinx()
+        ax5_2.plot(df['date_s'], df['orders'], color='#34D399', marker='s', linewidth=lw, markersize=ms,
+                   label='— 전환건수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+        ax5_2.set_ylabel('전환건수 (건)', color='#34D399', weight='bold', fontsize=fs_label)
+        ax5_2.tick_params(axis='y', labelcolor='#34D399', labelsize=fs_tick)
+        for i, v in enumerate(df['orders']):
+            if i % step != step - 1 or v == 0: continue
+            offset_y = -14 if (i // step) % 2 == 0 else 10
+            ax5_2.annotate(f"{int(v):,}건", (df['date_s'].iloc[i], v),
+                           xytext=(0, offset_y), textcoords="offset points", ha='center',
+                           color='#34D399', weight='bold', fontsize=fs_ann, path_effects=pe)
+        add_legend(ax5, ax5_2)
+
+        # ─── 6. 노출수(막대) + 전환건수(선) [우하] ───
+        ax6 = fig.add_subplot(326); setup_ax(ax6)
+        ax6.set_title("노출수 및 전환건수", color='white', pad=30, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+        ax6.text(0.5, 1.01, '노출이 실제 주문으로 연결되는지 확인', transform=ax6.transAxes,
+                ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, style='italic')
+        ax6.bar(df['date_s'], df['imp'], color='#60A5FA', alpha=0.35, label='■ 노출수')
+        ax6.set_ylabel('노출수 (회)', color='#60A5FA', weight='bold', fontsize=fs_label)
+        ax6.tick_params(axis='y', labelcolor='#60A5FA', labelsize=fs_tick)
+        for i, v in enumerate(df['imp']):
+            if i % step != 0 or v == 0: continue
+            ax6.annotate(self._fmt_val(v, 'int'), (df['date_s'].iloc[i], v),
+                         xytext=(0, 4), textcoords="offset points", ha='center',
+                         color='#60A5FA', weight='bold', fontsize=fs_ann, path_effects=pe)
+        ax6_2 = ax6.twinx()
+        ax6_2.plot(df['date_s'], df['orders'], color='#FB923C', marker='o', linewidth=lw, markersize=ms,
+                   label='— 전환건수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+        ax6_2.set_ylabel('전환건수 (건)', color='#FB923C', weight='bold', fontsize=fs_label)
+        ax6_2.tick_params(axis='y', labelcolor='#FB923C', labelsize=fs_tick)
+        for i, v in enumerate(df['orders']):
+            if i % step != step - 1 or v == 0: continue
+            offset_y = -14 if (i // step) % 2 == 0 else 10
+            ax6_2.annotate(f"{int(v):,}건", (df['date_s'].iloc[i], v),
+                           xytext=(0, offset_y), textcoords="offset points", ha='center',
+                           color='#FB923C', weight='bold', fontsize=fs_ann, path_effects=pe)
+        add_legend(ax6, ax6_2)
+
         # ─── 모든 서브플롯에 메모 세로 점선 표시 ───
-        all_axes = [ax1, ax2, ax3, ax4]
+        all_axes = [ax1, ax2, ax3, ax4, ax5, ax6]
         self._draw_memo_vlines(all_axes, df['date_s'].tolist(), pe, fs_ann)
 
-        fig.subplots_adjust(left=0.06, right=0.94, top=0.91, bottom=0.08, hspace=0.45, wspace=0.35)
+        fig.subplots_adjust(left=0.06, right=0.94, top=0.94, bottom=0.05, hspace=0.40, wspace=0.35)
         canvas = FigureCanvasTkAgg(fig, master=master); canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
 

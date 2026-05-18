@@ -1167,30 +1167,55 @@ class AdOptimizerApp(ctk.CTk):
         fig.patch.set_facecolor('#0B0B1A'); ax.set_facecolor('#0B0B1A')
         ax.set_title("노출 영역별 광고비", color='white', pad=40, loc='center',
                      fontdict={'size': 16, 'weight': 'bold', 'family': 'Malgun Gothic'})
-        ax.text(0.5, 1.01, '검색/비검색 영역 비중을 보고 노출 전략을 조정하세요',
+        ax.text(0.5, 1.01, '검색/비검색/오피니언 영역 비중을 보고 노출 전략을 조정하세요',
                transform=ax.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=11, style='italic')
+        
         if not br_df.empty:
-            s = br_df.groupby('region')['spend'].sum().sort_values(ascending=False)
+            # 3대 핵심 대표 영역 정의 (데이터가 없더라도 고정 표출)
+            target_regions = ['검색 영역', '비검색 영역', '오디언스 플러스(외부 채널) - Product Ad']
+            
+            s_dict = {reg: 0.0 for reg in target_regions}
+            
+            raw_s = br_df.groupby('region')['spend'].sum()
+            for r_name, val in raw_s.items():
+                r_name_str = str(r_name)
+                matched = False
+                for reg in target_regions:
+                    # 키워드 유사도 매칭 (검색, 비검색, 오디언스/외부채널)
+                    if (reg in r_name_str) or (r_name_str in reg) or \
+                       ('오디언스' in r_name_str and '오디언스' in reg) or \
+                       ('비검색' in r_name_str and '비검색' in reg):
+                        s_dict[reg] += val
+                        matched = True
+                        break
+                if not matched:
+                    s_dict[r_name_str] = val
+                        
+            s = pd.Series(s_dict)
+            
             colors = ['#EC4899', '#8B5CF6', '#3B82F6', '#F59E0B', '#10B981']
             
-            # 영역명 줄이기
+            # 영역명 친숙하게 매핑 및 길이 압축
             labels = []
             for name in s.index:
-                if len(str(name)) > 6:
-                    labels.append(str(name)[:6] + '..')
+                n_str = str(name)
+                if '오디언스' in n_str or '외부 채널' in n_str or '오피니언' in n_str:
+                    labels.append('오피니언 영역')
+                elif len(n_str) > 6:
+                    labels.append(n_str[:6] + '..')
                 else:
-                    labels.append(str(name))
+                    labels.append(n_str)
             
             bars = ax.bar(labels, s.values, color=colors[:len(s)], width=0.5, edgecolor='none', alpha=0.85)
             
             for bar, val in zip(bars, s.values):
                 ax.annotate(f"{int(val):,}원", 
-                           (bar.get_x() + bar.get_width()/2, bar.get_height()),
+                           (bar.get_x() + bar.get_width()/2, max(bar.get_height(), s.max() * 0.02 if s.max() > 0 else 100)),
                            xytext=(0, 8), textcoords="offset points", ha='center',
                            color='#FBBF24', fontsize=11, weight='bold', 
                            fontfamily='Malgun Gothic', path_effects=pe)
             
-            ax.set_ylim(0, s.max() * 1.25)
+            ax.set_ylim(0, max(s.max() * 1.25, 10000))
             ax.tick_params(axis='x', labelcolor='white', labelsize=10, rotation=0)
             ax.tick_params(axis='y', labelcolor='#94A3B8', labelsize=8)
             ax.yaxis.set_visible(False)
@@ -1202,6 +1227,7 @@ class AdOptimizerApp(ctk.CTk):
         else:
             ax.text(0.5, 0.5, '데이터 없음', ha='center', va='center', color='#6B7280', 
                    fontsize=14, fontfamily='Malgun Gothic')
+        
         fig.tight_layout(rect=[0, 0, 1, 0.82])
         canvas = FigureCanvasTkAgg(fig, master=master); canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=5, pady=5)

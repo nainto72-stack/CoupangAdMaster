@@ -795,8 +795,6 @@ class AdOptimizerApp(ctk.CTk):
                 return
 
             ax = event.inaxes
-            min_dist = float('inf')
-            best = None  # (data_x, data_y, label, target_ax)
             
             # 해당 위치의 모든 axes 수집 (twin axes 포함)
             all_axes = [ax]
@@ -809,6 +807,9 @@ class AdOptimizerApp(ctk.CTk):
                     except:
                         pass
 
+            # 마우스 주변 X축 좌표를 공유하는 후보 데이터 수집
+            candidates = []
+            
             for chk_ax in all_axes:
                 # ── 막대 그래프 확인 ──
                 for container in chk_ax.containers:
@@ -827,18 +828,25 @@ class AdOptimizerApp(ctk.CTk):
                             
                         try:
                             disp = chk_ax.transData.transform((bx, by))
-                            dist = ((event.x - disp[0])**2 + (event.y - disp[1])**2)**0.5
+                            dist_x = abs(event.x - disp[0])
+                            dist_y = abs(event.y - disp[1])
                             
-                            # display 상의 bounding box를 구해서 마우스 위치 판정
                             bbox = bar.get_window_extent()
                             in_bar = bbox.contains(event.x, event.y)
                             
-                            if in_bar or dist < 25:
-                                eff_dist = dist * 0.8  # 막대 우선순위
-                                if eff_dist < min_dist:
-                                    min_dist = eff_dist
-                                    lbl = _get_clean_label(chk_ax, bar, raw_lbl, is_horiz)
-                                    best = (bx, by, lbl, val, chk_ax)
+                            # X축 거리가 40px 미만이거나 막대 내부인 경우 후보 포함
+                            if in_bar or (dist_x < 40 and dist_y < 250):
+                                lbl = _get_clean_label(chk_ax, bar, raw_lbl, is_horiz)
+                                candidates.append({
+                                    'dist_x': dist_x,
+                                    'dist_y': dist_y,
+                                    'label': lbl,
+                                    'val': val,
+                                    'dx': bx,
+                                    'dy': by,
+                                    'ax': chk_ax,
+                                    'type': 'bar'
+                                })
                         except:
                             continue
 
@@ -855,33 +863,66 @@ class AdOptimizerApp(ctk.CTk):
                     try:
                         for idx in range(len(xdata)):
                             disp = chk_ax.transData.transform((float(xdata[idx]), float(ydata[idx])))
-                            dist = ((event.x - disp[0])**2 + (event.y - disp[1])**2)**0.5
-                            if dist < min_dist and dist < 40:
-                                min_dist = dist
-                                best = (float(xdata[idx]), float(ydata[idx]), lbl, float(ydata[idx]), chk_ax)
+                            dist_x = abs(event.x - disp[0])
+                            dist_y = abs(event.y - disp[1])
+                            
+                            # X축 거리가 40px 미만인 경우 후보 포함
+                            if dist_x < 40:
+                                candidates.append({
+                                    'dist_x': dist_x,
+                                    'dist_y': dist_y,
+                                    'label': lbl,
+                                    'val': float(ydata[idx]),
+                                    'dx': float(xdata[idx]),
+                                    'dy': float(ydata[idx]),
+                                    'ax': chk_ax,
+                                    'type': 'line'
+                                })
                     except (ValueError, TypeError):
                         continue
 
-            if best and min_dist < 50:
-                dx, dy, label, val_real, target_ax = best
-                text = _format_val(label, val_real)
-                annot = annots[ax]
-                annot.xy = (dx, dy)
-                # twin axes인 경우 좌표 변환
-                if target_ax is not ax:
-                    try:
-                        disp_pt = target_ax.transData.transform((dx, dy))
-                        data_pt = ax.transData.inverted().transform(disp_pt)
-                        annot.xy = (data_pt[0], data_pt[1])
-                    except:
+            if candidates:
+                # 가장 X축상으로 근접한 점을 기준으로 필터링
+                min_x_dist = min(c['dist_x'] for c in candidates)
+                closest_candidates = [c for c in candidates if abs(c['dist_x'] - min_x_dist) < 15]
+                
+                if closest_candidates:
+                    # 중복되지 않는 값 목록 구성
+                    lines_text = []
+                    seen = set()
+                    for c in closest_candidates:
+                        text_item = _format_val(c['label'], c['val'])
+                        if text_item not in seen:
+                            seen.add(text_item)
+                            lines_text.append(text_item)
+                            
+                    if lines_text:
+                        text = "\n".join(lines_text)
+                        annot = annots[ax]
+                        
+                        # 대표 앵커 좌표계 설정
+                        repr_c = closest_candidates[0]
+                        dx, dy, target_ax = repr_c['dx'], repr_c['dy'], repr_c['ax']
                         annot.xy = (dx, dy)
-                annot.set_text(text)
-                annot.set_visible(True)
+                        
+                        if target_ax is not ax:
+                            try:
+                                disp_pt = target_ax.transData.transform((dx, dy))
+                                data_pt = ax.transData.inverted().transform(disp_pt)
+                                annot.xy = (data_pt[0], data_pt[1])
+                            except:
+                                annot.xy = (dx, dy)
+                        
+                        annot.set_text(text)
+                        annot.set_visible(True)
+                        vis_changed = True
+                        canvas.draw_idle()
+                        return
+
+            if annots.get(ax) and annots[ax].get_visible():
+                annots[ax].set_visible(False)
                 vis_changed = True
-            else:
-                if annots.get(ax) and annots[ax].get_visible():
-                    annots[ax].set_visible(False)
-                    vis_changed = True
+                canvas.draw_idle()
             
             # 다른 axes의 annotation 숨기기
             for other_ax, annot in annots.items():

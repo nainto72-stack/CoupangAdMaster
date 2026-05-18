@@ -819,11 +819,11 @@ class AdOptimizerApp(ctk.CTk):
                         if is_horiz:
                             bx = bar.get_width()  # 수평막대는 너비가 실제 데이터값
                             by = bar.get_y() + bar.get_height() / 2
-                            val = bx
+                            val = bar.custom_val if hasattr(bar, 'custom_val') else bx
                         else:
                             bx = bar.get_x() + bar.get_width() / 2
                             by = bar.get_height()  # 수직막대는 높이가 실제 데이터값
-                            val = by
+                            val = bar.custom_val if hasattr(bar, 'custom_val') else by
                             
                         try:
                             disp = chk_ax.transData.transform((bx, by))
@@ -1107,7 +1107,9 @@ class AdOptimizerApp(ctk.CTk):
             # 배경 바
             ax.barh(y, 1.0, height=0.45, color='#1F2937', edgecolor='none')
             # 채움 바
-            ax.barh(y, fill, height=0.45, color=color, edgecolor='none', alpha=0.85)
+            bars = ax.barh(y, fill, height=0.45, color=color, edgecolor='none', alpha=0.85, label=name)
+            for bar in bars:
+                bar.custom_val = val
             
             # 값 표시
             if unit == '원':

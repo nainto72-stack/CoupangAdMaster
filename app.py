@@ -724,6 +724,107 @@ class AdOptimizerApp(ctk.CTk):
         fig.subplots_adjust(left=0.06, right=0.94, top=0.94, bottom=0.05, hspace=0.40, wspace=0.35)
         canvas = FigureCanvasTkAgg(fig, master=master); canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+        self._add_hover_tooltip(fig, canvas)
+
+    def _add_hover_tooltip(self, fig, canvas):
+        """모든 서브플롯에 마우스 호버 툴팁을 추가"""
+        # 각 axes에 숨겨진 annotation 생성
+        annots = {}
+        for ax in fig.get_axes():
+            annot = ax.annotate("", xy=(0, 0), xytext=(15, 15),
+                               textcoords="offset points",
+                               bbox=dict(boxstyle="round,pad=0.4", fc="#1E293B", ec="#60A5FA", lw=1.5, alpha=0.95),
+                               fontsize=10, color="white", fontfamily="Malgun Gothic",
+                               arrowprops=dict(arrowstyle="->", color="#60A5FA", lw=1.2),
+                               zorder=999)
+            annot.set_visible(False)
+            annots[ax] = annot
+
+        def on_hover(event):
+            if event.inaxes is None:
+                for annot in annots.values():
+                    if annot.get_visible():
+                        annot.set_visible(False)
+                        canvas.draw_idle()
+                return
+
+            ax = event.inaxes
+            found = False
+
+            # 1) 막대 그래프 확인
+            for container in ax.containers:
+                for bar in container:
+                    cont, _ = bar.contains(event)
+                    if cont:
+                        x_center = bar.get_x() + bar.get_width() / 2
+                        val = bar.get_height()
+                        label = container.get_label() if hasattr(container, 'get_label') else ''
+                        label = label.replace('■ ', '') if label else ''
+                        text = f"{label}: {val:,.0f}" if label else f"{val:,.0f}"
+                        annots[ax].xy = (x_center, val)
+                        annots[ax].set_text(text)
+                        annots[ax].set_visible(True)
+                        found = True
+                        break
+                if found:
+                    break
+
+            # 2) 선 그래프 확인 (해당 axes + twin axes)
+            if not found:
+                check_axes = [ax]
+                # twin axes도 확인
+                for other_ax in fig.get_axes():
+                    if other_ax is not ax and other_ax.bbox.bounds == ax.bbox.bounds:
+                        check_axes.append(other_ax)
+                
+                min_dist = float('inf')
+                best_info = None
+                for chk_ax in check_axes:
+                    for line in chk_ax.get_lines():
+                        xdata = line.get_xdata()
+                        ydata = line.get_ydata()
+                        if len(xdata) == 0:
+                            continue
+                        # x축이 문자열인 경우 인덱스로 비교
+                        try:
+                            for idx in range(len(xdata)):
+                                # display 좌표로 변환해서 거리 계산
+                                xy_disp = chk_ax.transData.transform((idx, float(ydata[idx])))
+                                dist = ((event.x - xy_disp[0])**2 + (event.y - xy_disp[1])**2)**0.5
+                                if dist < min_dist and dist < 30:  # 30픽셀 이내
+                                    min_dist = dist
+                                    label = line.get_label().replace('— ', '') if line.get_label() else ''
+                                    val = float(ydata[idx])
+                                    best_info = (idx, val, label, chk_ax)
+                        except (ValueError, TypeError):
+                            continue
+                
+                if best_info:
+                    idx, val, label, target_ax = best_info
+                    # 원래 axes의 annotation에 표시
+                    if '%' in label or 'CTR' in label or 'CVR' in label or 'ROAS' in label:
+                        text = f"{label}: {val:.2f}%"
+                    elif '건' in label:
+                        text = f"{label}: {int(val):,}건"
+                    else:
+                        text = f"{label}: {val:,.0f}" if label else f"{val:,.0f}"
+                    annots[ax].xy = (idx, val)
+                    annots[ax].set_text(text)
+                    # annotation의 transform을 target_ax로 설정
+                    annots[ax].xy = target_ax.transData.inverted().transform(
+                        ax.transData.transform((idx, 0))
+                    )
+                    annots[ax].xy = (idx, val)
+                    annots[ax].set_visible(True)
+                    found = True
+
+            if not found:
+                if annots[ax].get_visible():
+                    annots[ax].set_visible(False)
+            
+            canvas.draw_idle()
+
+        fig.canvas.mpl_connect("motion_notify_event", on_hover)
 
     def _memo_date_to_mmdd(self, date_str):
         """메모 날짜 문자열을 그래프 x축 형식 'MM.DD'로 변환"""
@@ -844,6 +945,7 @@ class AdOptimizerApp(ctk.CTk):
         fig.tight_layout(rect=[0, 0, 1, 0.82])
         canvas = FigureCanvasTkAgg(fig, master=master); canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=5, pady=5)
+        self._add_hover_tooltip(fig, canvas)
 
     def _render_dash_top_keywords(self, kw_data, master):
         """🏆 TOP5 효자 키워드: 매출 기여 상위 키워드"""
@@ -888,6 +990,7 @@ class AdOptimizerApp(ctk.CTk):
         fig.tight_layout(rect=[0, 0, 1, 0.82])
         canvas = FigureCanvasTkAgg(fig, master=master); canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=5, pady=5)
+        self._add_hover_tooltip(fig, canvas)
 
     def _render_dash_kpi_gauge(self, overall, master):
         """⚡ 핵심 KPI 건강도: 4대 지표를 직관적 게이지로 표시"""
@@ -956,6 +1059,7 @@ class AdOptimizerApp(ctk.CTk):
         fig.tight_layout(rect=[0, 0.02, 1, 0.88])
         canvas = FigureCanvasTkAgg(fig, master=master); canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=5, pady=5)
+        self._add_hover_tooltip(fig, canvas)
 
     def _render_dashboard_dual(self, df, master, title, y1, y2, c1, c2):
         plt.rcParams['font.family'] = 'Malgun Gothic'
@@ -1024,6 +1128,7 @@ class AdOptimizerApp(ctk.CTk):
         fig.tight_layout(rect=[0, 0, 1, 0.82])
         canvas = FigureCanvasTkAgg(fig, master=master); canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=5, pady=5)
+        self._add_hover_tooltip(fig, canvas)
 
     def _render_dashboard_pie(self, br_df, master):
         plt.rcParams['font.family'] = 'Malgun Gothic'
@@ -1072,6 +1177,7 @@ class AdOptimizerApp(ctk.CTk):
         fig.tight_layout(rect=[0, 0, 1, 0.82])
         canvas = FigureCanvasTkAgg(fig, master=master); canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=5, pady=5)
+        self._add_hover_tooltip(fig, canvas)
 
     def _init_context_menu(self):
         self.context_menu = tk.Menu(self, tearoff=0, font=("Malgun Gothic", 10))

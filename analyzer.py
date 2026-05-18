@@ -91,6 +91,14 @@ class CoupangAdAnalyzer:
         df = self.raw_df.copy()
         m = self._get_column_mapping(df)
         
+        # 키워드가 '-' 이거나 비어있는 경우, 노출 영역(지면)명으로 대체하여 분리 집계되도록 함
+        if m['kw'] and m['region']:
+            df[m['kw']] = np.where(
+                (df[m['kw']].astype(str).str.strip() == '-') | (df[m['kw']].isna()),
+                df[m['region']],
+                df[m['kw']]
+            )
+
         num_cols = ['imp', 'click', 'spend', 'sales', 'orders']
         for k in num_cols:
             c = m[k]

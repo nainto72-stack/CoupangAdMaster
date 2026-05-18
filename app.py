@@ -728,101 +728,129 @@ class AdOptimizerApp(ctk.CTk):
 
     def _add_hover_tooltip(self, fig, canvas):
         """모든 서브플롯에 마우스 호버 툴팁을 추가"""
-        # 각 axes에 숨겨진 annotation 생성
         annots = {}
         for ax in fig.get_axes():
-            annot = ax.annotate("", xy=(0, 0), xytext=(15, 15),
+            annot = ax.annotate("", xy=(0, 0), xytext=(20, 20),
                                textcoords="offset points",
-                               bbox=dict(boxstyle="round,pad=0.4", fc="#1E293B", ec="#60A5FA", lw=1.5, alpha=0.95),
-                               fontsize=10, color="white", fontfamily="Malgun Gothic",
-                               arrowprops=dict(arrowstyle="->", color="#60A5FA", lw=1.2),
+                               bbox=dict(boxstyle="round,pad=0.5", fc="#1E293B", ec="#60A5FA", lw=1.5, alpha=0.95),
+                               fontsize=11, color="white", fontfamily="Malgun Gothic", fontweight="bold",
+                               arrowprops=dict(arrowstyle="->", color="#60A5FA", lw=1.5),
                                zorder=999)
             annot.set_visible(False)
             annots[ax] = annot
 
+        def _format_val(label, val):
+            ll = label.lower()
+            if 'roas' in ll or 'ctr' in ll or 'cvr' in ll or '%' in label:
+                return f"{label}: {val:.2f}%"
+            elif '건' in label or '주문' in label or '전환' in label:
+                return f"{label}: {int(val):,}건"
+            else:
+                return f"{label}: {val:,.0f}" if label else f"{val:,.0f}"
+
         def on_hover(event):
+            vis_changed = False
+            
             if event.inaxes is None:
                 for annot in annots.values():
                     if annot.get_visible():
                         annot.set_visible(False)
-                        canvas.draw_idle()
+                        vis_changed = True
+                if vis_changed:
+                    canvas.draw_idle()
                 return
 
             ax = event.inaxes
-            found = False
-
-            # 1) 막대 그래프 확인
-            for container in ax.containers:
-                for bar in container:
-                    cont, _ = bar.contains(event)
-                    if cont:
-                        x_center = bar.get_x() + bar.get_width() / 2
-                        val = bar.get_height()
-                        label = container.get_label() if hasattr(container, 'get_label') else ''
-                        label = label.replace('■ ', '') if label else ''
-                        text = f"{label}: {val:,.0f}" if label else f"{val:,.0f}"
-                        annots[ax].xy = (x_center, val)
-                        annots[ax].set_text(text)
-                        annots[ax].set_visible(True)
-                        found = True
-                        break
-                if found:
-                    break
-
-            # 2) 선 그래프 확인 (해당 axes + twin axes)
-            if not found:
-                check_axes = [ax]
-                # twin axes도 확인
-                for other_ax in fig.get_axes():
-                    if other_ax is not ax and other_ax.bbox.bounds == ax.bbox.bounds:
-                        check_axes.append(other_ax)
-                
-                min_dist = float('inf')
-                best_info = None
-                for chk_ax in check_axes:
-                    for line in chk_ax.get_lines():
-                        xdata = line.get_xdata()
-                        ydata = line.get_ydata()
-                        if len(xdata) == 0:
-                            continue
-                        # x축이 문자열인 경우 인덱스로 비교
-                        try:
-                            for idx in range(len(xdata)):
-                                # display 좌표로 변환해서 거리 계산
-                                xy_disp = chk_ax.transData.transform((idx, float(ydata[idx])))
-                                dist = ((event.x - xy_disp[0])**2 + (event.y - xy_disp[1])**2)**0.5
-                                if dist < min_dist and dist < 30:  # 30픽셀 이내
-                                    min_dist = dist
-                                    label = line.get_label().replace('— ', '') if line.get_label() else ''
-                                    val = float(ydata[idx])
-                                    best_info = (idx, val, label, chk_ax)
-                        except (ValueError, TypeError):
-                            continue
-                
-                if best_info:
-                    idx, val, label, target_ax = best_info
-                    # 원래 axes의 annotation에 표시
-                    if '%' in label or 'CTR' in label or 'CVR' in label or 'ROAS' in label:
-                        text = f"{label}: {val:.2f}%"
-                    elif '건' in label:
-                        text = f"{label}: {int(val):,}건"
-                    else:
-                        text = f"{label}: {val:,.0f}" if label else f"{val:,.0f}"
-                    annots[ax].xy = (idx, val)
-                    annots[ax].set_text(text)
-                    # annotation의 transform을 target_ax로 설정
-                    annots[ax].xy = target_ax.transData.inverted().transform(
-                        ax.transData.transform((idx, 0))
-                    )
-                    annots[ax].xy = (idx, val)
-                    annots[ax].set_visible(True)
-                    found = True
-
-            if not found:
-                if annots[ax].get_visible():
-                    annots[ax].set_visible(False)
+            min_dist = float('inf')
+            best = None  # (data_x, data_y, label, target_ax)
             
-            canvas.draw_idle()
+            # 해당 위치의 모든 axes 수집 (twin axes 포함)
+            all_axes = [ax]
+            for other_ax in fig.get_axes():
+                if other_ax is not ax:
+                    try:
+                        if (abs(other_ax.bbox.x0 - ax.bbox.x0) < 5 and 
+                            abs(other_ax.bbox.y0 - ax.bbox.y0) < 5):
+                            all_axes.append(other_ax)
+                    except:
+                        pass
+
+            for chk_ax in all_axes:
+                # ── 막대 그래프 확인 ──
+                for container in chk_ax.containers:
+                    lbl = container.get_label() if hasattr(container, 'get_label') else ''
+                    lbl = lbl.replace('■ ', '') if lbl else ''
+                    for bar in container:
+                        bx = bar.get_x() + bar.get_width() / 2
+                        by = bar.get_height()
+                        if by == 0:
+                            continue
+                        try:
+                            disp = chk_ax.transData.transform((bx, by))
+                            dist = ((event.x - disp[0])**2 + (event.y - disp[1])**2)**0.5
+                            
+                            # display 상의 bounding box를 직접 구해서 마우스가 막대 영역 내에 있는지 정확하게 판정
+                            renderer = canvas.get_width_height() # canvas 렌더러 대신 window extent 사용
+                            bbox = bar.get_window_extent()
+                            in_bar = bbox.contains(event.x, event.y)
+                            
+                            if in_bar or dist < 25:
+                                eff_dist = dist * 0.8  # 막대 우선순위
+                                if eff_dist < min_dist:
+                                    min_dist = eff_dist
+                                    best = (bx, by, lbl, chk_ax)
+                        except:
+                            continue
+
+                # ── 선 그래프 확인 ──
+                for line in chk_ax.get_lines():
+                    xdata = line.get_xdata()
+                    ydata = line.get_ydata()
+                    if len(xdata) == 0:
+                        continue
+                    lbl = line.get_label() if line.get_label() else ''
+                    lbl = lbl.replace('— ', '')
+                    if lbl.startswith('_'):
+                        continue
+                    try:
+                        for idx in range(len(xdata)):
+                            disp = chk_ax.transData.transform((float(xdata[idx]), float(ydata[idx])))
+                            dist = ((event.x - disp[0])**2 + (event.y - disp[1])**2)**0.5
+                            if dist < min_dist and dist < 40:
+                                min_dist = dist
+                                best = (float(xdata[idx]), float(ydata[idx]), lbl, chk_ax)
+                    except (ValueError, TypeError):
+                        continue
+
+            if best and min_dist < 50:
+                dx, dy, label, target_ax = best
+                text = _format_val(label, dy)
+                annot = annots[ax]
+                annot.xy = (dx, dy)
+                # twin axes인 경우 좌표 변환
+                if target_ax is not ax:
+                    try:
+                        disp_pt = target_ax.transData.transform((dx, dy))
+                        data_pt = ax.transData.inverted().transform(disp_pt)
+                        annot.xy = (data_pt[0], data_pt[1])
+                    except:
+                        annot.xy = (dx, dy)
+                annot.set_text(text)
+                annot.set_visible(True)
+                vis_changed = True
+            else:
+                if annots.get(ax) and annots[ax].get_visible():
+                    annots[ax].set_visible(False)
+                    vis_changed = True
+            
+            # 다른 axes의 annotation 숨기기
+            for other_ax, annot in annots.items():
+                if other_ax is not ax and annot.get_visible():
+                    annot.set_visible(False)
+                    vis_changed = True
+
+            if vis_changed:
+                canvas.draw_idle()
 
         fig.canvas.mpl_connect("motion_notify_event", on_hover)
 

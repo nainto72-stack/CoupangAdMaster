@@ -739,14 +739,48 @@ class AdOptimizerApp(ctk.CTk):
             annot.set_visible(False)
             annots[ax] = annot
 
+        def _get_clean_label(chk_ax, bar, lbl, is_horiz):
+            # 시스템 기본 컨테이너 명칭이거나 비어있는 경우 한글 틱 라벨에서 추적
+            if not lbl or '_container' in lbl or lbl.startswith('_'):
+                try:
+                    if is_horiz:
+                        # 가로 막대: Y축 라벨에서 키워드명 가져오기
+                        y_val = bar.get_y() + bar.get_height() / 2
+                        ticks = chk_ax.get_yticks()
+                        tick_labels = [t.get_text() for t in chk_ax.get_yticklabels()]
+                        if len(ticks) == len(tick_labels) and len(ticks) > 0:
+                            idx = np.argmin([abs(t - y_val) for t in ticks])
+                            cand = tick_labels[idx].replace('..', '').strip()
+                            if cand: return cand
+                    else:
+                        # 세로 막대: X축 라벨에서 지면명/지표명 가져오기
+                        x_val = bar.get_x() + bar.get_width() / 2
+                        ticks = chk_ax.get_xticks()
+                        tick_labels = [t.get_text() for t in chk_ax.get_xticklabels()]
+                        if len(ticks) == len(tick_labels) and len(ticks) > 0:
+                            idx = np.argmin([abs(t - x_val) for t in ticks])
+                            cand = tick_labels[idx].replace('..', '').strip()
+                            if cand: return cand
+                except Exception as e:
+                    pass
+            
+            if lbl:
+                lbl = lbl.replace('■ ', '').replace('— ', '').strip()
+                if '_container' in lbl: return ''
+                return lbl
+            return ''
+
         def _format_val(label, val):
-            ll = label.lower()
+            ll = label.lower() if label else ''
             if 'roas' in ll or 'ctr' in ll or 'cvr' in ll or '%' in label:
                 return f"{label}: {val:.2f}%"
             elif '건' in label or '주문' in label or '전환' in label:
                 return f"{label}: {int(val):,}건"
+            elif '광고비' in label or '매출' in label or '수익' in label or '지출' in label or label in ['총 광고비', '총 매출', '순수익', '적자']:
+                return f"{label}: {int(val):,}원"
             else:
-                return f"{label}: {val:,.0f}" if label else f"{val:,.0f}"
+                prefix = f"{label}: " if label else ""
+                return f"{prefix}{val:,.0f}원" if val > 100 else f"{prefix}{val:,.0f}"
 
         def on_hover(event):
             vis_changed = False
@@ -778,19 +812,24 @@ class AdOptimizerApp(ctk.CTk):
             for chk_ax in all_axes:
                 # ── 막대 그래프 확인 ──
                 for container in chk_ax.containers:
-                    lbl = container.get_label() if hasattr(container, 'get_label') else ''
-                    lbl = lbl.replace('■ ', '') if lbl else ''
+                    is_horiz = hasattr(container, 'orientation') and container.orientation == 'horizontal'
+                    raw_lbl = container.get_label() if hasattr(container, 'get_label') else ''
+                    
                     for bar in container:
-                        bx = bar.get_x() + bar.get_width() / 2
-                        by = bar.get_height()
-                        if by == 0:
-                            continue
+                        if is_horiz:
+                            bx = bar.get_width()  # 수평막대는 너비가 실제 데이터값
+                            by = bar.get_y() + bar.get_height() / 2
+                            val = bx
+                        else:
+                            bx = bar.get_x() + bar.get_width() / 2
+                            by = bar.get_height()  # 수직막대는 높이가 실제 데이터값
+                            val = by
+                            
                         try:
                             disp = chk_ax.transData.transform((bx, by))
                             dist = ((event.x - disp[0])**2 + (event.y - disp[1])**2)**0.5
                             
-                            # display 상의 bounding box를 직접 구해서 마우스가 막대 영역 내에 있는지 정확하게 판정
-                            renderer = canvas.get_width_height() # canvas 렌더러 대신 window extent 사용
+                            # display 상의 bounding box를 구해서 마우스 위치 판정
                             bbox = bar.get_window_extent()
                             in_bar = bbox.contains(event.x, event.y)
                             
@@ -798,7 +837,8 @@ class AdOptimizerApp(ctk.CTk):
                                 eff_dist = dist * 0.8  # 막대 우선순위
                                 if eff_dist < min_dist:
                                     min_dist = eff_dist
-                                    best = (bx, by, lbl, chk_ax)
+                                    lbl = _get_clean_label(chk_ax, bar, raw_lbl, is_horiz)
+                                    best = (bx, by, lbl, val, chk_ax)
                         except:
                             continue
 
@@ -818,13 +858,13 @@ class AdOptimizerApp(ctk.CTk):
                             dist = ((event.x - disp[0])**2 + (event.y - disp[1])**2)**0.5
                             if dist < min_dist and dist < 40:
                                 min_dist = dist
-                                best = (float(xdata[idx]), float(ydata[idx]), lbl, chk_ax)
+                                best = (float(xdata[idx]), float(ydata[idx]), lbl, float(ydata[idx]), chk_ax)
                     except (ValueError, TypeError):
                         continue
 
             if best and min_dist < 50:
-                dx, dy, label, target_ax = best
-                text = _format_val(label, dy)
+                dx, dy, label, val_real, target_ax = best
+                text = _format_val(label, val_real)
                 annot = annots[ax]
                 annot.xy = (dx, dy)
                 # twin axes인 경우 좌표 변환

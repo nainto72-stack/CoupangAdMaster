@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+scratch/
+backup_*/
+.gemini/
+*.xlsx
+*.xls

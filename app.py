@@ -635,9 +635,14 @@ class AdOptimizerApp(ctk.CTk):
 
         # ─── 4. CPC(막대) + CPA(선) [우하] ───
         ax4 = fig.add_subplot(324); setup_ax(ax4)
-        ax4.set_title("CPC 및 CPA", color='white', pad=30, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
-        ax4.text(0.5, 1.01, 'CPC와 CPA가 낮을수록 효율적!', transform=ax4.transAxes,
-                ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, style='italic')
+        ax4.set_title("CPC 및 CPA", color='white', pad=52, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+        guide_str = (
+            "유입비용[CPC 막대] = 고객 유입 1인당 단가   |   주문비용[CPA 선] = 결제완료 1건당 광고비\n"
+            "☞ [CPC 높음] 입찰가 과다 경쟁 키워드 조정   |   ☞ [CPA > 마진] 마진 대비 광고비 적자상태 점검"
+        )
+        ax4.text(0.5, 1.02, guide_str, transform=ax4.transAxes,
+                ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide - 1.5, style='normal', weight='bold',
+                bbox=dict(boxstyle='round,pad=0.4', facecolor='#111122', edgecolor='#8B5CF6', alpha=0.95))
         cpc = np.where(df['click'] > 0, df['spend'] / df['click'], 0)
         ax4.bar(df['date_s'], cpc, color='#EC4899', alpha=0.35, label='■ CPC')
         ax4.set_ylabel('CPC (원)', color='#EC4899', weight='bold', fontsize=fs_label)

@@ -606,10 +606,11 @@ class AdOptimizerApp(ctk.CTk):
 
         # ─── 3. CTR(막대) + CVR(선) [좌하] ───
         ax3 = fig.add_subplot(323); setup_ax(ax3)
-        ax3.set_title("CTR 및 CVR 분석", color='white', pad=52, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+        ax3.set_title("CTR 및 CVR 분석", color='white', pad=65, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
         guide_str = (
             "첫인상[CTR 막대] = 대표이미지/가격 매력도   |   설득력[CVR 선] = 상세페이지/리뷰 신뢰도\n"
-            "☞ [CTR 낮음] 썸네일/상품명 개선 필요    |    ☞ [CVR 낮음] 상세페이지/혜택/리뷰 보완 필요"
+            "☞ [CTR 낮음] 썸네일/상품명 개선 필요    |    ☞ [CVR 낮음] 상세페이지/혜택/리뷰 보완 필요\n"
+            "💡 [이렇게 보면 좋은 것?] CTR(막대)과 CVR(선)이 동시에 높게 우상향할 때가 '광고비 증액 골든타임'!"
         )
         ax3.text(0.5, 1.02, guide_str, transform=ax3.transAxes,
                 ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide - 1.5, style='normal', weight='bold',
@@ -635,10 +636,11 @@ class AdOptimizerApp(ctk.CTk):
 
         # ─── 4. CPC(막대) + CPA(선) [우하] ───
         ax4 = fig.add_subplot(324); setup_ax(ax4)
-        ax4.set_title("CPC 및 CPA", color='white', pad=52, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+        ax4.set_title("CPC 및 CPA", color='white', pad=65, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
         guide_str = (
             "유입비용[CPC 막대] = 고객 유입 1인당 단가   |   주문비용[CPA 선] = 결제완료 1건당 광고비\n"
-            "☞ [CPC 높음] 입찰가 과다 경쟁 키워드 조정   |   ☞ [CPA > 마진] 마진 대비 광고비 적자상태 점검"
+            "☞ [CPC 높음] 입찰가 과다 경쟁 키워드 조정   |   ☞ [CPA > 마진] 마진 대비 광고비 적자상태 점검\n"
+            "💡 [이렇게 보면 좋은 것?] CPC(막대)는 높은데 CVR이 낮아 CPA(선)가 마진보다 크면 '적자 키워드' 즉시 필터링!"
         )
         ax4.text(0.5, 1.02, guide_str, transform=ax4.transAxes,
                 ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide - 1.5, style='normal', weight='bold',

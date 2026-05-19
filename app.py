@@ -560,9 +560,15 @@ class AdOptimizerApp(ctk.CTk):
         
         # ─── 1. 매출(막대) + ROAS(선) [좌상] ───
         ax1 = fig.add_subplot(321); setup_ax(ax1)
-        ax1.set_title("매출 및 ROAS 추이", color='white', pad=30, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
-        ax1.text(0.5, 1.01, '매출 상승 시 ROAS도 유지되는지 확인', transform=ax1.transAxes,
-                ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, style='italic')
+        ax1.set_title("매출 및 ROAS 추이", color='white', pad=65, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+        guide_str = (
+            "판매성과[매출 막대] = 광고로 창출한 총 매출   |   수익률[ROAS 선] = 광고비 대비 매출 효율 (적정: 300%↑)\n"
+            "☞ [매출 낮음] 노출/클릭 유입 절대량 부족 점검   |   ☞ [ROAS 낮음] 매출 대비 광고 예산 과다 지출 점검\n"
+            "💡 [이렇게 보면 좋은 것?] ROAS(선)는 상승하는데 매출(막대)이 정체된다면, 예산 제한으로 기회 손실 중! (예산 증액)"
+        )
+        ax1.text(0.5, 1.02, guide_str, transform=ax1.transAxes,
+                ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide - 1.5, style='normal', weight='bold',
+                bbox=dict(boxstyle='round,pad=0.4', facecolor='#111122', edgecolor='#FF00FF', alpha=0.95))
         ax1.bar(df['date_s'], df['sales'], color='#00E5FF', alpha=0.35, label='■ 매출액')
         ax1.set_ylabel('매출액 (원)', color='#00E5FF', weight='bold', fontsize=fs_label)
         ax1.tick_params(axis='y', labelcolor='#00E5FF', labelsize=fs_tick)
@@ -583,9 +589,15 @@ class AdOptimizerApp(ctk.CTk):
 
         # ─── 2. 광고비(막대) + 클릭수(선) [우상] ───
         ax2 = fig.add_subplot(322); setup_ax(ax2)
-        ax2.set_title("광고비 및 클릭 효율", color='white', pad=30, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
-        ax2.text(0.5, 1.01, '광고비 대비 클릭수 동반 상승이 핵심', transform=ax2.transAxes,
-                ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, style='italic')
+        ax2.set_title("광고비 및 클릭 효율", color='white', pad=65, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+        guide_str = (
+            "지출예산[광고비 막대] = 순수 집행된 광고비   |   유입량[클릭수 선] = 상품에 들어온 총 고객 수\n"
+            "☞ [비용 대비 클릭 낮음] 클릭 단가(CPC) 과다 상태 점검   |   ☞ [클릭수 급감] 키워드 노출 순위 하락 여부 점검\n"
+            "💡 [이렇게 보면 좋은 것?] 광고비(막대)를 늘렸는데 클릭수(선)가 정체된다면 단가 비싼 키워드 중심 낭비 중! (최적화)"
+        )
+        ax2.text(0.5, 1.02, guide_str, transform=ax2.transAxes,
+                ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide - 1.5, style='normal', weight='bold',
+                bbox=dict(boxstyle='round,pad=0.4', facecolor='#111122', edgecolor='#F59E0B', alpha=0.95))
         ax2.bar(df['date_s'], df['spend'], color='#EF4444', alpha=0.35, label='■ 광고비')
         ax2.set_ylabel('광고비 (원)', color='#EF4444', weight='bold', fontsize=fs_label)
         ax2.tick_params(axis='y', labelcolor='#EF4444', labelsize=fs_tick)
@@ -667,9 +679,15 @@ class AdOptimizerApp(ctk.CTk):
 
         # ─── 5. 클릭수(막대) + 전환건수(선) [좌하] ───
         ax5 = fig.add_subplot(325); setup_ax(ax5)
-        ax5.set_title("클릭수 및 전환건수", color='white', pad=30, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
-        ax5.text(0.5, 1.01, '클릭이 실제 주문으로 이어지는지 확인', transform=ax5.transAxes,
-                ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, style='italic')
+        ax5.set_title("클릭수 및 전환건수", color='white', pad=65, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+        guide_str = (
+            "유입고객[클릭 막대] = 광고로 유입된 총 클릭수   |   실제성과[전환건수 선] = 최종 주문으로 이어진 결제건수\n"
+            "☞ [클릭 대비 전환 낮음] 상세페이지 매력 저하 및 이탈 분석   |   ☞ [클릭수만 많음] 우회/부적합 키워드 유입 검토\n"
+            "💡 [이렇게 보면 좋은 것?] 클릭수(막대)가 솟구칠 때 전환건수(선)도 함께 솟아올라야 건강하고 최적화된 광고입니다!"
+        )
+        ax5.text(0.5, 1.02, guide_str, transform=ax5.transAxes,
+                ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide - 1.5, style='normal', weight='bold',
+                bbox=dict(boxstyle='round,pad=0.4', facecolor='#111122', edgecolor='#34D399', alpha=0.95))
         ax5.bar(df['date_s'], df['click'], color='#F59E0B', alpha=0.35, label='■ 클릭수')
         ax5.set_ylabel('클릭수 (회)', color='#F59E0B', weight='bold', fontsize=fs_label)
         ax5.tick_params(axis='y', labelcolor='#F59E0B', labelsize=fs_tick)
@@ -690,9 +708,15 @@ class AdOptimizerApp(ctk.CTk):
 
         # ─── 6. 노출수(막대) + 전환건수(선) [우하] ───
         ax6 = fig.add_subplot(326); setup_ax(ax6)
-        ax6.set_title("노출수 및 전환건수", color='white', pad=30, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
-        ax6.text(0.5, 1.01, '노출이 실제 주문으로 연결되는지 확인', transform=ax6.transAxes,
-                ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, style='italic')
+        ax6.set_title("노출수 및 전환건수", color='white', pad=65, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+        guide_str = (
+            "인지도[노출수 막대] = 쿠팡 내 광고 노출 횟수   |   실제성과[전환건수 선] = 최종 주문으로 이어진 결제건수\n"
+            "☞ [노출 대비 전환 낮음] 타겟 키워드 불일치 또는 썸네일 점검   |   ☞ [노출 급감] 입찰가 너무 낮아 노출 경쟁 탈락 여부 점검\n"
+            "💡 [이렇게 보면 좋은 것?] 노출수(막대)는 어마어마한데 전환(선)이 0에 가깝다면 엉뚱한 대형 키워드 낭비 중! (타겟 정교화)"
+        )
+        ax6.text(0.5, 1.02, guide_str, transform=ax6.transAxes,
+                ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide - 1.5, style='normal', weight='bold',
+                bbox=dict(boxstyle='round,pad=0.4', facecolor='#111122', edgecolor='#FB923C', alpha=0.95))
         ax6.bar(df['date_s'], df['imp'], color='#60A5FA', alpha=0.35, label='■ 노출수')
         ax6.set_ylabel('노출수 (회)', color='#60A5FA', weight='bold', fontsize=fs_label)
         ax6.tick_params(axis='y', labelcolor='#60A5FA', labelsize=fs_tick)

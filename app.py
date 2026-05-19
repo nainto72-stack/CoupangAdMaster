@@ -564,7 +564,7 @@ class AdOptimizerApp(ctk.CTk):
         guide_str = (
             "판매성과[매출 막대] = 광고로 창출한 총 매출   |   수익률[ROAS 선] = 광고비 대비 매출 효율 (적정: 300%↑)\n"
             "☞ [매출 낮음] 노출/클릭 유입 절대량 부족 점검   |   ☞ [ROAS 낮음] 매출 대비 광고 예산 과다 지출 점검\n"
-            "💡 [이렇게 보면 좋은 것?] ROAS(선)는 상승하는데 매출(막대)이 정체된다면, 예산 제한으로 기회 손실 중! (예산 증액)"
+            "💡 [이렇게 보면 좋은 것?] 매출(막대)도 우뚝 높게 솟구치고 ROAS(선)도 함께 하늘로 솟아오르는 상황이 최상의 형태!"
         )
         ax1.text(0.5, 1.02, guide_str, transform=ax1.transAxes,
                 ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide - 1.5, style='normal', weight='bold',
@@ -593,7 +593,7 @@ class AdOptimizerApp(ctk.CTk):
         guide_str = (
             "지출예산[광고비 막대] = 순수 집행된 광고비   |   유입량[클릭수 선] = 상품에 들어온 총 고객 수\n"
             "☞ [비용 대비 클릭 낮음] 클릭 단가(CPC) 과다 상태 점검   |   ☞ [클릭수 급감] 키워드 노출 순위 하락 여부 점검\n"
-            "💡 [이렇게 보면 좋은 것?] 광고비(막대)를 늘렸는데 클릭수(선)가 정체된다면 단가 비싼 키워드 중심 낭비 중! (최적화)"
+            "💡 [이렇게 보면 좋은 것?] 광고비(막대)는 점점 밑으로 낮아지고 클릭수(선)는 높게 치솟아 올라갈 때가 대성공의 징조!"
         )
         ax2.text(0.5, 1.02, guide_str, transform=ax2.transAxes,
                 ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide - 1.5, style='normal', weight='bold',
@@ -622,7 +622,7 @@ class AdOptimizerApp(ctk.CTk):
         guide_str = (
             "첫인상[CTR 막대] = 대표이미지/가격 매력도   |   설득력[CVR 선] = 상세페이지/리뷰 신뢰도\n"
             "☞ [CTR 낮음] 썸네일/상품명 개선 필요    |    ☞ [CVR 낮음] 상세페이지/혜택/리뷰 보완 필요\n"
-            "💡 [이렇게 보면 좋은 것?] CTR(막대)과 CVR(선)이 동시에 높게 우상향할 때가 '광고비 증액 골든타임'!"
+            "💡 [이렇게 보면 좋은 것?] CTR(막대)도 높게 솟구쳐 있고 CVR(선)도 하늘 위로 높게 솟아올라 있을 때가 완벽한 상황!"
         )
         ax3.text(0.5, 1.02, guide_str, transform=ax3.transAxes,
                 ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide - 1.5, style='normal', weight='bold',
@@ -652,7 +652,7 @@ class AdOptimizerApp(ctk.CTk):
         guide_str = (
             "유입비용[CPC 막대] = 고객 유입 1인당 단가   |   주문비용[CPA 선] = 결제완료 1건당 광고비\n"
             "☞ [CPC 높음] 입찰가 과다 경쟁 키워드 조정   |   ☞ [CPA > 마진] 마진 대비 광고비 적자상태 점검\n"
-            "💡 [이렇게 보면 좋은 것?] CPC(막대)는 높은데 CVR이 낮아 CPA(선)가 마진보다 크면 '적자 키워드' 즉시 필터링!"
+            "💡 [이렇게 보면 좋은 것?] CPC(막대)도 바닥으로 납작하고 CPA(선)도 바닥 밑으로 가라앉아 있을 때가 고수익의 최고조!"
         )
         ax4.text(0.5, 1.02, guide_str, transform=ax4.transAxes,
                 ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide - 1.5, style='normal', weight='bold',
@@ -683,7 +683,7 @@ class AdOptimizerApp(ctk.CTk):
         guide_str = (
             "유입고객[클릭 막대] = 광고로 유입된 총 클릭수   |   실제성과[전환건수 선] = 최종 주문으로 이어진 결제건수\n"
             "☞ [클릭 대비 전환 낮음] 상세페이지 매력 저하 및 이탈 분석   |   ☞ [클릭수만 많음] 우회/부적합 키워드 유입 검토\n"
-            "💡 [이렇게 보면 좋은 것?] 클릭수(막대)가 솟구칠 때 전환건수(선)도 함께 솟아올라야 건강하고 최적화된 광고입니다!"
+            "💡 [이렇게 보면 좋은 것?] 클릭수(막대) 높이 대비 전환건수(선)의 꼭대기가 가파르게 하늘 위로 솟아오를 때가 최상의 상태!"
         )
         ax5.text(0.5, 1.02, guide_str, transform=ax5.transAxes,
                 ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide - 1.5, style='normal', weight='bold',
@@ -712,7 +712,7 @@ class AdOptimizerApp(ctk.CTk):
         guide_str = (
             "인지도[노출수 막대] = 쿠팡 내 광고 노출 횟수   |   실제성과[전환건수 선] = 최종 주문으로 이어진 결제건수\n"
             "☞ [노출 대비 전환 낮음] 타겟 키워드 불일치 또는 썸네일 점검   |   ☞ [노출 급감] 입찰가 너무 낮아 노출 경쟁 탈락 여부 점검\n"
-            "💡 [이렇게 보면 좋은 것?] 노출수(막대)는 어마어마한데 전환(선)이 0에 가깝다면 엉뚱한 대형 키워드 낭비 중! (타겟 정교화)"
+            "💡 [이렇게 보면 좋은 것?] 노출수(막대) 크기 대비 전환건수(선)가 아래로 처지지 않고 높은 언덕을 꼿꼿이 그릴 때가 최고!"
         )
         ax6.text(0.5, 1.02, guide_str, transform=ax6.transAxes,
                 ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide - 1.5, style='normal', weight='bold',

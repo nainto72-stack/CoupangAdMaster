@@ -566,19 +566,16 @@ class AdOptimizerApp(ctk.CTk):
         ax1.bar(df['date_s'], df['sales'], color='#00E5FF', alpha=0.35, label='■ 매출액')
         ax1.set_ylabel('매출액 (원)', color='#00E5FF', weight='bold', fontsize=fs_label)
         ax1.tick_params(axis='y', labelcolor='#00E5FF', labelsize=fs_tick)
-        for i, v in enumerate(df['sales']):
-            if i % step != 0 or v == 0: continue
-            ax1.annotate(self._fmt_val(v, 'won'), (df['date_s'].iloc[i], v),
-                         xytext=(0, 4), textcoords="offset points", ha='center',
-                         color='#00E5FF', weight='bold', fontsize=fs_ann, path_effects=pe)
+        
         ax1_2 = ax1.twinx()
         ax1_2.plot(df['date_s'], df['ROAS'], color='#FF00FF', marker='o', markersize=ms, linewidth=lw, 
                    label='— ROAS%', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
         ax1_2.set_ylabel('ROAS (%)', color='#FF00FF', weight='bold', fontsize=fs_label)
         ax1_2.tick_params(axis='y', labelcolor='#FF00FF', labelsize=fs_tick)
+        # 선 그래프의 모든 데이터 포인트에 100% 상시 값 표시
         for i, v in enumerate(df['ROAS']):
-            if i % step != step - 1 or v == 0: continue
-            offset_y = 10 if (i // step) % 2 == 0 else -14
+            if v == 0: continue
+            offset_y = -14 if i % 2 == 0 else 10
             ax1_2.annotate(f"{v:.0f}%", (df['date_s'].iloc[i], v), 
                            xytext=(0, offset_y), textcoords="offset points", ha='center', color='#FF00FF', 
                            weight='bold', fontsize=fs_ann, path_effects=pe)
@@ -592,22 +589,19 @@ class AdOptimizerApp(ctk.CTk):
         ax2.bar(df['date_s'], df['spend'], color='#EF4444', alpha=0.35, label='■ 광고비')
         ax2.set_ylabel('광고비 (원)', color='#EF4444', weight='bold', fontsize=fs_label)
         ax2.tick_params(axis='y', labelcolor='#EF4444', labelsize=fs_tick)
-        for i, v in enumerate(df['spend']):
-            if i % step != 0 or v == 0: continue
-            ax2.annotate(self._fmt_val(v, 'won'), (df['date_s'].iloc[i], v), 
-                         xytext=(0, 4), textcoords="offset points", ha='center', 
-                         color='#EF4444', weight='bold', fontsize=fs_ann, path_effects=pe)
+        
         ax2_2 = ax2.twinx()
         ax2_2.plot(df['date_s'], df['click'], color='#F59E0B', marker='^', linewidth=lw, markersize=ms,
                    label='— 클릭수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
         ax2_2.set_ylabel('클릭수 (회)', color='#F59E0B', weight='bold', fontsize=fs_label)
         ax2_2.tick_params(axis='y', labelcolor='#F59E0B', labelsize=fs_tick)
+        # 선 그래프의 모든 데이터 포인트에 100% 상시 값 표시
         for i, v in enumerate(df['click']):
-            if i % step != step - 1 or v == 0: continue
-            offset_y = -14 if (i // step) % 2 == 0 else 10
+            if v == 0: continue
+            offset_y = -14 if i % 2 == 0 else 10
             ax2_2.annotate(f"{int(v):,}", (df['date_s'].iloc[i], v), 
-                           xytext=(0, offset_y), textcoords="offset points", ha='center', 
-                           color='#F59E0B', weight='bold', fontsize=fs_ann, path_effects=pe)
+                           xytext=(0, offset_y), textcoords="offset points", ha='center', color='#F59E0B', 
+                           weight='bold', fontsize=fs_ann, path_effects=pe)
         add_legend(ax2, ax2_2)
 
         # ─── 3. CTR(막대) + CVR(선) [좌하] ───
@@ -618,23 +612,20 @@ class AdOptimizerApp(ctk.CTk):
         ax3.bar(df['date_s'], df['CTR'], color='#10B981', alpha=0.35, label='■ CTR%')
         ax3.set_ylabel('CTR (%)', color='#10B981', weight='bold', fontsize=fs_label)
         ax3.tick_params(axis='y', labelcolor='#10B981', labelsize=fs_tick)
-        for i, v in enumerate(df['CTR']):
-            if i % step != 0: continue
-            ax3.annotate(f"{v:.2f}%", (df['date_s'].iloc[i], v), 
-                         xytext=(0, 4), textcoords="offset points", ha='center', 
-                         color='#10B981', weight='bold', fontsize=fs_ann, path_effects=pe)
+        
         ax3_2 = ax3.twinx()
         cvr = np.where(df['click'] > 0, (df['orders'] / df['click']) * 100, 0)
         ax3_2.plot(df['date_s'], cvr, color='#6366F1', marker='D', linewidth=lw, markersize=ms,
                    label='— CVR%', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
         ax3_2.set_ylabel('CVR (%)', color='#6366F1', weight='bold', fontsize=fs_label)
         ax3_2.tick_params(axis='y', labelcolor='#6366F1', labelsize=fs_tick)
+        # 선 그래프의 모든 데이터 포인트에 100% 상시 값 표시
         for i, v in enumerate(cvr):
-            if i % step != step - 1 or v == 0: continue
-            offset_y = -14 if (i // step) % 2 == 0 else 10
-            ax3_2.annotate(f"{v:.1f}%", (df['date_s'].iloc[i], v), 
-                           xytext=(0, offset_y), textcoords="offset points", ha='center', 
-                           color='#6366F1', weight='bold', fontsize=fs_ann, path_effects=pe)
+            if v == 0: continue
+            offset_y = -14 if i % 2 == 0 else 10
+            ax3_2.annotate(f"{v:.2f}%", (df['date_s'].iloc[i], v), 
+                           xytext=(0, offset_y), textcoords="offset points", ha='center', color='#6366F1', 
+                           weight='bold', fontsize=fs_ann, path_effects=pe)
         add_legend(ax3, ax3_2)
 
         # ─── 4. CPC(막대) + CPA(선) [우하] ───
@@ -646,23 +637,20 @@ class AdOptimizerApp(ctk.CTk):
         ax4.bar(df['date_s'], cpc, color='#EC4899', alpha=0.35, label='■ CPC')
         ax4.set_ylabel('CPC (원)', color='#EC4899', weight='bold', fontsize=fs_label)
         ax4.tick_params(axis='y', labelcolor='#EC4899', labelsize=fs_tick)
-        for i, v in enumerate(cpc):
-            if i % step != 0 or v == 0: continue
-            ax4.annotate(self._fmt_val(v, 'won'), (df['date_s'].iloc[i], v), 
-                         xytext=(0, 4), textcoords="offset points", ha='center', 
-                         color='#EC4899', weight='bold', fontsize=fs_ann, path_effects=pe)
+        
         ax4_2 = ax4.twinx()
         cpa = np.where(df['orders'] > 0, df['spend'] / df['orders'], 0)
         ax4_2.plot(df['date_s'], cpa, color='#8B5CF6', marker='h', markersize=ms+1, linewidth=lw,
                    label='— CPA', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
         ax4_2.set_ylabel('CPA (원)', color='#8B5CF6', weight='bold', fontsize=fs_label)
         ax4_2.tick_params(axis='y', labelcolor='#8B5CF6', labelsize=fs_tick)
+        # 선 그래프의 모든 데이터 포인트에 100% 상시 값 표시
         for i, v in enumerate(cpa):
-            if i % step != step - 1 or v == 0: continue
-            offset_y = -14 if (i // step) % 2 == 0 else 10
+            if v == 0: continue
+            offset_y = -14 if i % 2 == 0 else 10
             ax4_2.annotate(self._fmt_val(v, 'won'), (df['date_s'].iloc[i], v), 
-                           xytext=(0, offset_y), textcoords="offset points", ha='center', 
-                           color='#8B5CF6', weight='bold', fontsize=fs_ann, path_effects=pe)
+                           xytext=(0, offset_y), textcoords="offset points", ha='center', color='#8B5CF6', 
+                           weight='bold', fontsize=fs_ann, path_effects=pe)
         add_legend(ax4, ax4_2)
 
         # ─── 5. 클릭수(막대) + 전환건수(선) [좌하] ───
@@ -673,19 +661,16 @@ class AdOptimizerApp(ctk.CTk):
         ax5.bar(df['date_s'], df['click'], color='#F59E0B', alpha=0.35, label='■ 클릭수')
         ax5.set_ylabel('클릭수 (회)', color='#F59E0B', weight='bold', fontsize=fs_label)
         ax5.tick_params(axis='y', labelcolor='#F59E0B', labelsize=fs_tick)
-        for i, v in enumerate(df['click']):
-            if i % step != 0 or v == 0: continue
-            ax5.annotate(f"{int(v):,}", (df['date_s'].iloc[i], v),
-                         xytext=(0, 4), textcoords="offset points", ha='center',
-                         color='#F59E0B', weight='bold', fontsize=fs_ann, path_effects=pe)
+        
         ax5_2 = ax5.twinx()
         ax5_2.plot(df['date_s'], df['orders'], color='#34D399', marker='s', linewidth=lw, markersize=ms,
                    label='— 전환건수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
         ax5_2.set_ylabel('전환건수 (건)', color='#34D399', weight='bold', fontsize=fs_label)
         ax5_2.tick_params(axis='y', labelcolor='#34D399', labelsize=fs_tick)
+        # 선 그래프의 모든 데이터 포인트에 100% 상시 값 표시
         for i, v in enumerate(df['orders']):
-            if i % step != step - 1 or v == 0: continue
-            offset_y = -14 if (i // step) % 2 == 0 else 10
+            if v == 0: continue
+            offset_y = -14 if i % 2 == 0 else 10
             ax5_2.annotate(f"{int(v):,}건", (df['date_s'].iloc[i], v),
                            xytext=(0, offset_y), textcoords="offset points", ha='center',
                            color='#34D399', weight='bold', fontsize=fs_ann, path_effects=pe)
@@ -699,19 +684,16 @@ class AdOptimizerApp(ctk.CTk):
         ax6.bar(df['date_s'], df['imp'], color='#60A5FA', alpha=0.35, label='■ 노출수')
         ax6.set_ylabel('노출수 (회)', color='#60A5FA', weight='bold', fontsize=fs_label)
         ax6.tick_params(axis='y', labelcolor='#60A5FA', labelsize=fs_tick)
-        for i, v in enumerate(df['imp']):
-            if i % step != 0 or v == 0: continue
-            ax6.annotate(self._fmt_val(v, 'int'), (df['date_s'].iloc[i], v),
-                         xytext=(0, 4), textcoords="offset points", ha='center',
-                         color='#60A5FA', weight='bold', fontsize=fs_ann, path_effects=pe)
+        
         ax6_2 = ax6.twinx()
         ax6_2.plot(df['date_s'], df['orders'], color='#FB923C', marker='o', linewidth=lw, markersize=ms,
                    label='— 전환건수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
         ax6_2.set_ylabel('전환건수 (건)', color='#FB923C', weight='bold', fontsize=fs_label)
         ax6_2.tick_params(axis='y', labelcolor='#FB923C', labelsize=fs_tick)
+        # 선 그래프의 모든 데이터 포인트에 100% 상시 값 표시
         for i, v in enumerate(df['orders']):
-            if i % step != step - 1 or v == 0: continue
-            offset_y = -14 if (i // step) % 2 == 0 else 10
+            if v == 0: continue
+            offset_y = -14 if i % 2 == 0 else 10
             ax6_2.annotate(f"{int(v):,}건", (df['date_s'].iloc[i], v),
                            xytext=(0, offset_y), textcoords="offset points", ha='center',
                            color='#FB923C', weight='bold', fontsize=fs_ann, path_effects=pe)

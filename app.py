@@ -606,9 +606,14 @@ class AdOptimizerApp(ctk.CTk):
 
         # ─── 3. CTR(막대) + CVR(선) [좌하] ───
         ax3 = fig.add_subplot(323); setup_ax(ax3)
-        ax3.set_title("CTR 및 CVR 분석", color='white', pad=30, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
-        ax3.text(0.5, 1.01, 'CTR=썸네일 매력도, CVR=구매 전환력', transform=ax3.transAxes,
-                ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, style='italic')
+        ax3.set_title("CTR 및 CVR 분석", color='white', pad=52, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+        guide_str = (
+            "첫인상[CTR 막대] = 대표이미지/가격 매력도   |   설득력[CVR 선] = 상세페이지/리뷰 신뢰도\n"
+            "☞ [CTR 낮음] 썸네일/상품명 개선 필요    |    ☞ [CVR 낮음] 상세페이지/혜택/리뷰 보완 필요"
+        )
+        ax3.text(0.5, 1.02, guide_str, transform=ax3.transAxes,
+                ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide - 1.5, style='normal', weight='bold',
+                bbox=dict(boxstyle='round,pad=0.4', facecolor='#111122', edgecolor='#6366F1', alpha=0.95))
         ax3.bar(df['date_s'], df['CTR'], color='#10B981', alpha=0.35, label='■ CTR%')
         ax3.set_ylabel('CTR (%)', color='#10B981', weight='bold', fontsize=fs_label)
         ax3.tick_params(axis='y', labelcolor='#10B981', labelsize=fs_tick)

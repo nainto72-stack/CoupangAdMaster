@@ -1026,19 +1026,9 @@ class AdOptimizerApp(ctk.CTk):
         colors = ['#EF4444', '#00E5FF']
         bars = ax.bar(cats, vals, color=colors, width=0.5, edgecolor='none', alpha=0.8)
         
-        # 막대 위에 금액 표시
-        for bar, v in zip(bars, vals):
-            ax.annotate(self._fmt_val(v, 'won'), (bar.get_x() + bar.get_width()/2, bar.get_height()),
-                       xytext=(0, 8), textcoords="offset points", ha='center',
-                       color='white', weight='bold', fontsize=12, path_effects=pe)
-        
         # 순수익 바
         p_color = '#10B981' if profit >= 0 else '#EF4444'
-        p_label = f'순수익: {self._fmt_val(abs(profit), "won")}' if profit >= 0 else f'적자: {self._fmt_val(abs(profit), "won")}'
         ax.bar(['순수익'], [profit], color=p_color, width=0.5, alpha=0.8)
-        ax.annotate(p_label, (2, max(profit, 0)),
-                   xytext=(0, 8), textcoords="offset points", ha='center',
-                   color=p_color, weight='bold', fontsize=11, path_effects=pe)
         
         # ROAS 표시
         roas_color = '#10B981' if roas >= 330 else '#F59E0B' if roas >= 100 else '#EF4444'
@@ -1080,14 +1070,8 @@ class AdOptimizerApp(ctk.CTk):
                 elif r['ROAS'] >= 100: colors_map.append('#F59E0B')
                 else: colors_map.append('#EF4444')
             
+            # 막대 생성 (상시 텍스트 제거, 호버 툴팁으로 확인 가능)
             bars = ax.barh(labels, top5['sales'].values, color=colors_map, height=0.5, edgecolor='none', alpha=0.8)
-            
-            for bar, (_, r) in zip(bars, top5.iterrows()):
-                w = bar.get_width()
-                ax.annotate(f'{self._fmt_val(w, "won")}  ROAS:{r["ROAS"]:.0f}%', 
-                           (w, bar.get_y() + bar.get_height()/2),
-                           xytext=(5, 0), textcoords="offset points", ha='left', va='center',
-                           color='white', weight='bold', fontsize=8, path_effects=pe)
         else:
             ax.text(0.5, 0.5, '데이터 없음', transform=ax.transAxes, ha='center', va='center',
                    color='#666', fontsize=14)
@@ -1201,11 +1185,6 @@ class AdOptimizerApp(ctk.CTk):
         ax.set_ylabel(y1_label, color=c1, size=9, weight='bold', fontfamily='Malgun Gothic')
         ax.tick_params(axis='y', labelcolor=c1, labelsize=7)
         ax.tick_params(axis='x', labelcolor='#94A3B8', labelsize=6, rotation=30)
-        ax.grid(True, axis='y', color='#1F2937', linestyle='--', alpha=0.3)
-        
-        step = 2 if len(df) > 6 else 1
-        self._annotate_smart(ax, df['date_s'], y1_vals, c1, y1_kind, pe, fontsize=7, step=step)
-        
         # y2: 항상 선 그래프
         ax2 = ax.twinx()
         if y2 == 'CVR':
@@ -1222,13 +1201,14 @@ class AdOptimizerApp(ctk.CTk):
         ax2.set_ylabel(y2_label, color=c2, size=9, weight='bold', fontfamily='Malgun Gothic')
         ax2.tick_params(axis='y', labelcolor=c2, labelsize=7)
         
+        # 선 그래프의 모든 데이터 포인트에 100% 상시 값 표시
         for i, v in enumerate(y2_vals):
-            if i % step != (step - 1) % step or v == 0: continue
-            offset_y = -14 if (i // step) % 2 == 0 else 10
+            if v == 0: continue
+            offset_y = -14 if i % 2 == 0 else 10
             txt = self._fmt_val(v, y2_kind)
             ax2.annotate(txt, (df['date_s'].iloc[i], y2_vals.iloc[i] if hasattr(y2_vals, 'iloc') else y2_vals[i]),
                          xytext=(0, offset_y), textcoords="offset points", ha='center',
-                         color=c2, weight='bold', fontsize=7, path_effects=pe)
+                         color=c2, weight='bold', fontsize=8, path_effects=pe)
         
         # 범례
         h1, l1 = ax.get_legend_handles_labels()
@@ -1290,13 +1270,6 @@ class AdOptimizerApp(ctk.CTk):
                     labels.append(n_str)
             
             bars = ax.bar(labels, s.values, color=colors[:len(s)], width=0.5, edgecolor='none', alpha=0.85)
-            
-            for bar, val in zip(bars, s.values):
-                ax.annotate(f"{int(val):,}원", 
-                           (bar.get_x() + bar.get_width()/2, max(bar.get_height(), s.max() * 0.02 if s.max() > 0 else 100)),
-                           xytext=(0, 8), textcoords="offset points", ha='center',
-                           color='#FBBF24', fontsize=11, weight='bold', 
-                           fontfamily='Malgun Gothic', path_effects=pe)
             
             ax.set_ylim(0, max(s.max() * 1.25, 10000))
             ax.tick_params(axis='x', labelcolor='white', labelsize=10, rotation=0)

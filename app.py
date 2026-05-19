@@ -491,17 +491,44 @@ class AdOptimizerApp(ctk.CTk):
         if not d: return
         
         self.diag_title.configure(text=f"🛡️ AI 전략 나침반: [{d['status']}]")
+        
+        # 1. 👑 [최상단] AI 최종 종합 판정 대왕 썸머리 카드 생성
+        summary_card = ctk.CTkFrame(self.advice_container, fg_color="#1E1E38", 
+                                    border_width=2, border_color="#60A5FA", corner_radius=18)
+        summary_card.pack(fill="x", pady=(10, 20))
+        
+        # 왕관 이모지와 함께 대왕 타이틀
+        ctk.CTkLabel(summary_card, text="👑 AI 최종 종합 판정 (Summary)", 
+                     font=("Malgun Gothic", 22, "bold"), text_color="#FBBF24").pack(anchor="w", padx=30, pady=(25, 10))
+        
+        # 종합 진단 본문 텍스트 (줄바꿈 wrap 처리 추가)
+        ctk.CTkLabel(summary_card, text=d['briefing'], 
+                     font=("Malgun Gothic", 15, "bold"), text_color="white", justify="left", wraplength=850).pack(anchor="w", padx=30, pady=(5, 25))
+        
+        # 2. [그 아래] 10개 차트 개별 진단 리포트 카드 자동 생성
         for adv in d['advice']:
-            card = ctk.CTkFrame(self.advice_container, fg_color="#1A1A2E", corner_radius=15)
+            card = ctk.CTkFrame(self.advice_container, fg_color="#1A1A2E", corner_radius=15, 
+                                border_width=1, border_color="#2E2E4A")
             card.pack(fill="x", pady=10)
-            ctk.CTkLabel(card, text=adv['subject'], font=("Malgun Gothic", 20, "bold"), text_color="#60A5FA").pack(anchor="w", padx=25, pady=(20, 10))
-            ctk.CTkLabel(card, text=f"💡 분석: {adv['meaning']}", font=("Malgun Gothic", 15)).pack(anchor="w", padx=25, pady=5)
-            ctk.CTkLabel(card, text=f"📖 전략: {adv['easy_story']}", font=("Malgun Gothic", 14), text_color="#94A3B8").pack(anchor="w", padx=25, pady=5)
             
-            sol_frame = ctk.CTkFrame(card, fg_color="#0B0B1A", corner_radius=10)
+            # 카드 타이틀
+            ctk.CTkLabel(card, text=adv['subject'], font=("Malgun Gothic", 18, "bold"), 
+                         text_color="#60A5FA").pack(anchor="w", padx=25, pady=(20, 8))
+            
+            # 💡 분석 영역 (wrap 처리)
+            ctk.CTkLabel(card, text=f"💡 분석: {adv['meaning']}", font=("Malgun Gothic", 14, "bold"), 
+                         text_color="#E2E8F0", justify="left", wraplength=850).pack(anchor="w", padx=25, pady=4)
+            
+            # 📖 전략 (초등생용 비유, wrap 처리)
+            ctk.CTkLabel(card, text=f"📖 이렇게 보면 좋은 거 (초등생도 1초 이해!):\n   {adv['easy_story']}", 
+                         font=("Malgun Gothic", 13), text_color="#A7F3D0", justify="left", wraplength=850).pack(anchor="w", padx=25, pady=4)
+            
+            # 🛠️ 세부 해결책 박스
+            sol_frame = ctk.CTkFrame(card, fg_color="#0D0D21", corner_radius=10)
             sol_frame.pack(fill="x", padx=25, pady=(10, 20))
             for s in adv['solution']:
-                ctk.CTkLabel(sol_frame, text=f"✔️ {s}", font=("Malgun Gothic", 14)).pack(anchor="w", padx=15, pady=5)
+                ctk.CTkLabel(sol_frame, text=f"✔️ {s}", font=("Malgun Gothic", 13), 
+                             text_color="#94A3B8", justify="left", wraplength=800).pack(anchor="w", padx=15, pady=4)
 
     def _draw_all_charts(self):
         # 모든 차트 프레임 초기화

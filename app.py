@@ -358,11 +358,36 @@ class AdOptimizerApp(ctk.CTk):
                 prefix = "🟢 [매출 발생]  " if is_sales_plus else "⚪ [무매출]  "
                 btn_txt = f"{prefix}{p} (총 매출: {int(sales_val):,}원)" if is_sales_plus else f"{prefix}{p}"
                 
-                btn = ctk.CTkButton(self.popup_scroll, text=btn_txt, font=("Malgun Gothic", 13),
-                                     anchor="w", fg_color="#18182D", hover_color="#2B2B4A",
-                                     text_color=txt_color, height=42, corner_radius=6,
-                                     command=lambda prod=p: self._select_product_from_popup(prod))
-                btn.pack(fill="x", padx=5, pady=4)
+                # 긴 상품명이 잘리지 않도록 줄바꿈(wraplength)이 지원되는 CTkLabel을 탑재한 CTkFrame 카드 형태로 구현
+                item_frame = ctk.CTkFrame(self.popup_scroll, fg_color="#18182D", corner_radius=6, border_width=1, border_color="#2E2E4A")
+                item_frame.pack(fill="x", padx=5, pady=4)
+                
+                # 호버 및 클릭 이벤트 바인딩 (클로저를 활용해 독립된 변수 스코프 캡처)
+                def make_callbacks(prod_name, frame_obj):
+                    def on_enter(e):
+                        frame_obj.configure(fg_color="#2B2B4A")
+                    def on_leave(e):
+                        frame_obj.configure(fg_color="#18182D")
+                    def on_click(e):
+                        self._select_product_from_popup(prod_name)
+                    return on_enter, on_leave, on_click
+                
+                on_enter, on_leave, on_click = make_callbacks(p, item_frame)
+                
+                item_frame.configure(cursor="hand2")
+                item_frame.bind("<Enter>", on_enter)
+                item_frame.bind("<Leave>", on_leave)
+                item_frame.bind("<Button-1>", on_click)
+                
+                # wraplength=520으로 설정하여 긴 텍스트를 자동 줄바꿈 처리
+                lbl = ctk.CTkLabel(item_frame, text=btn_txt, font=("Malgun Gothic", 13),
+                                   text_color=txt_color, anchor="w", justify="left", 
+                                   wraplength=520, cursor="hand2")
+                lbl.pack(fill="x", padx=15, pady=10)
+                
+                lbl.bind("<Enter>", on_enter)
+                lbl.bind("<Leave>", on_leave)
+                lbl.bind("<Button-1>", on_click)
         else:
             ctk.CTkLabel(self.popup_scroll, text="상품 목록을 조회할 수 없습니다.", font=("Malgun Gothic", 13), text_color="#EF4444").pack(pady=20)
 

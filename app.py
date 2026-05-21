@@ -276,14 +276,15 @@ class AdOptimizerApp(ctk.CTk):
         ctk.CTkLabel(self.prod_filter_frame, text="📦 상품명 선택 (클릭하여 선택) :", 
                      font=("Malgun Gothic", 16, "bold"), text_color="#60A5FA").pack(side="left", padx=(25, 10), pady=18)
         
-        # 상품 드롭다운 박스 (클릭하여 선택 가능)
-        self.product_combobox = ctk.CTkComboBox(self.prod_filter_frame, width=550, height=38, 
-                                                 font=("Malgun Gothic", 13), dropdown_font=("Malgun Gothic", 13), 
-                                                 state="readonly", command=self._on_product_select)
-        self.product_combobox.pack(side="left", padx=10, pady=18)
-        self.product_combobox.set("데이터 분석을 먼저 진행해주세요.")
+        # 상품 선택 버튼 (클릭 시 세로 스크롤 & 검색을 탑재한 고급 팝업창 오픈)
+        self.selected_product_var = tk.StringVar(value="데이터 분석을 먼저 진행해주세요.")
+        self.product_select_btn = ctk.CTkButton(self.prod_filter_frame, textvariable=self.selected_product_var,
+                                                width=550, height=38, font=("Malgun Gothic", 13, "bold"),
+                                                fg_color="#0F0F24", hover_color="#1F1F44", border_width=1, border_color="#3B82F6",
+                                                anchor="w", command=self._open_product_select_popup)
+        self.product_select_btn.pack(side="left", padx=10, pady=18)
         
-        # 차트 조회 버튼 (선택 사항 - 클릭으로 자동 로드되나 예비용)
+        # 차트 조회 버튼 (선택 사항 - 예비용)
         self.prod_search_btn = ctk.CTkButton(self.prod_filter_frame, text="📊 차트 조회", command=self._draw_product_charts, 
                                              fg_color="#2563EB", hover_color="#1D4ED8", width=120, height=38, font=("Malgun Gothic", 13, "bold"))
         self.prod_search_btn.pack(side="left", padx=15, pady=18)
@@ -292,16 +293,42 @@ class AdOptimizerApp(ctk.CTk):
         self.prod_metrics_scroll = ctk.CTkScrollableFrame(self.tab_product_metrics, fg_color="#0B0B1A")
         self.prod_metrics_scroll.pack(fill="both", expand=True, padx=15, pady=(5, 15))
 
-    def _on_product_select(self, value):
-        """드롭다운에서 상품명을 클릭하여 선택 시 자동으로 차트를 로딩"""
-        self._draw_product_charts()
-
-    def _update_product_combobox(self):
-        """분석 완료 시점에 데이터에서 상품 리스트를 정렬 추출하여 콤보박스에 등록"""
+    def _open_product_select_popup(self):
+        """세로 스크롤바가 우측에 배치된 상품 선택 팝업창을 오픈"""
         if self.analyzer.raw_df is None:
-            self.product_combobox.configure(values=[])
-            self.product_combobox.set("데이터 분석을 먼저 진행해주세요.")
+            messagebox.showwarning("알림", "분석을 실행한 뒤 상품을 선택해주세요.")
             return
+
+        # 팝업 창 생성 (CTkToplevel)
+        self.popup = ctk.CTkToplevel(self)
+        self.popup.title("📦 상품 선택 나침반 (매출 발생 상품은 파란색으로 표시됨)")
+        self.popup.geometry("650x700")
+        self.popup.configure(fg_color="#0B0B1A")
+        self.popup.attributes("-topmost", True)
+        self.popup.focus()
+        
+        # 상단 검색 바 프레임
+        search_frame = ctk.CTkFrame(self.popup, fg_color="#1A1A2E", corner_radius=10, height=60)
+        search_frame.pack(fill="x", padx=15, pady=(15, 5))
+        
+        ctk.CTkLabel(search_frame, text="🔍 상품 검색 :", font=("Malgun Gothic", 14, "bold"), text_color="#60A5FA").pack(side="left", padx=(15, 8))
+        
+        self.search_entry = ctk.CTkEntry(search_frame, placeholder_text="검색어를 입력하세요 (예: 옥수수)", 
+                                          width=450, height=34, font=("Malgun Gothic", 13))
+        self.search_entry.pack(side="left", padx=5, pady=13)
+        self.search_entry.bind("<KeyRelease>", self._filter_product_list_popup)
+        
+        # 하단 스크롤 리스트 (CTkScrollableFrame으로 우측에 명확한 세로 스크롤바 장착)
+        self.popup_scroll = ctk.CTkScrollableFrame(self.popup, fg_color="#0D0D21", border_width=1, border_color="#1A3A4A")
+        self.popup_scroll.pack(fill="both", expand=True, padx=15, pady=(5, 15))
+        
+        # 리스트 초기 렌더링
+        self._render_popup_product_list("")
+
+    def _render_popup_product_list(self, filter_text=""):
+        """검색어 필터에 따라 상품 리스트 재생성"""
+        for w in self.popup_scroll.winfo_children():
+            w.destroy()
             
         m = self.analyzer._get_column_mapping(self.analyzer.raw_df)
         pname_col = m.get('pname')
@@ -311,16 +338,78 @@ class AdOptimizerApp(ctk.CTk):
             products = [str(p).strip() for p in products if str(p).strip() and str(p).strip() != '-']
             products = sorted(products)
             
+            # 검색 필터링
+            if filter_text:
+                products = [p for p in products if filter_text.lower() in p.lower()]
+                
+            if not products:
+                ctk.CTkLabel(self.popup_scroll, text="일치하는 상품이 없습니다.", font=("Malgun Gothic", 13), text_color="#94A3B8").pack(pady=20)
+                return
+                
+            for p in products:
+                # 매출 발생 판정 (매출액 총합 > 0)
+                sales_val = self.product_sales_dict.get(p, 0)
+                is_sales_plus = sales_val > 0
+                
+                # 디자인 설정 (매출 발생 상품은 파란색 계열, 무매출은 회백색)
+                txt_color = "#60A5FA" if is_sales_plus else "#E2E8F0"
+                prefix = "🟢 [매출 발생]  " if is_sales_plus else "⚪ [무매출]  "
+                btn_txt = f"{prefix}{p} (총 매출: {int(sales_val):,}원)" if is_sales_plus else f"{prefix}{p}"
+                
+                btn = ctk.CTkButton(self.popup_scroll, text=btn_txt, font=("Malgun Gothic", 13),
+                                     anchor="w", fg_color="#18182D", hover_color="#2B2B4A",
+                                     text_color=txt_color, height=42, corner_radius=6,
+                                     command=lambda prod=p: self._select_product_from_popup(prod))
+                btn.pack(fill="x", padx=5, pady=4)
+        else:
+            ctk.CTkLabel(self.popup_scroll, text="상품 목록을 조회할 수 없습니다.", font=("Malgun Gothic", 13), text_color="#EF4444").pack(pady=20)
+
+    def _filter_product_list_popup(self, event):
+        """검색어 입력 시 실시간 리스트 필터링"""
+        query = self.search_entry.get().strip()
+        self._render_popup_product_list(query)
+
+    def _select_product_from_popup(self, product_name):
+        """팝업창에서 상품명 선택 시 변수 변경, 창 닫기 및 그래프 즉각 갱신"""
+        self.selected_product_var.set(product_name)
+        if hasattr(self, 'popup') and self.popup.winfo_exists():
+            self.popup.destroy()
+        self._draw_product_charts()
+
+    def _update_product_selector(self):
+        """분석 완료 시점에 매출 데이터를 합산하고 상품 선택창을 기본 세팅"""
+        if self.analyzer.raw_df is None:
+            self.selected_product_var.set("데이터 분석을 먼저 진행해주세요.")
+            self.product_sales_dict = {}
+            return
+            
+        m = self.analyzer._get_column_mapping(self.analyzer.raw_df)
+        pname_col = m.get('pname')
+        sales_col = m.get('sales')
+        
+        # 상품별 총 매출액 집계
+        self.product_sales_dict = {}
+        if pname_col and sales_col and pname_col in self.analyzer.raw_df.columns:
+            df_clean = self.analyzer.raw_df.copy()
+            df_clean[sales_col] = pd.to_numeric(df_clean[sales_col].astype(str).str.replace(',', '').str.replace('₩', '').str.replace('원', ''), errors='coerce').fillna(0)
+            self.product_sales_dict = df_clean.groupby(pname_col)[sales_col].sum().to_dict()
+            
+            # 고유 상품명 추출 및 정렬
+            products = self.analyzer.raw_df[pname_col].dropna().unique().tolist()
+            products = [str(p).strip() for p in products if str(p).strip() and str(p).strip() != '-']
+            products = sorted(products)
+            
             if products:
-                self.product_combobox.configure(values=products)
-                self.product_combobox.set(products[0])  # 기본값 첫 번째 상품 선택
+                # 🟢 매출 발생한 상품이 있다면, 매출 발생 상품을 가나다 정렬하여 첫 번째에 보여주고, 없으면 그냥 첫 상품 선택
+                sales_products = [p for p in products if self.product_sales_dict.get(p, 0) > 0]
+                default_prod = sales_products[0] if sales_products else products[0]
+                
+                self.selected_product_var.set(default_prod)
                 self._draw_product_charts()  # 즉각 첫 렌더링
             else:
-                self.product_combobox.configure(values=[])
-                self.product_combobox.set("엑셀에 추출된 상품명이 없습니다.")
+                self.selected_product_var.set("엑셀에 추출된 상품명이 없습니다.")
         else:
-            self.product_combobox.configure(values=[])
-            self.product_combobox.set("상품명 컬럼을 찾을 수 없습니다.")
+            self.selected_product_var.set("상품명 컬럼을 찾을 수 없습니다.")
 
     def _draw_product_charts(self):
         """선택한 상품의 데이터로 기존 10대 차트를 필터링 렌더링"""
@@ -331,7 +420,7 @@ class AdOptimizerApp(ctk.CTk):
             ctk.CTkLabel(self.prod_metrics_scroll, text="⚠️ 분석을 실행한 뒤 상품을 선택해주세요.", text_color="#EF4444", font=("Malgun Gothic", 14, "bold")).pack(pady=40)
             return
             
-        selected = self.product_combobox.get()
+        selected = self.selected_product_var.get()
         if not selected or selected in ["데이터 분석을 먼저 진행해주세요.", "엑셀에 추출된 상품명이 없습니다.", "상품명 컬럼을 찾을 수 없습니다."]:
             ctk.CTkLabel(self.prod_metrics_scroll, text="⚠️ 유효한 상품을 선택해주세요.", text_color="#EF4444", font=("Malgun Gothic", 14, "bold")).pack(pady=40)
             return
@@ -543,7 +632,7 @@ class AdOptimizerApp(ctk.CTk):
         self._update_performance_cards()
         self._draw_all_charts()
         self._update_diagnosis()
-        self._update_product_combobox()
+        self._update_product_selector()
         self.status_label.configure(text=f"✅ 분석 완료! ({self.analyzer.last_analysis_info})")
 
     def _populate_kw_tree(self, data):

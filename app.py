@@ -1065,8 +1065,8 @@ class AdOptimizerApp(ctk.CTk):
         # 키워드 데이터 처리: 광고비 기준 상위 10개 키워드 추출
         if kw_data is not None and not kw_data.empty:
             top_kws = kw_data.sort_values('spend', ascending=False).head(10).copy()
-            # 글자 길이가 길면 축약
-            top_kws['kw_short'] = top_kws['kw'].apply(lambda x: x[:8] + '..' if len(str(x)) > 8 else x)
+            # 글자 길이가 너무 짧게 짤려 식별하기 힘들었던 문제를 14글자로 여유 있게 늘려 해결
+            top_kws['kw_short'] = top_kws['kw'].apply(lambda x: x[:14] + '..' if len(str(x)) > 14 else x)
             
             x_indices = list(range(len(top_kws)))
             x_labels = top_kws['kw_short'].tolist()
@@ -1076,9 +1076,9 @@ class AdOptimizerApp(ctk.CTk):
             ax10.set_ylabel('광고비 (원)', color='#EF4444', weight='bold', fontsize=fs_label)
             ax10.tick_params(axis='y', labelcolor='#EF4444', labelsize=fs_tick)
             
-            # x축의 정수 눈금 위치마다 축약된 키워드명을 눈금 라벨로 정확히 설정
+            # x축의 정수 눈금 위치마다 축약된 키워드명을 눈금 라벨로 정확히 설정 (각도를 40도로 늘리고 우측 맞춤 적용)
             ax10.set_xticks(x_indices)
-            ax10.set_xticklabels(x_labels, color='white', fontsize=fs_tick, rotation=35, ha='right')
+            ax10.set_xticklabels(x_labels, color='white', fontsize=fs_tick, rotation=40, ha='right')
             ax10.tick_params(axis='x', labelcolor='white', labelsize=fs_tick)
             
             ax10_2 = ax10.twinx()
@@ -1099,7 +1099,8 @@ class AdOptimizerApp(ctk.CTk):
         all_axes = [ax1, ax2, ax3, ax4, ax5, ax6, ax7, ax8, ax9]
         self._draw_memo_vlines(all_axes, df['date_s'].tolist(), pe, fs_ann)
 
-        fig.subplots_adjust(left=0.06, right=0.94, top=0.96, bottom=0.04, hspace=0.35, wspace=0.35)
+        # bottom 여백을 0.04에서 0.06으로 늘려 5행(9번, 10번 차트)의 긴 x축 라벨이 캔버스 밖으로 잘려 나가는 것을 완전 차단
+        fig.subplots_adjust(left=0.06, right=0.94, top=0.96, bottom=0.06, hspace=0.35, wspace=0.35)
         canvas = FigureCanvasTkAgg(fig, master=master); canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
         self._add_hover_tooltip(fig, canvas)

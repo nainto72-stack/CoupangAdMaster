@@ -1065,21 +1065,26 @@ class AdOptimizerApp(ctk.CTk):
         # 키워드 데이터 처리: 광고비 기준 상위 10개 키워드 추출
         if kw_data is not None and not kw_data.empty:
             top_kws = kw_data.sort_values('spend', ascending=False).head(10).copy()
-            # 글자 길이가 너무 짧게 짤려 식별하기 힘들었던 문제를 14글자로 여유 있게 늘려 해결
-            top_kws['kw_short'] = top_kws['kw'].apply(lambda x: x[:14] + '..' if len(str(x)) > 14 else x)
+            # 💡 [줄바꿈 기법 적용] 글자를 잘라내지 않고 8글자마다 줄바꿈(\n)하여 전체를 온전히 표시
+            def wrap_kw(text, width=8):
+                if not text: return ""
+                t = str(text).strip()
+                return '\n'.join([t[i:i+width] for i in range(0, len(t), width)])
+            
+            top_kws['kw_wrapped'] = top_kws['kw'].apply(lambda x: wrap_kw(x, 8))
             
             x_indices = list(range(len(top_kws)))
-            x_labels = top_kws['kw_short'].tolist()
+            x_labels = top_kws['kw_wrapped'].tolist()
             
             # 정수 인덱스 기준으로 막대그래프 렌더링 (중복 범주 매핑 꼬임 원천 차단)
             ax10.bar(x_indices, top_kws['spend'], color='#EF4444', alpha=0.35, label='■ 광고비')
             ax10.set_ylabel('광고비 (원)', color='#EF4444', weight='bold', fontsize=fs_label)
             ax10.tick_params(axis='y', labelcolor='#EF4444', labelsize=fs_tick)
             
-            # x축의 정수 눈금 위치마다 축약된 키워드명을 눈금 라벨로 정확히 설정 (각도를 40도로 늘리고 우측 맞춤 적용)
+            # 줄바꿈된 텍스트이므로 회전하지 않고 똑바로 세우며(rotation=0, ha='center'), 폰트를 살짝 낮추어 줄바꿈 가독성 극대화
             ax10.set_xticks(x_indices)
-            ax10.set_xticklabels(x_labels, color='white', fontsize=fs_tick, rotation=40, ha='right')
-            ax10.tick_params(axis='x', labelcolor='white', labelsize=fs_tick)
+            ax10.set_xticklabels(x_labels, color='white', fontsize=fs_tick - 1.5, rotation=0, ha='center')
+            ax10.tick_params(axis='x', labelcolor='white', labelsize=fs_tick - 1.5)
             
             ax10_2 = ax10.twinx()
             # 동일한 정수 인덱스를 공유하여 선그래프 렌더링 (x축 정밀 일치)
@@ -1351,10 +1356,12 @@ class AdOptimizerApp(ctk.CTk):
             color_idx += 1
             
             for ax in axes:
-                ax.axvline(x=x_pos, color=color, linewidth=1.2, linestyle=':', alpha=0.7, zorder=5)
+                # 💡 범주형 x축 상에서 점선이 누락되는 현상을 완벽 차단하기 위해 정수 인덱스 대신 문자열(mmdd)을 직접 x로 지정
+                ax.axvline(x=mmdd, color=color, linewidth=1.2, linestyle=':', alpha=0.7, zorder=5)
                 ylim = ax.get_ylim()
                 y_pos = ylim[1] * 0.92
-                ax.text(x_pos, y_pos, summary, rotation=90, va='top', ha='right',
+                # 텍스트 출력 위치 또한 범주형 눈금 명칭(mmdd)을 기준으로 지정하여 정밀 일치시킴
+                ax.text(mmdd, y_pos, summary, rotation=90, va='top', ha='right',
                        color=color, fontsize=fontsize, weight='bold', alpha=0.85,
                        path_effects=pe)
 

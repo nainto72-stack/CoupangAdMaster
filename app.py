@@ -336,7 +336,9 @@ class AdOptimizerApp(ctk.CTk):
         if pname_col and pname_col in self.analyzer.raw_df.columns:
             products = self.analyzer.raw_df[pname_col].dropna().unique().tolist()
             products = [str(p).strip() for p in products if str(p).strip() and str(p).strip() != '-']
-            products = sorted(products)
+            # 매출액 내림차순 정렬 (매출이 클수록 위로, 매출이 같거나 없을 경우 가나다순)
+            sales_dict = getattr(self, 'product_sales_dict', {})
+            products.sort(key=lambda p: (-sales_dict.get(p, 0), p))
             
             # 검색 필터링
             if filter_text:
@@ -397,12 +399,12 @@ class AdOptimizerApp(ctk.CTk):
             # 고유 상품명 추출 및 정렬
             products = self.analyzer.raw_df[pname_col].dropna().unique().tolist()
             products = [str(p).strip() for p in products if str(p).strip() and str(p).strip() != '-']
-            products = sorted(products)
+            # 매출액 내림차순 정렬 (매출이 클수록 위로, 매출이 같거나 없을 경우 가나다순)
+            products.sort(key=lambda p: (-self.product_sales_dict.get(p, 0), p))
             
             if products:
-                # 🟢 매출 발생한 상품이 있다면, 매출 발생 상품을 가나다 정렬하여 첫 번째에 보여주고, 없으면 그냥 첫 상품 선택
-                sales_products = [p for p in products if self.product_sales_dict.get(p, 0) > 0]
-                default_prod = sales_products[0] if sales_products else products[0]
+                # 정렬된 결과의 첫 번째 상품(매출 1위인 상품 혹은 가나다순 첫 상품)을 기본값으로 자동 로드
+                default_prod = products[0]
                 
                 self.selected_product_var.set(default_prod)
                 self._draw_product_charts()  # 즉각 첫 렌더링

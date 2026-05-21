@@ -1068,20 +1068,29 @@ class AdOptimizerApp(ctk.CTk):
             # 글자 길이가 길면 축약
             top_kws['kw_short'] = top_kws['kw'].apply(lambda x: x[:8] + '..' if len(str(x)) > 8 else x)
             
-            x_kws = top_kws['kw_short'].tolist()
-            ax10.bar(x_kws, top_kws['spend'], color='#EF4444', alpha=0.35, label='■ 광고비')
+            x_indices = list(range(len(top_kws)))
+            x_labels = top_kws['kw_short'].tolist()
+            
+            # 정수 인덱스 기준으로 막대그래프 렌더링 (중복 범주 매핑 꼬임 원천 차단)
+            ax10.bar(x_indices, top_kws['spend'], color='#EF4444', alpha=0.35, label='■ 광고비')
             ax10.set_ylabel('광고비 (원)', color='#EF4444', weight='bold', fontsize=fs_label)
             ax10.tick_params(axis='y', labelcolor='#EF4444', labelsize=fs_tick)
-            ax10.tick_params(axis='x', labelcolor='white', labelsize=fs_tick, rotation=35)
+            
+            # x축의 정수 눈금 위치마다 축약된 키워드명을 눈금 라벨로 정확히 설정
+            ax10.set_xticks(x_indices)
+            ax10.set_xticklabels(x_labels, color='white', fontsize=fs_tick, rotation=35, ha='right')
+            ax10.tick_params(axis='x', labelcolor='white', labelsize=fs_tick)
             
             ax10_2 = ax10.twinx()
-            ax10_2.plot(x_kws, top_kws['orders'], color='#10B981', marker='s', markersize=ms, linewidth=lw, label='— 주문수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+            # 동일한 정수 인덱스를 공유하여 선그래프 렌더링 (x축 정밀 일치)
+            ax10_2.plot(x_indices, top_kws['orders'], color='#10B981', marker='s', markersize=ms, linewidth=lw, label='— 주문수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
             ax10_2.set_ylabel('주문수 (건)', color='#10B981', weight='bold', fontsize=fs_label)
             ax10_2.tick_params(axis='y', labelcolor='#10B981', labelsize=fs_tick)
             
             for i, v in enumerate(top_kws['orders']):
                 if v == 0: continue
-                ax10_2.annotate(f"{int(v)}건", (x_kws[i], v), xytext=(0, 10), textcoords="offset points", ha='center', color='#10B981', weight='bold', fontsize=fs_ann, path_effects=pe)
+                # 정수 위치(x_indices[i])에 정확하게 텍스트 애노테이션 추가
+                ax10_2.annotate(f"{int(v)}건", (x_indices[i], v), xytext=(0, 10), textcoords="offset points", ha='center', color='#10B981', weight='bold', fontsize=fs_ann, path_effects=pe)
             add_legend(ax10, ax10_2)
         else:
             ax10.text(0.5, 0.5, "표시할 키워드 데이터가 없습니다.", transform=ax10.transAxes, ha='center', va='center', color='#94A3B8', fontsize=12)

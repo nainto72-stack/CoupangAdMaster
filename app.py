@@ -141,7 +141,7 @@ class AdOptimizerApp(ctk.CTk):
 
     def _setup_performance_cards(self):
         self.perf_card_frame = ctk.CTkFrame(self.dashboard_scroll, fg_color="transparent")
-        self.perf_card_frame.pack(fill="x", padx=15, pady=5)
+        self.perf_card_frame.pack(fill="x", padx=15, pady=8)
         
         metrics = [
             ("전체 광고비", "spend", "원"), ("집행 광고비", "spend", "원"),
@@ -155,13 +155,43 @@ class AdOptimizerApp(ctk.CTk):
         self.perf_labels = {}
         for i, (t, k, u) in enumerate(metrics):
             r, c = divmod(i, 6)
-            card = ctk.CTkFrame(self.perf_card_frame, fg_color="white", corner_radius=4)
-            card.grid(row=r, column=c, padx=4, pady=4, sticky="nsew")
+            
+            # 1. 3D 입체 플로팅 네온 스타일 카드 프레임 설정
+            card = ctk.CTkFrame(
+                self.perf_card_frame, 
+                fg_color="#1E293B",      # 슬레이트 블루 (어두운 배경과 텍스트의 고대비 극대화)
+                border_width=2, 
+                border_color="#3B82F6",  # 입체적인 선명한 파란색 네온 테두리
+                corner_radius=12         # 부드러운 코너 라운딩 처리
+            )
+            card.grid(row=r, column=c, padx=6, pady=6, sticky="nsew")
             self.perf_card_frame.grid_columnconfigure(c, weight=1)
             
-            ctk.CTkLabel(card, text=t, font=("Malgun Gothic", 12), text_color="#4B5563").pack(pady=(10, 0))
-            v_lbl = ctk.CTkLabel(card, text="-", font=("Consolas", 20, "bold"), text_color="#111827")
-            v_lbl.pack(pady=(5, 10))
+            # 2. 지표 유형별 고대비 형광 네온 컬러 매핑
+            if "광고비" in t:
+                color = "#FBBF24"  # 골드 옐로우
+            elif "매출" in t:
+                color = "#34D399"  # 에메랄드 그린
+            elif t in ["전체 판매수", "노출수", "클릭수", "전환 판매수", "전환 주문수"]:
+                color = "#60A5FA"  # 스카이 블루
+            else:
+                color = "#FB923C"  # 네온 오렌지
+            
+            # 3. 노안 맞춤 초대형 레이아웃 텍스트 적용 (맑은 고딕 사용으로 한글 단위 어그러짐 방지)
+            ctk.CTkLabel(
+                card, 
+                text=t, 
+                font=("Malgun Gothic", 14, "bold"), 
+                text_color="#E2E8F0"  # 선명한 연회색
+            ).pack(pady=(12, 0))
+            
+            v_lbl = ctk.CTkLabel(
+                card, 
+                text="-", 
+                font=("Malgun Gothic", 26, "bold"), 
+                text_color=color
+            )
+            v_lbl.pack(pady=(6, 12))
             self.perf_labels[i] = {"label": v_lbl, "unit": u, "key": k}
 
     def _setup_keyword_tab(self):

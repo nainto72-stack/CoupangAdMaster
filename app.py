@@ -772,10 +772,22 @@ class AdOptimizerApp(ctk.CTk):
             
             # 🛠️ 세부 해결책 박스
             sol_frame = ctk.CTkFrame(card, fg_color="#0D0D21", corner_radius=10)
-            sol_frame.pack(fill="x", padx=25, pady=(10, 20))
+            sol_frame.pack(fill="x", padx=25, pady=(10, 5))
             for s in adv['solution']:
                 ctk.CTkLabel(sol_frame, text=f"✔️ {s}", font=("Malgun Gothic", 13), 
                              text_color="#94A3B8", justify="left", wraplength=800).pack(anchor="w", padx=15, pady=4)
+            
+            # 🔍 현시점 트렌드 조언 (trend_insight가 있을 때만 표시)
+            trend_text = adv.get('trend_insight', '')
+            if trend_text:
+                trend_frame = ctk.CTkFrame(card, fg_color="#0F1A2E", corner_radius=10,
+                                           border_width=1, border_color="#F59E0B")
+                trend_frame.pack(fill="x", padx=25, pady=(5, 20))
+                ctk.CTkLabel(trend_frame, text=trend_text, font=("Malgun Gothic", 13, "bold"), 
+                             text_color="#FDE68A", justify="left", wraplength=800).pack(anchor="w", padx=15, pady=10)
+            else:
+                # trend_insight가 없으면 기존 여백 유지
+                sol_frame.pack_configure(pady=(10, 20))
 
     def _draw_all_charts(self):
         # 모든 차트 프레임 초기화
@@ -1381,7 +1393,8 @@ class AdOptimizerApp(ctk.CTk):
                 continue
             
             x_pos = date_labels.index(mmdd)
-            summary = memo_text[:12] + '..' if len(memo_text) > 12 else memo_text
+            # 글자수 제한 해제하여 100% 표기
+            summary = memo_text 
             color = memo_colors[color_idx % len(memo_colors)]
             color_idx += 1
             
@@ -1391,8 +1404,9 @@ class AdOptimizerApp(ctk.CTk):
                 ylim = ax.get_ylim()
                 y_pos = ylim[1] * 0.92
                 # 텍스트 출력 위치 또한 범주형 눈금 명칭(mmdd)을 기준으로 지정하여 정밀 일치시킴
+                # 글꼴 크기를 기존 fontsize보다 1 줄여서 전체 표시에 유리하도록 함
                 ax.text(mmdd, y_pos, summary, rotation=90, va='top', ha='right',
-                       color=color, fontsize=fontsize, weight='bold', alpha=0.85,
+                       color=color, fontsize=max(6, fontsize-1), weight='bold', alpha=0.85,
                        path_effects=pe)
 
     def _fmt_val(self, v, kind):
@@ -1495,6 +1509,135 @@ class AdOptimizerApp(ctk.CTk):
         ax.tick_params(axis='y', labelcolor='white', labelsize=9)
         ax.tick_params(axis='x', labelcolor='#94A3B8', labelsize=7)
         ax.grid(True, axis='x', color='#1F2937', linestyle='--', alpha=0.3)
+        
+        fig.tight_layout(rect=[0, 0, 1, 0.82])
+        canvas = FigureCanvasTkAgg(fig, master=master); canvas.draw()
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=5, pady=5)
+        self._add_hover_tooltip(fig, canvas)
+
+    def _render_dashboard_pie(self, br_df, master):
+        plt.rcParams['font.family'] = 'Malgun Gothic'
+        plt.rcParams['axes.unicode_minus'] = False
+        pe = [path_effects.withStroke(linewidth=3, foreground='black')]
+        
+        fig = Figure(figsize=(6.5, 4.5), dpi=95); ax = fig.add_subplot(111)
+        fig.patch.set_facecolor('#0B0B1A'); ax.set_facecolor('#0B0B1A')
+        ax.set_title("노출 영역별 상세 성과", color='white', pad=40, loc='center',
+                     fontdict={'size': 16, 'weight': 'bold', 'family': 'Malgun Gothic'})
+        ax.text(0.5, 1.01, '광고비(막대) 대비 클릭수와 주문수(선) 효율을 확인하세요',
+               transform=ax.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=11, style='italic')
+        
+        if not br_df.empty:
+            # 3대 핵심 대표 영역 정의 (데이터가 없더라도 고정 표출)
+            target_regions = ['검색 영역', '비검색 영역', '오디언스 플러스(외부 채널) - Product Ad']
+            
+            # 영역별 성과를 담을 다차원 딕셔너리 초기화
+            s_dict = {reg: {'spend': 0.0, 'click': 0.0, 'orders': 0.0} for reg in target_regions}
+            
+            # 그룹바이 집계
+            raw_s = br_df.groupby('region').agg({'spend': 'sum', 'click': 'sum', 'orders': 'sum'})
+            
+            for r_name, row in raw_s.iterrows():
+                r_name_str = str(r_name)
+                matched = False
+                
+                # 안전하고 정교한 영역 매칭 수행 (비검색 영역이 검색 영역에 합산되는 버그 차단)
+                if '비검색' in r_name_str:
+                    s_dict['비검색 영역']['spend'] += row['spend']
+                    s_dict['비검색 영역']['click'] += row['click']
+                    s_dict['비검색 영역']['orders'] += row['orders']
+                    matched = True
+                elif '검색' in r_name_str:
+                    s_dict['검색 영역']['spend'] += row['spend']
+                    s_dict['검색 영역']['click'] += row['click']
+                    s_dict['검색 영역']['orders'] += row['orders']
+                    matched = True
+                elif '오디언스' in r_name_str or '외부 채널' in r_name_str or '오피니언' in r_name_str:
+                    s_dict['오디언스 플러스(외부 채널) - Product Ad']['spend'] += row['spend']
+                    s_dict['오디언스 플러스(외부 채널) - Product Ad']['click'] += row['click']
+                    s_dict['오디언스 플러스(외부 채널) - Product Ad']['orders'] += row['orders']
+                    matched = True
+                
+                if not matched:
+                    # 매칭되지 않은 기타 지면 예외처리
+                    s_dict[r_name_str] = {
+                        'spend': row['spend'],
+                        'click': row['click'],
+                        'orders': row['orders']
+                    }
+            
+            # DataFrame으로 변환
+            s_df = pd.DataFrame(s_dict).T
+            
+            # 라벨 압축 매핑
+            labels = []
+            for name in s_df.index:
+                n_str = str(name)
+                if '오디언스' in n_str or '외부 채널' in n_str or '오피니언' in n_str:
+                    labels.append('오피니언 영역')
+                elif len(n_str) > 6:
+                    labels.append(n_str[:6] + '..')
+                else:
+                    labels.append(n_str)
+            
+            # 1. 왼쪽 Y축: 광고비 막대 그래프
+            colors = ['#EC4899', '#8B5CF6', '#3B82F6', '#F59E0B', '#10B981']
+            bars = ax.bar(labels, s_df['spend'].values, color=colors[:len(s_df)], width=0.4, edgecolor='none', alpha=0.7)
+            
+            # 막대에 값 속성 할당 (호버 툴팁용)
+            for bar, val in zip(bars, s_df['spend'].values):
+                bar.custom_val = val
+                
+            ax.set_ylabel('광고비 (원)', color='#EC4899', size=9, weight='bold', fontfamily='Malgun Gothic')
+            ax.tick_params(axis='y', labelcolor='#EC4899', labelsize=8)
+            ax.set_ylim(0, max(s_df['spend'].max() * 1.25, 10000))
+            
+            # 2. 오른쪽 Y축: 클릭수 및 주문수 선 그래프 (이중 축 생성)
+            ax2 = ax.twinx()
+            
+            # 클릭수 선그래프 (파란색 계열)
+            line_click = ax2.plot(labels, s_df['click'].values, color='#3B82F6', marker='o', linewidth=2, markersize=5,
+                                  label='— 클릭수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+            
+            # 주문수 선그래프 (초록색 계열)
+            line_orders = ax2.plot(labels, s_df['orders'].values, color='#10B981', marker='s', linewidth=2, markersize=5,
+                                   label='— 주문수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+            
+            ax2.set_ylabel('클릭수(회) / 주문수(건)', color='white', size=9, weight='bold', fontfamily='Malgun Gothic')
+            ax2.tick_params(axis='y', labelcolor='white', labelsize=8)
+            ax2.set_ylim(0, max(s_df['click'].max() * 1.3, 10))
+            
+            # 선그래프의 데이터 포인트 위에 값 텍스트 애노테이션
+            for i in range(len(s_df)):
+                # 클릭수 텍스트 표시
+                c_val = s_df['click'].iloc[i]
+                ax2.annotate(f"{int(c_val)}회", (i, c_val), xytext=(-5, 8), textcoords="offset points",
+                             color='#3B82F6', weight='bold', fontsize=8, path_effects=pe, ha='center')
+                
+                # 주문수 텍스트 표시
+                o_val = s_df['orders'].iloc[i]
+                ax2.annotate(f"{int(o_val)}건", (i, o_val), xytext=(5, -12), textcoords="offset points",
+                             color='#10B981', weight='bold', fontsize=8, path_effects=pe, ha='center')
+            
+            # 범례 통합 표시
+            import matplotlib.patches as mpatches
+            patch_spend = mpatches.Patch(color='#EC4899', alpha=0.7, label='■ 광고비')
+            
+            h1 = [patch_spend]
+            h2, l2 = ax2.get_legend_handles_labels()
+            ax.legend(h1 + h2, ['■ 광고비'] + l2, loc='upper right', fontsize=8,
+                      facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
+            
+            ax.tick_params(axis='x', labelcolor='white', labelsize=10, rotation=0)
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            ax.spines['left'].set_visible(False)
+            ax.spines['bottom'].set_color('#1F2937')
+            ax.grid(True, axis='y', color='#1F2937', linestyle='--', alpha=0.3)
+            
+        else:
+            ax.text(0.5, 0.5, '데이터 없음', ha='center', va='center', color='#6B7280', 
+                   fontsize=14, fontfamily='Malgun Gothic')
         
         fig.tight_layout(rect=[0, 0, 1, 0.82])
         canvas = FigureCanvasTkAgg(fig, master=master); canvas.draw()
@@ -1637,73 +1780,7 @@ class AdOptimizerApp(ctk.CTk):
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=5, pady=5)
         self._add_hover_tooltip(fig, canvas)
 
-    def _render_dashboard_pie(self, br_df, master):
-        plt.rcParams['font.family'] = 'Malgun Gothic'
-        plt.rcParams['axes.unicode_minus'] = False
-        pe = [path_effects.withStroke(linewidth=3, foreground='black')]
-        
-        fig = Figure(figsize=(6.5, 4.5), dpi=95); ax = fig.add_subplot(111)
-        fig.patch.set_facecolor('#0B0B1A'); ax.set_facecolor('#0B0B1A')
-        ax.set_title("노출 영역별 광고비", color='white', pad=40, loc='center',
-                     fontdict={'size': 16, 'weight': 'bold', 'family': 'Malgun Gothic'})
-        ax.text(0.5, 1.01, '검색/비검색/오피니언 영역 비중을 보고 노출 전략을 조정하세요',
-               transform=ax.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=11, style='italic')
-        
-        if not br_df.empty:
-            # 3대 핵심 대표 영역 정의 (데이터가 없더라도 고정 표출)
-            target_regions = ['검색 영역', '비검색 영역', '오디언스 플러스(외부 채널) - Product Ad']
-            
-            s_dict = {reg: 0.0 for reg in target_regions}
-            
-            raw_s = br_df.groupby('region')['spend'].sum()
-            for r_name, val in raw_s.items():
-                r_name_str = str(r_name)
-                matched = False
-                for reg in target_regions:
-                    # 키워드 유사도 매칭 (검색, 비검색, 오디언스/외부채널)
-                    if (reg in r_name_str) or (r_name_str in reg) or \
-                       ('오디언스' in r_name_str and '오디언스' in reg) or \
-                       ('비검색' in r_name_str and '비검색' in reg):
-                        s_dict[reg] += val
-                        matched = True
-                        break
-                if not matched:
-                    s_dict[r_name_str] = val
-                        
-            s = pd.Series(s_dict)
-            
-            colors = ['#EC4899', '#8B5CF6', '#3B82F6', '#F59E0B', '#10B981']
-            
-            # 영역명 친숙하게 매핑 및 길이 압축
-            labels = []
-            for name in s.index:
-                n_str = str(name)
-                if '오디언스' in n_str or '외부 채널' in n_str or '오피니언' in n_str:
-                    labels.append('오피니언 영역')
-                elif len(n_str) > 6:
-                    labels.append(n_str[:6] + '..')
-                else:
-                    labels.append(n_str)
-            
-            bars = ax.bar(labels, s.values, color=colors[:len(s)], width=0.5, edgecolor='none', alpha=0.85)
-            
-            ax.set_ylim(0, max(s.max() * 1.25, 10000))
-            ax.tick_params(axis='x', labelcolor='white', labelsize=10, rotation=0)
-            ax.tick_params(axis='y', labelcolor='#94A3B8', labelsize=8)
-            ax.yaxis.set_visible(False)
-            ax.spines['top'].set_visible(False)
-            ax.spines['right'].set_visible(False)
-            ax.spines['left'].set_visible(False)
-            ax.spines['bottom'].set_color('#1F2937')
-            ax.grid(True, axis='y', color='#1F2937', linestyle='--', alpha=0.3)
-        else:
-            ax.text(0.5, 0.5, '데이터 없음', ha='center', va='center', color='#6B7280', 
-                   fontsize=14, fontfamily='Malgun Gothic')
-        
-        fig.tight_layout(rect=[0, 0, 1, 0.82])
-        canvas = FigureCanvasTkAgg(fig, master=master); canvas.draw()
-        canvas.get_tk_widget().pack(fill="both", expand=True, padx=5, pady=5)
-        self._add_hover_tooltip(fig, canvas)
+
 
     def _init_context_menu(self):
         self.context_menu = tk.Menu(self, tearoff=0, font=("Malgun Gothic", 10))

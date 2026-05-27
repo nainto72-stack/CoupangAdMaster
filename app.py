@@ -84,6 +84,7 @@ class AdOptimizerApp(ctk.CTk):
         self.tab_product_metrics = self.tabview.add("📦 상품별 성과 (그래프)")
         self.tab_memos = self.tabview.add("📝 일별 기록 / 메모")
         self.tab_diagnosis = self.tabview.add("🛡️ AI 전략 나침반")
+        self.tab_calculator = self.tabview.add("🧮 ROAS 순익 계산기")
         
         self._setup_dashboard_tab()
         self._setup_keyword_tab()
@@ -94,8 +95,10 @@ class AdOptimizerApp(ctk.CTk):
         self._setup_product_metrics_tab()
         self._setup_memos_tab()
         self._setup_diagnosis_tab()
+        self._setup_calculator_tab()
         
         self._refresh_management_tabs()
+
         
         self.status_label = ctk.CTkLabel(self, text="준비됨", anchor="w", padx=20, height=35, fg_color="#1A1A2E", font=("Malgun Gothic", 11))
         self.status_label.pack(fill="x", side="bottom")
@@ -658,6 +661,281 @@ class AdOptimizerApp(ctk.CTk):
         
         self.advice_container = ctk.CTkFrame(self.diag_scroll, fg_color="transparent")
         self.advice_container.pack(fill="both", expand=True, padx=50)
+
+    def _setup_calculator_tab(self):
+        # 탭 전체를 스크롤 가능하게 구성
+        calc_scroll = ctk.CTkScrollableFrame(self.tab_calculator, fg_color="#0B0B1A")
+        calc_scroll.pack(fill="both", expand=True)
+        
+        title_lbl = ctk.CTkLabel(calc_scroll, text="🧮 ROAS 순익 계산기 (초등생도 1초 이해하는 마진·광고 내비게이터)", font=("Malgun Gothic", 26, "bold"), text_color="#38BDF8")
+        title_lbl.pack(pady=20)
+        
+        # 좌우 분할을 위한 메인 컨테이너
+        calc_split = ctk.CTkFrame(calc_scroll, fg_color="transparent")
+        calc_split.pack(fill="both", expand=True, padx=30, pady=10)
+        
+        # 1. 좌측 입력 및 가이드북 패널
+        left_panel = ctk.CTkFrame(calc_split, fg_color="#101026", border_width=2, border_color="#1E293B", corner_radius=15)
+        left_panel.pack(side="left", fill="both", expand=True, padx=(0, 15), pady=10)
+        
+        lbl_input_title = ctk.CTkLabel(left_panel, text="📥 제품 및 광고정보 입력하기", font=("Malgun Gothic", 18, "bold"), text_color="#38BDF8")
+        lbl_input_title.pack(pady=15, padx=20, anchor="w")
+        
+        form_frame = ctk.CTkFrame(left_panel, fg_color="transparent")
+        form_frame.pack(fill="x", padx=20, pady=5)
+        
+        inputs = [
+            ("제품 명 (상품 이름)", "p_name", "전기장판"),
+            ("제품 원가 (사입 단가 ₩)", "p_cost", "20,000"),
+            ("판매 갯수 (팔린 수량 개)", "p_qty", "30"),
+            ("실제 판매가격 (최종 결제액 ₩)", "p_price", "42,900"),
+            ("쿠팡 등록가 (할인 전 가격 ₩)", "p_coupang", "52,900"),
+            ("수수료율 (%)", "p_fee_pct", "11.0"),
+            ("부가세율 (%)", "p_tax_pct", "10.0"),
+            ("배송비/물류비 (₩)", "p_shipping", "3,000"),
+            ("포장/기타비용 (₩)", "p_etc_cost", "500"),
+            ("광고비용 (집행 광고비 ₩)", "p_ad_spend", "400,000")
+        ]
+        
+        self.calc_vars = {}
+        for idx, (label_txt, var_name, def_val) in enumerate(inputs):
+            lbl = ctk.CTkLabel(form_frame, text=label_txt, font=("Malgun Gothic", 13, "bold"), text_color="#E2E8F0")
+            lbl.grid(row=idx, column=0, padx=10, pady=6, sticky="w")
+            
+            entry = ctk.CTkEntry(form_frame, width=320, height=32, font=("Malgun Gothic", 13), fg_color="#1E1E38", text_color="white", border_color="#3B82F6")
+            entry.insert(0, def_val)
+            entry.grid(row=idx, column=1, padx=10, pady=6, sticky="e")
+            entry.bind("<KeyRelease>", lambda e: self._calculate_roas())
+            self.calc_vars[var_name] = entry
+            
+        form_frame.grid_columnconfigure(1, weight=1)
+        
+        btn_calc = ctk.CTkButton(left_panel, text="🔄 즉시 계산 및 분석", command=self._calculate_roas, fg_color="#2563EB", hover_color="#1D4ED8", height=45, font=("Malgun Gothic", 14, "bold"))
+        btn_calc.pack(fill="x", padx=20, pady=15)
+        
+        # 💡 좌측 하단: 가독성 극대화를 위해 CTkTextbox(스크롤바 자동 생성) 가이드북 도입
+        guide_frame = ctk.CTkFrame(left_panel, fg_color="#0F172A", border_width=1, border_color="#334155", corner_radius=10)
+        guide_frame.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+        
+        lbl_g_title = ctk.CTkLabel(guide_frame, text="📖 초등생도 1초 이해하는 계산기 사용 매뉴얼 (스크롤 가능 🖱️)", font=("Malgun Gothic", 12, "bold"), text_color="#34D399")
+        lbl_g_title.pack(pady=(10, 5), padx=15, anchor="w")
+        
+        # CTkTextbox를 사용하여 글씨가 찌그러지거나 잘리지 않도록 구현
+        self.guide_box = ctk.CTkTextbox(guide_frame, height=220, font=("Malgun Gothic", 12), fg_color="#070C16", text_color="#F8FAFC", wrap="word", corner_radius=8)
+        self.guide_box.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        
+        guide_text = (
+            "🧸 [초등생도 1초 장사 마스터! - 쿠팡 광고 쉽게 이해하기]\n\n"
+            "안녕 대표님! 매일 땀 흘리며 성실하게 장사하느라 정말 고생이 많아!\n"
+            "어려운 용어 때문에 골치 아팠지? 내가 아주 쉽고 재미있게 이 계산기를 쓰는 법을 가르쳐 줄게! 딱 세 가지만 알면 끝이야!\n\n"
+            "🛡️ 1. '앤드 로하스 (END ROAS)' -> \"내 돈 지킴이 방패선!\"\n"
+            "  • 친구들에게 나눠줄 만 원짜리 할인쿠폰을 만들어서 전기장판을 팔았어!\n"
+            "  • 근데 쿠팡 광고판은 할인 전 가격인 52,900원(등록가) 기준으로 광고 매출을 뻥튀기해서 잡는 바보야!\n"
+            "  • 그래서 광고 보고서에 나오는 수익 점수(ROAS)가 이 [방패선(END ROAS)] 점수 밑으로 떨어지면?\n"
+            "  • 사장님 통장에서 야금야금 돈이 깎여나가고 있는 무서운 '적자 게임'을 하고 있는 거란다!\n"
+            "  • 적어도 이 방패선 점수보다는 광고 점수가 높게 나와야 겨우 본전이고, 방패선보다 훨씬 높게(예: 700% 이상) 나와야 내 지갑에 용돈이 진짜 쌓여!\n\n"
+            "🛑 2. '20% 최대원가' -> \"상품 떼어오기 마지노선!\"\n"
+            "  • '나 손님들한테 42,900원에 팔아서 수수료랑 세금 다 내고도, 내 몫으로 마진 20%는 꼭 남겨서 용돈 할래!'\n"
+            "  • 그럼 문방구 아저씨한테 가서 이 전기장판을 1개에 얼마 이하로 떼어와야 할까?\n"
+            "  • 그 대답이 바로 [최대원가] 금액이야! 만약 도매 단가가 최대원가보다 비싸면 마진 20%를 절대로 지킬 수 없어! 사입하기 전에 꼭 확인해봐!\n\n"
+            "📝 3. 일주일/한 달 장사 끝나고 돈 벌었나 체크할 때!\n"
+            "  • 광고 돌리고 일주일이나 한 달이 지나서 광고 지표 보고서를 열어봐!\n"
+            "  • 거기 적힌 [팔린 개수]와 [광고비] 딱 2개만 여기에 입력해봐!\n"
+            "  • 그럼 내가 쓴 광고비 대비 진짜 지갑에 돈이 남았는지, 아니면 광고 아저씨한테 다 털렸는지를 단번에 정산해준단다! 간편하지?"
+        )
+        self.guide_box.insert("0.0", guide_text)
+        self.guide_box.configure(state="disabled") # 읽기 전용 모드 적용
+        
+        # 2. 우측 결과 패널
+        right_panel = ctk.CTkFrame(calc_split, fg_color="#101026", border_width=2, border_color="#3B82F6", corner_radius=15)
+        right_panel.pack(side="right", fill="both", expand=True, padx=(15, 0), pady=10)
+        
+        lbl_res_title = ctk.CTkLabel(right_panel, text="📋 마진 분석 성과표 (정석 기준)", font=("Malgun Gothic", 18, "bold"), text_color="#34D399")
+        lbl_res_title.pack(pady=15, padx=20, anchor="w")
+        
+        self.calc_res_frame = ctk.CTkFrame(right_panel, fg_color="#0F0F24", border_width=1, border_color="#2E2E4A", corner_radius=10)
+        self.calc_res_frame.pack(fill="both", expand=True, padx=20, pady=(5, 20))
+        
+        self._calculate_roas()
+
+    def _calculate_roas(self):
+        for w in self.calc_res_frame.winfo_children():
+            w.destroy()
+            
+        try:
+            # 값 파싱
+            p_name = self.calc_vars["p_name"].get().strip() or "미정 상품"
+            p_cost = float(self.calc_vars["p_cost"].get().replace(",", "") or 0)
+            p_qty = float(self.calc_vars["p_qty"].get().replace(",", "") or 0)
+            p_price = float(self.calc_vars["p_price"].get().replace(",", "") or 0)
+            p_coupang = float(self.calc_vars["p_coupang"].get().replace(",", "") or 0)
+            p_fee_pct = float(self.calc_vars["p_fee_pct"].get().replace(",", "") or 0) / 100.0
+            p_tax_pct = float(self.calc_vars["p_tax_pct"].get().replace(",", "") or 0) / 100.0
+            p_shipping = float(self.calc_vars["p_shipping"].get().replace(",", "") or 0)
+            p_etc_cost = float(self.calc_vars["p_etc_cost"].get().replace(",", "") or 0)
+            p_ad_spend = float(self.calc_vars["p_ad_spend"].get().replace(",", "") or 0)
+            
+            # 1. 비용 연산
+            # 수수료: 쿠팡 WING 수수료 규정에 따라 실제 판매가(p_price) 기준으로 계산 (엑셀 매칭: 42,900 * 11% = 4,719)
+            fee = p_price * p_fee_pct
+            # 부가세 예수금: 실제 판매가(p_price) 기준으로 산정 (엑셀 매칭: 42,900 * 10% = 4,290)
+            tax = p_price * p_tax_pct
+            
+            # 1개당 쿠팡 정산금액 (수수료, 부가세, 배송비 차감 후 사장님 주머니에 꽂히는 금액)
+            settlement_per_item = p_price - fee - tax - p_shipping
+            
+            # 1개당 순이익 (정산액에서 원가와 포장기타비용까지 전부 공제)
+            profit_per_item = settlement_per_item - p_cost - p_etc_cost
+            margin_rate = (profit_per_item / p_price * 100) if p_price > 0 else 0
+            
+            # 매출 및 현재 ROAS (매출액 = 실제 판매가 * 수량)
+            sales = p_price * p_qty
+            roas = (sales / p_ad_spend * 100) if p_ad_spend > 0 else 0
+            
+            # 광고비까지 차감한 최종 순이익
+            real_profit = (profit_per_item * p_qty) - p_ad_spend
+            
+            # 🎯 앤드 로하스 (END ROAS) - 쿠팡 광고 보고서의 왜곡 매출(부가세 포함 부풀려진 금액)을 커버하기 위한 역산 공식
+            # 엑셀 매칭 공식: (쿠팡 등록가 * 1.1) / 1개당 순익 * 100%
+            real_end_roas = ((p_coupang * 1.1) / profit_per_item * 100) if profit_per_item > 0 else 0
+            
+            # 🛑 최대 사입원가 한계 (최대원가)
+            # 사장님의 의도: 실제 판매가에 팔아도 최소 마진율 '20%'를 지켜낼 수 있는 도매가격 마지노선
+            # 공식: 실제 판매가 - 수수료 - 부가세 - 배송비 - 기타비용 - (실제 판매가 * 최소 목표 마진 20%)
+            real_max_cost = p_price - fee - tax - p_shipping - p_etc_cost - (p_price * 0.2)
+            if real_max_cost < 0:
+                real_max_cost = 0
+            
+            # UI 결과 배치 (Premium Layout)
+            res_scroll = ctk.CTkFrame(self.calc_res_frame, fg_color="transparent")
+            res_scroll.pack(fill="both", expand=True, padx=20, pady=15)
+            
+            # --- [Part 1] 상단 3대 핵심 성과 보드 ---
+            board_frame = ctk.CTkFrame(res_scroll, fg_color="transparent")
+            board_frame.pack(fill="x", pady=(0, 15))
+            
+            # 1-1. 최종 순이익 카드
+            is_profit = real_profit >= 0
+            profit_bg = "#064E3B" if is_profit else "#7C2D12"
+            profit_border = "#10B981" if is_profit else "#EF4444"
+            profit_text_color = "#34D399" if is_profit else "#F87171"
+            
+            card_profit = ctk.CTkFrame(board_frame, fg_color=profit_bg, border_width=1.5, border_color=profit_border, corner_radius=12)
+            card_profit.pack(side="left", expand=True, fill="both", padx=5)
+            ctk.CTkLabel(card_profit, text="💰 내 용돈 주머니 (최종 순이익)", font=("Malgun Gothic", 11, "bold"), text_color="#E2E8F0").pack(pady=(10, 2))
+            ctk.CTkLabel(card_profit, text=f"₩{real_profit:,.0f}", font=("Malgun Gothic", 19, "bold"), text_color=profit_text_color).pack(pady=(2, 10))
+            
+            # 1-2. 앤드 로하스 카드
+            card_end_roas = ctk.CTkFrame(board_frame, fg_color="#1E1E38", border_width=1, border_color="#60A5FA", corner_radius=12)
+            card_end_roas.pack(side="left", expand=True, fill="both", padx=5)
+            ctk.CTkLabel(card_end_roas, text="🎯 앤드 로하스 (END ROAS)", font=("Malgun Gothic", 11, "bold"), text_color="#E2E8F0").pack(pady=(10, 2))
+            roas_val_str = f"{real_end_roas:.1f}%" if real_end_roas > 0 else "마진 없음"
+            ctk.CTkLabel(card_end_roas, text=roas_val_str, font=("Malgun Gothic", 19, "bold"), text_color="#60A5FA").pack(pady=(2, 10))
+            
+            # 1-3. 최대 제품원가 카드
+            card_max_cost = ctk.CTkFrame(board_frame, fg_color="#1E1E38", border_width=1, border_color="#FBBF24", corner_radius=12)
+            card_max_cost.pack(side="left", expand=True, fill="both", padx=5)
+            ctk.CTkLabel(card_max_cost, text="🛑 20% 마진용 최대원가", font=("Malgun Gothic", 11, "bold"), text_color="#E2E8F0").pack(pady=(10, 2))
+            cost_val_str = f"₩{real_max_cost:,.0f}"
+            ctk.CTkLabel(card_max_cost, text=cost_val_str, font=("Malgun Gothic", 19, "bold"), text_color="#FBBF24").pack(pady=(2, 10))
+            
+            # --- [Part 2] 중단: 🧾 상세 정산 영수증 명세서 ---
+            receipt_lbl = ctk.CTkLabel(res_scroll, text="🧾 정산 및 마진 상세 영수증 (1개당 분석)", font=("Malgun Gothic", 14, "bold"), text_color="#94A3B8")
+            receipt_lbl.pack(anchor="w", pady=(10, 5))
+            
+            receipt_frame = ctk.CTkFrame(res_scroll, fg_color="#0D0D21", border_width=1, border_color="#1E293B", corner_radius=10)
+            receipt_frame.pack(fill="x", pady=5)
+            
+            receipt_items = [
+                ("[+] 실제 판매가격 (소비자 결제액)", f"₩{p_price:,.0f}", "#E2E8F0", False),
+                ("[-] 쿠팡 카테고리 수수료", f"-₩{fee:,.0f}", "#F87171", False),
+                ("[-] 부가세 예수금 (세금)", f"-₩{tax:,.0f}", "#F87171", False),
+                ("[-] 배송비/물류수수료", f"-₩{p_shipping:,.0f}", "#F87171", False),
+                ("[=] 1개당 쿠팡 순정산액", f"₩{settlement_per_item:,.0f}", "#34D399", True),
+                ("[-] 제품 사입 원가", f"-₩{p_cost:,.0f}", "#F87171", False),
+                ("[-] 포장 및 기타 고정비", f"-₩{p_etc_cost:,.0f}", "#F87171", False),
+                ("[=] 1개당 최종 순이익", f"₩{profit_per_item:,.0f}", "#10B981", True),
+                ("[%] 최종 마진율", f"{margin_rate:.2f}%", "#FBBF24", True)
+            ]
+            
+            receipt_grid = ctk.CTkFrame(receipt_frame, fg_color="transparent")
+            receipt_grid.pack(fill="x", padx=20, pady=12)
+            
+            for r_idx, (label, val, color, is_bold) in enumerate(receipt_items):
+                font_weight = "bold" if is_bold else "normal"
+                font_size = 12 if not is_bold else 13
+                
+                lbl = ctk.CTkLabel(receipt_grid, text=label, font=("Malgun Gothic", font_size, font_weight), text_color="#94A3B8" if not is_bold else "#E2E8F0")
+                lbl.grid(row=r_idx, column=0, pady=3, sticky="w")
+                
+                v_lbl = ctk.CTkLabel(receipt_grid, text=val, font=("Malgun Gothic", font_size, font_weight), text_color=color)
+                v_lbl.grid(row=r_idx, column=1, pady=3, sticky="e")
+                
+            receipt_grid.grid_columnconfigure(1, weight=1)
+            
+            # --- [Part 3] 총합 지표 요약 ---
+            total_lbl = ctk.CTkLabel(res_scroll, text=f"📊 총합 데이터 요약 ({p_qty:,.0f}개 판매 기준)", font=("Malgun Gothic", 14, "bold"), text_color="#94A3B8")
+            total_lbl.pack(anchor="w", pady=(15, 5))
+            
+            total_frame = ctk.CTkFrame(res_scroll, fg_color="#0D0D21", border_width=1, border_color="#1E293B", corner_radius=10)
+            total_frame.pack(fill="x", pady=5)
+            
+            total_metrics = [
+                ("총 판매 매출액", f"₩{sales:,.0f}", "white"),
+                ("총 집행 광고비", f"₩{p_ad_spend:,.0f}", "#F87171"),
+                ("현재 광고 ROAS (실제)", f"{roas:.1f}%", "#60A5FA")
+            ]
+            
+            total_grid = ctk.CTkFrame(total_frame, fg_color="transparent")
+            total_grid.pack(fill="x", padx=20, pady=10)
+            for t_idx, (label, val, color) in enumerate(total_metrics):
+                lbl = ctk.CTkLabel(total_grid, text=label, font=("Malgun Gothic", 12), text_color="#94A3B8")
+                lbl.grid(row=t_idx, column=0, pady=3, sticky="w")
+                
+                v_lbl = ctk.CTkLabel(total_grid, text=val, font=("Malgun Gothic", 12, "bold"), text_color=color)
+                v_lbl.grid(row=t_idx, column=1, pady=3, sticky="e")
+            total_grid.grid_columnconfigure(1, weight=1)
+            
+            # --- [Part 4] 💡 초등생용 AI 마진 & 광고 진단 처방전 ---
+            rx_lbl = ctk.CTkLabel(res_scroll, text="🛡️ 초등생도 1초 이해하는 마케팅 내비게이터 처방", font=("Malgun Gothic", 15, "bold"), text_color="#FBBF24")
+            rx_lbl.pack(anchor="w", pady=(20, 5))
+            
+            rx_card = ctk.CTkFrame(res_scroll, fg_color=profit_bg, border_width=1, border_color=profit_border, corner_radius=12)
+            rx_card.pack(fill="x", pady=(5, 10))
+            
+            # 정량적 처방 및 초등생용 비유 지문 생성
+            if not is_profit:
+                roas_diff = real_end_roas - roas
+                deficit = p_ad_spend - (profit_per_item * p_qty)
+                
+                diag_msg = (
+                    f"🚨 [적자 비상! 내 지갑 털리는 중!]\n"
+                    f"쿠팡 광고판에 나오는 수익 점수(ROAS)가 {roas:.1f}%인데, 우리의 내 돈 지킴이 방패선인 "
+                    f"[앤드 로하스(END ROAS) {real_end_roas:.1f}%] 밑으로 무려 {roas_diff:.1f}%p나 주저앉았어요!\n"
+                    f"장사를 할수록 내 통장에서 ₩{deficit:,.0f}씩 슬금슬금 빠져나가고 있답니다. 즉시 탈출 조치를 취해야 해요!\n\n"
+                    f"💡 [이렇게 해결해 보아요! (둘 중 하나 꼭 하기)]\n"
+                    f"1. [상품 가격 올리기] : 손님이 결제하는 판매가격을 지금보다 올려서 내 주머니 마진을 채워보세요.\n"
+                    f"2. [더 싸게 떼어오기] : 도매처 사장님한테 가서 제품 1개당 가격을 {cost_val_str} 이하로 더 싸게 달라고 떼를 써보세요!\n"
+                    f"3. [알짜 손님 데려오기] : 쓰잘데기 없는 광고 키워드를 중단해서 광고판 수익률(ROAS)을 {real_end_roas:.1f}% 위로 번쩍 끌어올리세요!"
+                )
+            else:
+                roas_diff = roas - real_end_roas
+                
+                diag_msg = (
+                    f"🟢 [야호! 흑자 가속 페달 구간!]\n"
+                    f"쿠팡 광고판 점수(ROAS {roas:.1f}%)가 우리의 내 돈 지킴이 방패선(END ROAS {real_end_roas:.1f}%)보다 "
+                    f"무려 {roas_diff:.1f}%p 높게 솟아있어요! 지금은 세금 다 빼고도 ₩{real_profit:,.0f}의 알짜 이익이 통장에 쏙 꽂히는 신나는 구간입니다.\n\n"
+                    f"📈 [더 크게 벌어들이는 꿀팁!]\n"
+                    f"• 지금 마진 구조가 엄청 튼튼하니까, 광고 수익률이 앤드 로하스({real_end_roas:.1f}%) 아래로만 떨어지지 않게 슬슬 보면서 광고비를 더 든든하게 태워 판을 키우셔도 절대 망하지 않아요!\n"
+                    f"• 사입 수량을 늘려 원가 단가를 더 싸게 깎아오면 마진율은 백만 배 더 솟구칩니다. 당장 고고싱!"
+                )
+                
+            lbl_rx = ctk.CTkLabel(rx_card, text=diag_msg, font=("Malgun Gothic", 12), text_color="#E2E8F0", justify="left", wraplength=430)
+            lbl_rx.pack(pady=15, padx=18, anchor="w")
+            
+        except Exception as ex:
+            lbl_err = ctk.CTkLabel(self.calc_res_frame, text=f"입력값을 확인해주세요.\n({ex})", font=("Malgun Gothic", 12), text_color="#EF4444")
+            lbl_err.pack(pady=20)
 
     def _execute_analysis(self):
         if not self.analyzer.file_path:

@@ -1346,6 +1346,39 @@ class AdOptimizerApp(ctk.CTk):
             lbl_desc2 = ctk.CTkLabel(analysis_card, text=analysis_text, font=("Malgun Gothic", 12), text_color="#E2E8F0", justify="left", anchor="w", wraplength=480)
             lbl_desc2.pack(anchor="w", padx=15, pady=(0, 10), fill="x")
             
+            # [AI 추천 현실적 광고 세팅 튜닝 가이드 카드]
+            tune_card = ctk.CTkFrame(res_scroll, fg_color="#1E1B4B", corner_radius=10, border_width=1, border_color="#A855F7")
+            tune_card.pack(fill="x", pady=5)
+            
+            lbl_tune_title = ctk.CTkLabel(tune_card, text="💡 AI가 추천하는 현실적인 광고 튜닝 처방전 (성공 공식)", font=("Malgun Gothic", 14, "bold"), text_color="#C084FC")
+            lbl_tune_title.pack(anchor="w", padx=15, pady=(10, 5))
+            
+            # 튜닝 제안값 계산
+            max_realistic_roas = (3.0 * price / cpc)
+            max_realistic_cpc = (3.0 * price) / roas if roas > 0 else 0
+            
+            if req_cvr > 3.0:
+                tune_text = (
+                    f"현재 설정은 평균 전환율(3.0%) 기준 예산이 부족하거나 효율 목표가 과도하게 높습니다.\n"
+                    f"아래 변경안 중 하나를 적용하시면 AI가 우회하지 않고 성공적으로 광고를 운영합니다:\n\n"
+                    f"👉 [추천안 1. 일예산 조정]\n"
+                    f"   - 목표 효율({roas:.0f}%)을 지키려면, 일예산을 최소 ₩{req_budget_realistic:,.0f}원 이상으로 올리세요.\n\n"
+                    f"👉 [추천안 2. 목표 ROAS 조정]\n"
+                    f"   - 현재 일예산(₩{budget:,.0f}원)을 유지하려면, 목표 ROAS를 {max_realistic_roas:.0f}% 이하로 낮추세요.\n\n"
+                    f"👉 [추천안 3. 평균 CPC 조정]\n"
+                    f"   - 예산과 효율을 지키려면, 세부 키워드를 노려서 평균 CPC를 ₩{max_realistic_cpc:,.0f}원 이하로 낮추세요."
+                )
+            else:
+                tune_text = (
+                    f"🎉 현재 설정은 현실적으로 매우 훌륭하고 안정적인 세팅입니다!\n"
+                    f"AI가 정상적으로 검색 영역 및 주력 키워드에 적극 비딩할 것입니다.\n\n"
+                    f"🚀 [더 적극적인 세팅 추천]\n"
+                    f"   - 목표 효율({roas:.0f}%)을 높이거나 예산을 늘려 매출 규모 자체를 키워보세요!"
+                )
+                
+            lbl_tune_desc = ctk.CTkLabel(tune_card, text=tune_text, font=("Malgun Gothic", 12), text_color="#E9D5FF", justify="left", anchor="w", wraplength=480)
+            lbl_tune_desc.pack(anchor="w", padx=15, pady=(0, 10), fill="x")
+            
             # Part 3: AI의 비밀 행동 예측 (AI가 몰래 취할 행동)
             action_predict_card = ctk.CTkFrame(res_scroll, fg_color="#172554", corner_radius=10, border_width=1, border_color="#3B82F6")
             action_predict_card.pack(fill="x", pady=5)

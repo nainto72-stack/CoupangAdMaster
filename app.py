@@ -1535,7 +1535,7 @@ class AdOptimizerApp(ctk.CTk):
             lbl_err.pack(pady=20)
 
     def _run_ai_consultation(self, budget, roas, cpc, price, pname, req_cvr, max_realistic_roas, max_realistic_cpc, req_budget_realistic, target_revenue, target_sales, max_clicks):
-        api_key = self.api_key_entry.get().strip()
+        api_key = self.api_key_entry.get().strip().strip("'\"")
         provider = self.api_provider_var.get()
         
         if not api_key:
@@ -1556,6 +1556,7 @@ class AdOptimizerApp(ctk.CTk):
 
     def _call_ai_api_worker(self, api_key, provider, budget, roas, cpc, price, pname, req_cvr, max_realistic_roas, max_realistic_cpc, req_budget_realistic, target_revenue, target_sales, max_clicks):
         import urllib.request
+        import urllib.error
         
         prompt = (
             "당신은 쿠팡 전문 AI 마케팅 컨설턴트입니다.\n"
@@ -1626,9 +1627,26 @@ class AdOptimizerApp(ctk.CTk):
                     res_body = json.loads(response.read().decode("utf-8"))
                     result_text = res_body["content"][0]["text"]
                     
+        except urllib.error.HTTPError as he:
+            traceback.print_exc()
+            try:
+                error_body = he.read().decode("utf-8")
+                err_data = json.loads(error_body)
+                msg = ""
+                if "error" in err_data:
+                    err_obj = err_data["error"]
+                    if isinstance(err_obj, dict) and "message" in err_obj:
+                        msg = err_obj["message"]
+                    else:
+                        msg = str(err_obj)
+                else:
+                    msg = error_body
+                result_text = f"❌ AI 서버 오류 (HTTP {he.code}):\n{msg}\n\n위 에러 메시지(API 키 만료, 요금 부족 등)를 확인하여 조치를 취해 주세요."
+            except:
+                result_text = f"❌ AI 서버 오류 (HTTP {he.code}): {he.reason}\n\n입력하신 API 키의 결제/크레딧 상태를 확인해 주세요."
         except Exception as e:
             traceback.print_exc()
-            result_text = f"❌ AI API 호출 중 오류가 발생했습니다:\n{str(e)}\n\n입력하신 API 키의 유효성을 확인하시거나 네트워크 상태를 확인해 주세요."
+            result_text = f"❌ AI API 호출 중 오류가 발생했습니다:\n{str(e)}\n\n인터넷 연결을 확인하시거나 잠시 후 다시 시도해 주세요."
             
         self.after(0, lambda: self._update_ai_consultation_ui(result_text))
 

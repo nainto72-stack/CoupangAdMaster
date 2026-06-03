@@ -87,6 +87,7 @@ class AdOptimizerApp(ctk.CTk):
         self.tab_diagnosis = self.tabview.add("🛡️ AI 전략 나침반")
         self.tab_calculator = self.tabview.add("🧮 ROAS 순익 계산기")
         self.tab_region_metrics = self.tabview.add("🌐 노출 영역별 분석")
+        self.tab_ai_simulator = self.tabview.add("🔮 AI 광고 시뮬레이터")
         
         self._setup_dashboard_tab()
         self._setup_keyword_tab()
@@ -99,6 +100,7 @@ class AdOptimizerApp(ctk.CTk):
         self._setup_diagnosis_tab()
         self._setup_calculator_tab()
         self._setup_region_metrics_tab()
+        self._setup_ai_simulator_tab()
         
         self._refresh_management_tabs()
 
@@ -1200,6 +1202,202 @@ class AdOptimizerApp(ctk.CTk):
             
         except Exception as ex:
             lbl_err = ctk.CTkLabel(self.calc_res_frame, text=f"입력값을 확인해주세요.\n({ex})", font=("Malgun Gothic", 12), text_color="#EF4444")
+            lbl_err.pack(pady=20)
+
+    def _setup_ai_simulator_tab(self):
+        # 탭 전체를 스크롤 가능하게 구성
+        sim_scroll = ctk.CTkScrollableFrame(self.tab_ai_simulator, fg_color="#0B0B1A")
+        sim_scroll.pack(fill="both", expand=True)
+        
+        title_lbl = ctk.CTkLabel(sim_scroll, text="🔮 AI 광고 작동원리 & 미래 시뮬레이터", font=("Malgun Gothic", 26, "bold"), text_color="#EC4899")
+        title_lbl.pack(pady=20)
+        
+        # 좌우 분할을 위한 메인 컨테이너
+        sim_split = ctk.CTkFrame(sim_scroll, fg_color="transparent")
+        sim_split.pack(fill="both", expand=True, padx=30, pady=10)
+        
+        # 1. 좌측 입력 패널
+        left_panel = ctk.CTkFrame(sim_split, fg_color="#101026", border_width=2, border_color="#1E293B", corner_radius=15)
+        left_panel.pack(side="left", fill="both", expand=True, padx=(0, 15), pady=10)
+        
+        lbl_input_title = ctk.CTkLabel(left_panel, text="📥 시뮬레이션 조건 입력", font=("Malgun Gothic", 18, "bold"), text_color="#EC4899")
+        lbl_input_title.pack(pady=15, padx=20, anchor="w")
+        
+        # 가이드 배너 추가
+        info_banner = ctk.CTkFrame(left_panel, fg_color="#1E1E38", border_width=1, border_color="#EC4899", corner_radius=8)
+        info_banner.pack(fill="x", padx=20, pady=(0, 10))
+        
+        info_lbl = ctk.CTkLabel(
+            info_banner,
+            text="💡 설정하신 일예산, 목표 ROAS, CPC 단가, 제품가격을 기반으로\n    쿠팡 AI 광고의 실제 예산 운용 한계와 예상 행동 방안을 진단합니다.",
+            font=("Malgun Gothic", 12),
+            text_color="#FBCFE8",
+            justify="left"
+        )
+        info_lbl.pack(padx=15, pady=10, anchor="w")
+        
+        form_frame = ctk.CTkFrame(left_panel, fg_color="transparent")
+        form_frame.pack(fill="x", padx=20, pady=5)
+        
+        inputs = [
+            ("1. 일일 광고 예산 (₩)", "sim_budget", "30,000"),
+            ("2. 목표 광고 효율 (ROAS %)", "sim_roas", "350"),
+            ("3. 평균 CPC 단가 (₩)", "sim_cpc", "1,000"),
+            ("4. 제품 판매 가격 (₩)", "sim_price", "20,000"),
+            ("5. 대상 제품명 (카테고리)", "sim_pname", "가방백팩")
+        ]
+        
+        self.sim_vars = {}
+        for idx, (label_txt, var_name, def_val) in enumerate(inputs):
+            lbl_container = ctk.CTkFrame(form_frame, fg_color="transparent")
+            lbl_container.grid(row=idx, column=0, padx=10, pady=6, sticky="w")
+            
+            lbl = ctk.CTkLabel(lbl_container, text=label_txt, font=("Malgun Gothic", 13, "bold"), text_color="#E2E8F0")
+            lbl.pack(side="left")
+            
+            entry = ctk.CTkEntry(form_frame, width=320, height=32, font=("Malgun Gothic", 13), fg_color="#1E1E38", text_color="white", border_color="#EC4899")
+            entry.insert(0, def_val)
+            entry.grid(row=idx, column=1, padx=10, pady=6, sticky="e")
+            entry.bind("<KeyRelease>", lambda e: self._calculate_ai_simulation())
+            self.sim_vars[var_name] = entry
+            
+        form_frame.grid_columnconfigure(1, weight=1)
+        
+        btn_calc = ctk.CTkButton(left_panel, text="🔮 AI 작동 원리 시뮬레이션 시작", command=self._calculate_ai_simulation, fg_color="#DB2777", hover_color="#BE185D", height=45, font=("Malgun Gothic", 14, "bold"))
+        btn_calc.pack(fill="x", padx=20, pady=15)
+        
+        # 2. 우측 결과 패널
+        right_panel = ctk.CTkFrame(sim_split, fg_color="#101026", border_width=2, border_color="#3B82F6", corner_radius=15)
+        right_panel.pack(side="right", fill="both", expand=True, padx=(15, 0), pady=10)
+        
+        lbl_res_title = ctk.CTkLabel(right_panel, text="📋 AI 광고 비밀 일기 & 행동 예측서", font=("Malgun Gothic", 18, "bold"), text_color="#34D399")
+        lbl_res_title.pack(pady=15, padx=20, anchor="w")
+        
+        self.sim_res_frame = ctk.CTkFrame(right_panel, fg_color="#0F0F24", border_width=1, border_color="#2E2E4A", corner_radius=10)
+        self.sim_res_frame.pack(fill="both", expand=True, padx=20, pady=(5, 20))
+        
+        self._calculate_ai_simulation()
+
+    def _calculate_ai_simulation(self):
+        for w in self.sim_res_frame.winfo_children():
+            w.destroy()
+            
+        try:
+            budget = float(self.sim_vars["sim_budget"].get().replace(",", "") or 0)
+            roas = float(self.sim_vars["sim_roas"].get().replace(",", "") or 0)
+            cpc = float(self.sim_vars["sim_cpc"].get().replace(",", "") or 0)
+            price = float(self.sim_vars["sim_price"].get().replace(",", "") or 0)
+            pname = self.sim_vars["sim_pname"].get().strip() or "상품"
+            
+            if budget <= 0 or roas <= 0 or cpc <= 0 or price <= 0:
+                raise ValueError("모든 입력값은 0보다 커야 합니다.")
+                
+            target_revenue = budget * (roas / 100.0)
+            target_sales = target_revenue / price
+            max_clicks = budget / cpc
+            req_cvr = (target_sales / max_clicks) * 100 if max_clicks > 0 else 0
+            
+            # 현실적인 전환율 3% 기준 계산
+            cvr_realistic = 3.0
+            req_clicks_realistic = target_sales / (cvr_realistic / 100.0)
+            req_budget_realistic = req_clicks_realistic * cpc
+            budget_deficit_factor = req_budget_realistic / budget
+            
+            # 스크롤 영역 생성
+            res_scroll = ctk.CTkScrollableFrame(self.sim_res_frame, fg_color="transparent")
+            res_scroll.pack(fill="both", expand=True, padx=10, pady=10)
+            
+            # Part 1: AI가 부여받은 목표 (특명) 카드
+            target_card = ctk.CTkFrame(res_scroll, fg_color="#1E1E38", corner_radius=10, border_width=1, border_color="#3B82F6")
+            target_card.pack(fill="x", pady=5)
+            
+            lbl_title1 = ctk.CTkLabel(target_card, text="🎯 쿠팡 AI가 부여받은 특명 (목표치)", font=("Malgun Gothic", 14, "bold"), text_color="#60A5FA")
+            lbl_title1.pack(anchor="w", padx=15, pady=(10, 5))
+            
+            target_text = (
+                f"• 목표 매출액: ₩{target_revenue:,.0f} 원\n"
+                f"  (예산 ₩{budget:,.0f}원으로 {roas:.0f}% 광고 효율 달성 미션)\n"
+                f"• 목표 판매량: 약 {target_sales:.1f}개 ({price:,.0f}원짜리 {pname} 기준)\n"
+                f"☞ AI의 마음속 외침: \"나는 하루 만에 {price:,.0f}원짜리 {pname}를 {target_sales:.1f}개 팔아야만 해!\""
+            )
+            lbl_desc1 = ctk.CTkLabel(target_card, text=target_text, font=("Malgun Gothic", 12), text_color="#E2E8F0", justify="left")
+            lbl_desc1.pack(anchor="w", padx=15, pady=(0, 10))
+            
+            # Part 2: AI의 예산 한계 및 현실 분석 카드
+            cvr_warning_color = "#EF4444" if req_cvr > 5.0 else "#10B981"
+            status_text = "❌ 도저히 불가능 (정공법 불가)" if req_cvr > 5.0 else "✅ 운영 가능 범위"
+            
+            analysis_card = ctk.CTkFrame(res_scroll, fg_color="#1E1E38", corner_radius=10, border_width=1, border_color=cvr_warning_color)
+            analysis_card.pack(fill="x", pady=5)
+            
+            lbl_title2 = ctk.CTkLabel(analysis_card, text="📊 AI의 현실 계산기 & 예산 대비 부족 판단", font=("Malgun Gothic", 14, "bold"), text_color=cvr_warning_color)
+            lbl_title2.pack(anchor="w", padx=15, pady=(10, 5))
+            
+            analysis_text = (
+                f"• 예산 한도 내 최대 가능 클릭 수: {max_clicks:.1f} 회\n"
+                f"• 목표 달성에 필요한 극단적 전환율(CVR): {req_cvr:.1f}%\n"
+                f"  ※ [주의] {pname} 카테고리의 현실적 평균 전환율(CVR)은 약 3% 수준입니다.\n"
+                f"• 현실적 전환율(3%) 기준 필요 클릭 수: {req_clicks_realistic:.1f} 회\n"
+                f"• 현실적 전환율(3%) 적용 시 필요한 광고 예산: ₩{req_budget_realistic:,.0f} 원\n"
+                f"• 예산 부족율: 약 {budget_deficit_factor:.1f}배 부족\n"
+                f"☞ AI의 최종 결론: [{status_text}] \"내게 허락된 클릭은 {max_clicks:.0f}번뿐인데, "
+                f"{target_sales:.1f}개를 팔려면 전환율이 무려 {req_cvr:.1f}%가 나와야 해. 이건 물리적으로 불가능한 미션이야!\""
+            )
+            lbl_desc2 = ctk.CTkLabel(analysis_card, text=analysis_text, font=("Malgun Gothic", 12), text_color="#E2E8F0", justify="left")
+            lbl_desc2.pack(anchor="w", padx=15, pady=(0, 10))
+            
+            # Part 3: AI의 비밀 행동 예측 (AI가 몰래 취할 행동)
+            action_predict_card = ctk.CTkFrame(res_scroll, fg_color="#172554", corner_radius=10, border_width=1, border_color="#3B82F6")
+            action_predict_card.pack(fill="x", pady=5)
+            
+            lbl_title3 = ctk.CTkLabel(action_predict_card, text="🕵️‍♂️ 쿠팡 AI 광고의 예상 잠입 행로 (AI가 몰래 취할 행동)", font=("Malgun Gothic", 14, "bold"), text_color="#93C5FD")
+            lbl_title3.pack(anchor="w", padx=15, pady=(10, 5))
+            
+            if req_cvr > 3.0:
+                behavior_text = (
+                    f"⚠️ [비상!] AI는 이대로 메인 키워드('{pname}')를 입찰하면 단 30초 만에 예산이 다 날아가고,\n"
+                    f"수익률(ROAS)이 바닥을 칠 것을 직감하고 아래와 같이 우회 운영을 시작할 것입니다:\n\n"
+                    f"1. 🚫 메인 키워드 입찰 회피:\n"
+                    f"   - 단가가 비싼 메인 키워드('{pname}')에는 광고를 입찰하지 못하고 포기합니다.\n"
+                    f"2. 📉 비검색 영역 및 헐값 세부 키워드로 도피:\n"
+                    f"   - 비교적 CPC 단가가 저렴한 비검색 영역(상품 상세/비교 페이지)에 광고 노출을 집중시킵니다.\n"
+                    f"   - 혹은 '{pname}' 대신 단가가 매우 저렴한 세부 롱테일 키워드(예: '6학년아이가방', '가성비가방' 등)로 광고를 숨겨서 노출합니다.\n"
+                    f"3. ⚠️ 결과:\n"
+                    f"   - 클릭 단가(CPC)는 평균 100원~300원 수준으로 낮아져 목표 ROAS를 어찌어찌 맞출 수도 있으나,\n"
+                    f"   - 노출과 클릭이 거의 일어나지 않아 상품 판매량이 극도로 정체되는 현상을 겪게 됩니다."
+                )
+            else:
+                behavior_text = (
+                    f"✅ [양호] AI는 목표 전환율({req_cvr:.1f}%)이 현실 CVR(3%) 이하이므로 메인 키워드인 '{pname}'에 적극적으로 광고를 집행할 것입니다.\n"
+                    f"예산이 충분하여 검색 영역 및 주력 키워드에서 활발한 경쟁이 이루어질 것으로 보입니다."
+                )
+            lbl_desc3 = ctk.CTkLabel(action_predict_card, text=behavior_text, font=("Malgun Gothic", 12), text_color="#E2E8F0", justify="left")
+            lbl_desc3.pack(anchor="w", padx=15, pady=(0, 10))
+            
+            # Part 4: 초등학생도 1초 이해하는 처방전 및 실질적 액션플랜
+            action_plan_card = ctk.CTkFrame(res_scroll, fg_color="#0F172A", corner_radius=10, border_width=1, border_color="#34D399")
+            action_plan_card.pack(fill="x", pady=5)
+            
+            lbl_title4 = ctk.CTkLabel(action_plan_card, text="💡 초등학생도 1초 이해하는 처방전 & 실질적 액션 플랜", font=("Malgun Gothic", 14, "bold"), text_color="#34D399")
+            lbl_title4.pack(anchor="w", padx=15, pady=(10, 5))
+            
+            action_plan_text = (
+                "📍 [액션 플랜 1] 시간대별 입찰가 변동 노려 광고비 아끼기!\n"
+                "   • 원리: 경쟁사들은 보통 일예산을 충분히 안 잡아서(3만원 등) 낮 2~3시쯤이면 광고비가 다 닳아서 광고가 꺼진단다!\n"
+                "   • 비밀: 그럼 저녁이나 밤시간이 될수록 입찰 경쟁자가 싹 빠져서 광고 단가가 아침(1,000~1,500원)보다 엄청 싼 100~300원으로 내려가!\n"
+                "   • 실행: 매출 최적화 광고 예산을 충분히 넉넉히 주거나, 밤/새벽 시간대에 켜지도록 관리해서 싼 값에 클릭을 주워 먹으렴!\n\n"
+                "📍 [액션 플랜 2] 수동 키워드 최저가(100원) 낚시줄 드리우기!\n"
+                "   • 원리: 수동 키워드는 광고 단가를 내가 직접 정할 수 있어. 최저가인 100원으로 맞춰두는 거야.\n"
+                "   • 실행: 연관 있는 세부 키워드 수십 개에 100원짜리 광고를 쫙 깔아놔. 다른 애들 돈 다 쓰고 퇴근했을 때 내 상품이 아주 싼 값에 노출되고 팔려 나간단다!\n\n"
+                "📍 [액션 플랜 3] 300대 1의 싸움에서 이길 수 있는 키워드만 고르기!\n"
+                "   • 원리: 쿠팡에 가방을 치면 나랑 똑같은 가방이 10개, 비슷한 가방은 300개나 있어!\n"
+                "   • 실행: 메인 키워드에 무작정 입찰하기 전에, 직접 쿠팡에 키워드들을 쳐봐! 같이 뜨는 상품들과 비교해서 내 가방이 확실히 더 쌀 때나 메리트가 확실할 때(예: 사은품, 리뷰 압도)만 그 키워드에 비싼 돈(CPC 1,000원)을 내며 광고를 들어가야 승리할 수 있어!"
+            )
+            lbl_desc4 = ctk.CTkLabel(action_plan_card, text=action_plan_text, font=("Malgun Gothic", 12), text_color="#E2E8F0", justify="left")
+            lbl_desc4.pack(anchor="w", padx=15, pady=(0, 10))
+            
+        except Exception as ex:
+            lbl_err = ctk.CTkLabel(self.sim_res_frame, text=f"입력값을 확인해주세요.\n({ex})", font=("Malgun Gothic", 12), text_color="#EF4444")
             lbl_err.pack(pady=20)
 
     def _setup_region_metrics_tab(self):

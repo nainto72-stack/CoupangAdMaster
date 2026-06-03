@@ -1613,19 +1613,41 @@ class AdOptimizerApp(ctk.CTk):
                     "x-api-key": api_key,
                     "anthropic-version": "2023-06-01"
                 }
-                data = {
-                    "model": "claude-3-5-sonnet-20241022",
-                    "max_tokens": 2048,
-                    "messages": [
-                        {"role": "user", "content": prompt}
-                    ],
-                    "temperature": 0.7
-                }
                 
-                req = urllib.request.Request(url, data=json.dumps(data).encode("utf-8"), headers=headers, method="POST")
-                with urllib.request.urlopen(req, timeout=15) as response:
-                    res_body = json.loads(response.read().decode("utf-8"))
-                    result_text = res_body["content"][0]["text"]
+                # 3단계 모델 후보군 순차 시도 (최신 Sonnet -> 특정 날짜 Sonnet -> 기본 Haiku)
+                models_to_try = [
+                    "claude-3-5-sonnet-latest",
+                    "claude-3-5-sonnet-20241022",
+                    "claude-3-haiku-20240307"
+                ]
+                
+                last_error_msg = ""
+                for model_name in models_to_try:
+                    try:
+                        print(f"[AI 시뮬레이터] Claude 모델 시도 중: {model_name}")
+                        data = {
+                            "model": model_name,
+                            "max_tokens": 2048,
+                            "messages": [
+                                {"role": "user", "content": prompt}
+                            ],
+                            "temperature": 0.7
+                        }
+                        
+                        req = urllib.request.Request(url, data=json.dumps(data).encode("utf-8"), headers=headers, method="POST")
+                        with urllib.request.urlopen(req, timeout=15) as response:
+                            res_body = json.loads(response.read().decode("utf-8"))
+                            result_text = res_body["content"][0]["text"]
+                            print(f"[AI 시뮬레이터] Claude 모델 호출 성공: {model_name}")
+                            break
+                    except urllib.error.HTTPError as he:
+                        if he.code == 404:
+                            last_error_msg = f"{model_name} 모델을 찾을 수 없습니다."
+                            continue
+                        else:
+                            raise he
+                else:
+                    raise ValueError(f"모든 Claude 모델 호출에 실패했습니다. 계정 권한을 확인해 주세요. (최근 에러: {last_error_msg})")
                     
         except urllib.error.HTTPError as he:
             traceback.print_exc()

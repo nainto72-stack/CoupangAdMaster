@@ -1266,6 +1266,40 @@ class AdOptimizerApp(ctk.CTk):
         btn_calc = ctk.CTkButton(left_panel, text="🔮 AI 작동 원리 시뮬레이션 시작", command=self._calculate_ai_simulation, fg_color="#DB2777", hover_color="#BE185D", height=45, font=("Malgun Gothic", 14, "bold"))
         btn_calc.pack(fill="x", padx=20, pady=15)
         
+        # 🔑 API 연동 프레임 추가
+        api_frame = ctk.CTkFrame(left_panel, fg_color="#1E1E38", corner_radius=10, border_width=1, border_color="#A855F7")
+        api_frame.pack(fill="x", padx=20, pady=(5, 20))
+        
+        lbl_api_title = ctk.CTkLabel(api_frame, text="🤖 외부 GPT / Claude AI 개입 연동", font=("Malgun Gothic", 13, "bold"), text_color="#C084FC")
+        lbl_api_title.pack(anchor="w", padx=15, pady=(8, 4))
+        
+        # API 제공자 선택
+        self.api_provider_var = ctk.StringVar(value="OpenAI (GPT)")
+        api_provider_menu = ctk.CTkOptionMenu(
+            api_frame, 
+            values=["OpenAI (GPT)", "Anthropic (Claude)"],
+            variable=self.api_provider_var,
+            width=280,
+            height=30,
+            fg_color="#3B2E5A",
+            button_color="#2E204A",
+            button_hover_color="#4C3E7A"
+        )
+        api_provider_menu.pack(padx=15, pady=4)
+        
+        # API 키 입력
+        self.api_key_entry = ctk.CTkEntry(
+            api_frame, 
+            placeholder_text="API 키를 입력하세요 (sk-...) ", 
+            width=280, 
+            height=30, 
+            font=("Malgun Gothic", 12),
+            show="*",
+            fg_color="#1E1E38",
+            border_color="#A855F7"
+        )
+        self.api_key_entry.pack(padx=15, pady=(4, 12))
+        
         # 2. 우측 결과 패널
         right_panel = ctk.CTkFrame(sim_split, fg_color="#101026", border_width=2, border_color="#3B82F6", corner_radius=15)
         right_panel.pack(side="right", fill="both", expand=True, padx=(15, 0), pady=10)
@@ -1472,9 +1506,138 @@ class AdOptimizerApp(ctk.CTk):
             lbl_desc4 = ctk.CTkLabel(action_plan_card, text=action_plan_text, font=("Malgun Gothic", 12), text_color="#E2E8F0", justify="left", anchor="w", wraplength=480)
             lbl_desc4.pack(anchor="w", padx=15, pady=(0, 10), fill="x")
             
+            # Part 5: AI 마케팅 컨설턴트 1:1 맞춤 진단서 카드
+            ai_consult_card = ctk.CTkFrame(res_scroll, fg_color="#0F0F24", corner_radius=10, border_width=1, border_color="#A855F7")
+            ai_consult_card.pack(fill="x", pady=5)
+            
+            lbl_title5 = ctk.CTkLabel(ai_consult_card, text="🤖 GPT / Claude AI 마케팅 컨설턴트 1:1 심층 진단서", font=("Malgun Gothic", 14, "bold"), text_color="#A855F7")
+            lbl_title5.pack(anchor="w", padx=15, pady=(10, 5))
+            
+            self.ai_consult_box = ctk.CTkTextbox(ai_consult_card, height=350, font=("Malgun Gothic", 12), fg_color="#04070D", text_color="#F8FAFC", wrap="word", corner_radius=8)
+            self.ai_consult_box.pack(fill="both", expand=True, padx=15, pady=(5, 10))
+            
+            self.api_btn = ctk.CTkButton(
+                ai_consult_card, 
+                text="🤖 AI 실시간 심층 컨설팅 받기", 
+                command=lambda: self._run_ai_consultation(budget, roas, cpc, price, pname, req_cvr, max_realistic_roas, max_realistic_cpc, req_budget_realistic, target_revenue, target_sales, max_clicks),
+                fg_color="#8B5CF6", 
+                hover_color="#7C3AED", 
+                height=35, 
+                font=("Malgun Gothic", 12, "bold")
+            )
+            self.api_btn.pack(fill="x", padx=15, pady=(0, 15))
+            
+            self.ai_consult_box.insert("0.0", "💡 좌측에서 OpenAI 또는 Claude API 키를 입력한 뒤 아래 [AI 실시간 심층 컨설팅 받기] 버튼을 누르면,\n선택하신 AI 모델이 이 설정과 제품명을 기반으로 실시간 심층 마케팅 보고서를 작성해 줍니다.\n\nAPI 키가 없는 경우에도 기본 제공되는 위의 1~4번 분석 카드를 통해 진단받으실 수 있습니다.")
+            self.ai_consult_box.configure(state="disabled")
+            
         except Exception as ex:
             lbl_err = ctk.CTkLabel(self.sim_res_frame, text=f"입력값을 확인해주세요.\n({ex})", font=("Malgun Gothic", 12), text_color="#EF4444")
             lbl_err.pack(pady=20)
+
+    def _run_ai_consultation(self, budget, roas, cpc, price, pname, req_cvr, max_realistic_roas, max_realistic_cpc, req_budget_realistic, target_revenue, target_sales, max_clicks):
+        api_key = self.api_key_entry.get().strip()
+        provider = self.api_provider_var.get()
+        
+        if not api_key:
+            messagebox.showwarning("API 키 누락", "AI 실시간 컨설팅을 받으시려면 좌측에 API 키를 입력해 주세요.")
+            return
+            
+        self.ai_consult_box.configure(state="normal")
+        self.ai_consult_box.delete("0.0", "end")
+        self.ai_consult_box.insert("0.0", f"AI가 {pname} 광고 세팅과 경쟁 구도를 분석 중입니다...\n300대 1의 경쟁을 뚫고 흑자로 가기 위한 맞춤형 세팅 튜닝 및 실전 마케팅 보고서를 작성 중입니다. 잠시만 기다려 주세요 (약 5~10초 소요)... ⏳")
+        self.ai_consult_box.configure(state="disabled")
+        
+        self.api_btn.configure(state="disabled")
+        
+        # 백그라운드 스레드에서 API 호출 실행
+        t = threading.Thread(target=self._call_ai_api_worker, args=(api_key, provider, budget, roas, cpc, price, pname, req_cvr, max_realistic_roas, max_realistic_cpc, req_budget_realistic, target_revenue, target_sales, max_clicks))
+        t.daemon = True
+        t.start()
+
+    def _call_ai_api_worker(self, api_key, provider, budget, roas, cpc, price, pname, req_cvr, max_realistic_roas, max_realistic_cpc, req_budget_realistic, target_revenue, target_sales, max_clicks):
+        import urllib.request
+        
+        prompt = (
+            "당신은 쿠팡 전문 AI 마케팅 컨설턴트입니다.\n"
+            "사용자가 입력한 제품과 광고 세팅을 정밀 진단하여, 300대 1의 쿠팡 경쟁을 뚫고 흑자 전환하기 위한 실질적이고 구체적인 액션 플랜을 제시해야 합니다.\n"
+            "초등학생도 1초 만에 바로 이해할 수 있을 만큼 쉽고 재미있는 비유(방패선, 낚시줄 등)를 섞어 설명하되, 전문 마케터처럼 정밀한 수치적 분석을 제공하세요.\n"
+            "다음은 사용자의 광고 설정 정보입니다:\n"
+            f"- 상품명: {pname}\n"
+            f"- 상품 판매가: {price:,.0f}원\n"
+            f"- 일일 광고 예산: {budget:,.0f}원\n"
+            f"- 목표 ROAS: {roas:.0f}%\n"
+            f"- 설정한 평균 CPC 단가: {cpc:,.0f}원\n"
+            f"- 계산된 요구 전환율(CVR): {req_cvr:.1f}% (현실 평균 CVR은 3.0%입니다)\n"
+            f"- 현실적 최대 ROAS: {max_realistic_roas:.0f}%\n"
+            f"- 목표 달성을 위한 최적 CPC: {max_realistic_cpc:,.0f}원\n\n"
+            "다음 내용을 포함하여 보고서를 한글로 작성해 주세요:\n"
+            "1. 🎯 [현재 광고 세팅 진단 총평]\n"
+            f"   - 요구 CVR({req_cvr:.1f}%)과 현실 CVR(3%)의 괴리를 분석하고 왜 예산을 올려도 계속 예산이 부족해지는지(무한 루프의 수학적 이유) 설명.\n"
+            "2. 🕵️‍♂️ [쿠팡 AI 광고의 예상 잠입 경로 & 꼼수 운용]\n"
+            f"   - 예산이 부족하여 목표 효율을 억지로 맞추기 위해 AI가 몰래 취할 행동(메인 키워드 회피, 비검색 영역 및 헐값 세부 키워드로 숨어드는 현상) 예측.\n"
+            "3. 💡 [300대 1의 경쟁을 뚫는 3대 실전 액션 플랜]\n"
+            "   - 액션 1: 경쟁사의 광고 예산이 소진되는 오후/저녁 시간대를 공략하는 시간대별 입찰 전략.\n"
+            "   - 액션 2: 수동 입찰가 최저가(100원) 낚시줄 전략 (구체적으로 어떻게 세부 키워드를 세팅해야 하는지).\n"
+            "   - 액션 3: 경쟁 상품(유사 제품 200~300개) 분석을 통해 내 상품이 팔릴 만한 승산 있는 키워드를 고르는 방법 (가격 경쟁력, 사은품, 리뷰 비교 등).\n"
+            "4. 🛠️ [AI 컨설턴트가 추천하는 최적의 튜닝 세팅 제안]\n"
+            f"   - 구체적으로 일예산을 얼마로 하거나, 목표 효율을 몇 %로 수정해야 광고가 우회하지 않고 정상 비딩을 타서 흑자를 볼 수 있는지 정확한 수치를 찝어주세요."
+        )
+        
+        result_text = ""
+        try:
+            if "OpenAI" in provider:
+                url = "https://api.openai.com/v1/chat/completions"
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {api_key}"
+                }
+                data = {
+                    "model": "gpt-4o-mini",
+                    "messages": [
+                        {"role": "system", "content": "You are a professional Coupang ad consultant speaking in Korean."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    "temperature": 0.7
+                }
+                
+                req = urllib.request.Request(url, data=json.dumps(data).encode("utf-8"), headers=headers, method="POST")
+                with urllib.request.urlopen(req, timeout=15) as response:
+                    res_body = json.loads(response.read().decode("utf-8"))
+                    result_text = res_body["choices"][0]["message"]["content"]
+                    
+            else:
+                url = "https://api.anthropic.com/v1/messages"
+                headers = {
+                    "Content-Type": "application/json",
+                    "x-api-key": api_key,
+                    "anthropic-version": "2023-06-01"
+                }
+                data = {
+                    "model": "claude-3-5-haiku-20241022",
+                    "max_tokens": 2048,
+                    "messages": [
+                        {"role": "user", "content": prompt}
+                    ],
+                    "temperature": 0.7
+                }
+                
+                req = urllib.request.Request(url, data=json.dumps(data).encode("utf-8"), headers=headers, method="POST")
+                with urllib.request.urlopen(req, timeout=15) as response:
+                    res_body = json.loads(response.read().decode("utf-8"))
+                    result_text = res_body["content"][0]["text"]
+                    
+        except Exception as e:
+            traceback.print_exc()
+            result_text = f"❌ AI API 호출 중 오류가 발생했습니다:\n{str(e)}\n\n입력하신 API 키의 유효성을 확인하시거나 네트워크 상태를 확인해 주세요."
+            
+        self.after(0, lambda: self._update_ai_consultation_ui(result_text))
+
+    def _update_ai_consultation_ui(self, result_text):
+        self.ai_consult_box.configure(state="normal")
+        self.ai_consult_box.delete("0.0", "end")
+        self.ai_consult_box.insert("0.0", result_text)
+        self.ai_consult_box.configure(state="disabled")
+        self.api_btn.configure(state="normal")
 
     def _setup_region_metrics_tab(self):
         # 탭 스크롤 영역 생성

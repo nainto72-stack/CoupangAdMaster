@@ -1320,8 +1320,8 @@ class AdOptimizerApp(ctk.CTk):
                 f"• 목표 판매량: 약 {target_sales:.1f}개 ({price:,.0f}원짜리 {pname} 기준)\n"
                 f"☞ AI의 마음속 외침: \"나는 하루 만에 {price:,.0f}원짜리 {pname}를 {target_sales:.1f}개 팔아야만 해!\""
             )
-            lbl_desc1 = ctk.CTkLabel(target_card, text=target_text, font=("Malgun Gothic", 12), text_color="#E2E8F0", justify="left")
-            lbl_desc1.pack(anchor="w", padx=15, pady=(0, 10))
+            lbl_desc1 = ctk.CTkLabel(target_card, text=target_text, font=("Malgun Gothic", 12), text_color="#E2E8F0", justify="left", anchor="w", wraplength=480)
+            lbl_desc1.pack(anchor="w", padx=15, pady=(0, 10), fill="x")
             
             # Part 2: AI의 예산 한계 및 현실 분석 카드
             cvr_warning_color = "#EF4444" if req_cvr > 5.0 else "#10B981"
@@ -1343,8 +1343,8 @@ class AdOptimizerApp(ctk.CTk):
                 f"☞ AI의 최종 결론: [{status_text}] \"내게 허락된 클릭은 {max_clicks:.0f}번뿐인데, "
                 f"{target_sales:.1f}개를 팔려면 전환율이 무려 {req_cvr:.1f}%가 나와야 해. 이건 물리적으로 불가능한 미션이야!\""
             )
-            lbl_desc2 = ctk.CTkLabel(analysis_card, text=analysis_text, font=("Malgun Gothic", 12), text_color="#E2E8F0", justify="left")
-            lbl_desc2.pack(anchor="w", padx=15, pady=(0, 10))
+            lbl_desc2 = ctk.CTkLabel(analysis_card, text=analysis_text, font=("Malgun Gothic", 12), text_color="#E2E8F0", justify="left", anchor="w", wraplength=480)
+            lbl_desc2.pack(anchor="w", padx=15, pady=(0, 10), fill="x")
             
             # Part 3: AI의 비밀 행동 예측 (AI가 몰래 취할 행동)
             action_predict_card = ctk.CTkFrame(res_scroll, fg_color="#172554", corner_radius=10, border_width=1, border_color="#3B82F6")
@@ -1371,8 +1371,8 @@ class AdOptimizerApp(ctk.CTk):
                     f"✅ [양호] AI는 목표 전환율({req_cvr:.1f}%)이 현실 CVR(3%) 이하이므로 메인 키워드인 '{pname}'에 적극적으로 광고를 집행할 것입니다.\n"
                     f"예산이 충분하여 검색 영역 및 주력 키워드에서 활발한 경쟁이 이루어질 것으로 보입니다."
                 )
-            lbl_desc3 = ctk.CTkLabel(action_predict_card, text=behavior_text, font=("Malgun Gothic", 12), text_color="#E2E8F0", justify="left")
-            lbl_desc3.pack(anchor="w", padx=15, pady=(0, 10))
+            lbl_desc3 = ctk.CTkLabel(action_predict_card, text=behavior_text, font=("Malgun Gothic", 12), text_color="#E2E8F0", justify="left", anchor="w", wraplength=480)
+            lbl_desc3.pack(anchor="w", padx=15, pady=(0, 10), fill="x")
             
             # Part 4: 초등학생도 1초 이해하는 처방전 및 실질적 액션플랜
             action_plan_card = ctk.CTkFrame(res_scroll, fg_color="#0F172A", corner_radius=10, border_width=1, border_color="#34D399")
@@ -1393,8 +1393,8 @@ class AdOptimizerApp(ctk.CTk):
                 "   • 원리: 쿠팡에 가방을 치면 나랑 똑같은 가방이 10개, 비슷한 가방은 300개나 있어!\n"
                 "   • 실행: 메인 키워드에 무작정 입찰하기 전에, 직접 쿠팡에 키워드들을 쳐봐! 같이 뜨는 상품들과 비교해서 내 가방이 확실히 더 쌀 때나 메리트가 확실할 때(예: 사은품, 리뷰 압도)만 그 키워드에 비싼 돈(CPC 1,000원)을 내며 광고를 들어가야 승리할 수 있어!"
             )
-            lbl_desc4 = ctk.CTkLabel(action_plan_card, text=action_plan_text, font=("Malgun Gothic", 12), text_color="#E2E8F0", justify="left")
-            lbl_desc4.pack(anchor="w", padx=15, pady=(0, 10))
+            lbl_desc4 = ctk.CTkLabel(action_plan_card, text=action_plan_text, font=("Malgun Gothic", 12), text_color="#E2E8F0", justify="left", anchor="w", wraplength=480)
+            lbl_desc4.pack(anchor="w", padx=15, pady=(0, 10), fill="x")
             
         except Exception as ex:
             lbl_err = ctk.CTkLabel(self.sim_res_frame, text=f"입력값을 확인해주세요.\n({ex})", font=("Malgun Gothic", 12), text_color="#EF4444")

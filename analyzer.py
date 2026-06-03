@@ -38,9 +38,11 @@ class CoupangAdAnalyzer:
         mapping = {
             'kw': None, 'imp': None, 'click': None, 'spend': None, 
             'sales': None, 'orders': None, 'rank': None, 'pname': None, 
-            'date': None, 'region': None
+            'date': None, 'region': None, 'dir_sales': None, 'indir_sales': None
         }
         sales_locked = False
+        dir_sales_locked = False
+        indir_sales_locked = False
         orders_locked = False
         for col in df.columns:
             c = str(col).replace(" ", "").replace("\n", "")
@@ -51,8 +53,20 @@ class CoupangAdAnalyzer:
             elif '노출수' in c: mapping['imp'] = col
             elif '클릭수' in c: mapping['click'] = col
             elif '광고비' in c or '지출' in c: mapping['spend'] = col
+            # 직접 전환매출액
+            elif '직접' in c and ('전환매출' in c or '매출액' in c) and '상품명' not in c and 'ID' not in c and 'id' not in c and '옵션' not in c and '수익률' not in c and 'ROAS' not in c and '율' not in c:
+                if not dir_sales_locked:
+                    mapping['dir_sales'] = col
+                    if '14일' in c:
+                        dir_sales_locked = True
+            # 간접 전환매출액
+            elif '간접' in c and ('전환매출' in c or '매출액' in c) and '상품명' not in c and 'ID' not in c and 'id' not in c and '옵션' not in c and '수익률' not in c and 'ROAS' not in c and '율' not in c:
+                if not indir_sales_locked:
+                    mapping['indir_sales'] = col
+                    if '14일' in c:
+                        indir_sales_locked = True
             # 매출액: '총 전환매출액(14일)'을 최우선, 상품명/옵션ID 제외
-            elif ('전환매출' in c or '매출액' in c) and '상품명' not in c and 'ID' not in c and 'id' not in c and '옵션' not in c:
+            elif ('전환매출' in c or '매출액' in c) and '상품명' not in c and 'ID' not in c and 'id' not in c and '옵션' not in c and '수익률' not in c and 'ROAS' not in c and '율' not in c:
                 if not sales_locked:
                     mapping['sales'] = col
                     if '총' in c and '14일' in c:
@@ -99,7 +113,7 @@ class CoupangAdAnalyzer:
                 df[m['kw']]
             )
 
-        num_cols = ['imp', 'click', 'spend', 'sales', 'orders']
+        num_cols = ['imp', 'click', 'spend', 'sales', 'orders', 'dir_sales', 'indir_sales']
         for k in num_cols:
             c = m[k]
             if c:
@@ -120,13 +134,21 @@ class CoupangAdAnalyzer:
                 l_date = active_dates[0]
                 l_df = df_c[df_c['p_date'] == l_date]
                 
-                agg_dict = {m['imp']: 'sum', m['click']: 'sum', m['spend']: 'sum', m['sales']: 'sum', m['orders']: 'sum'}
+                agg_dict = {
+                    m['imp']: 'sum', m['click']: 'sum', m['spend']: 'sum', 
+                    m['sales']: 'sum', m['orders']: 'sum',
+                    m['dir_sales']: 'sum', m['indir_sales']: 'sum'
+                }
                 if m['rank']: agg_dict[m['rank']] = 'mean'
                 if m['pname']: agg_dict[m['pname']] = 'first'
                 if m['region']: agg_dict[m['region']] = 'first'
                 
                 sum_df = df_c.groupby(m['kw']).agg(agg_dict).reset_index()
-                rename_map = {m['kw']: 'kw', m['imp']: 'imp', m['click']: 'click', m['spend']: 'spend', m['sales']: 'sales', m['orders']: 'orders'}
+                rename_map = {
+                    m['kw']: 'kw', m['imp']: 'imp', m['click']: 'click', 
+                    m['spend']: 'spend', m['sales']: 'sales', m['orders']: 'orders',
+                    m['dir_sales']: 'dir_sales', m['indir_sales']: 'indir_sales'
+                }
                 if m['rank']: rename_map[m['rank']] = 'rank'
                 if m['pname']: rename_map[m['pname']] = 'pname'
                 if m['region']: rename_map[m['region']] = 'region'
@@ -169,6 +191,8 @@ class CoupangAdAnalyzer:
                 tr['ROAS'] = np.where(tr[m['spend']] > 0, (tr[m['sales']] / tr[m['spend']]) * 100, 0)
                 tr['CTR'] = np.where(tr[m['imp']] > 0, (tr[m['click']] / tr[m['imp']]) * 100, 0)
                 tr.rename(columns={m['imp']: 'imp', m['click']: 'click', m['spend']: 'spend', m['sales']: 'sales', m['orders']: 'orders'}, inplace=True)
+                tr['CPC'] = np.where(tr['click'] > 0, tr['spend'] / tr['click'], 0)
+                tr['CVR'] = np.where(tr['click'] > 0, (tr['orders'] / tr['click']) * 100, 0)
                 self.trend_df = tr.sort_values('p_date')
                 
         return self.summary_df
@@ -176,7 +200,12 @@ class CoupangAdAnalyzer:
     def get_overall_summary(self):
         if self.summary_df is None: return None
         s = self.summary_df
-        t = {'spend': s['spend'].sum(), 'sales': s['sales'].sum(), 'orders': s['orders'].sum(), 'imp': s['imp'].sum(), 'click': s['click'].sum()}
+        t = {
+            'spend': s['spend'].sum(), 'sales': s['sales'].sum(), 
+            'orders': s['orders'].sum(), 'imp': s['imp'].sum(), 'click': s['click'].sum(),
+            'dir_sales': s['dir_sales'].sum() if 'dir_sales' in s.columns else 0,
+            'indir_sales': s['indir_sales'].sum() if 'indir_sales' in s.columns else 0
+        }
         t['ROAS'] = (t['sales'] / t['spend'] * 100) if t['spend'] > 0 else 0
         t['CTR'] = (t['click'] / t['imp'] * 100) if t['imp'] > 0 else 0
         t['CVR'] = (t['orders'] / t['click'] * 100) if t['click'] > 0 else 0
@@ -191,23 +220,28 @@ class CoupangAdAnalyzer:
             if m['date'] and m['region']:
                 df = self.raw_df.copy()
                 df['date_s'] = df[m['date']].apply(self.parse_date_robust).dt.strftime('%m.%d')
+                df['p_date'] = df[m['date']].apply(self.parse_date_robust)
                 
                 # 수치 데이터 안전 형변환 추가
-                for k in ['spend', 'sales', 'click', 'orders']:
+                for k in ['imp', 'spend', 'sales', 'click', 'orders']:
                     if m[k]:
                         df[m[k]] = pd.to_numeric(df[m[k]].astype(str).str.replace(',', '').str.replace('₩', '').str.replace('원', ''), errors='coerce').fillna(0)
                     else:
                         df[f'tmp_{k}'] = 0
                         m[k] = f'tmp_{k}'
                         
-                rt = df.groupby(['date_s', m['region']]).agg({
+                rt = df.groupby(['date_s', 'p_date', m['region']]).agg({
+                    m['imp']: 'sum',
                     m['spend']: 'sum', 
                     m['sales']: 'sum',
                     m['click']: 'sum',
                     m['orders']: 'sum'
                 }).reset_index()
-                rt.columns = ['date_s', 'region', 'spend', 'sales', 'click', 'orders']
-                res['by_region'] = rt
+                rt.columns = ['date_s', 'p_date', 'region', 'imp', 'spend', 'sales', 'click', 'orders']
+                rt['CTR'] = np.where(rt['imp'] > 0, (rt['click'] / rt['imp']) * 100, 0)
+                rt['CVR'] = np.where(rt['click'] > 0, (rt['orders'] / rt['click']) * 100, 0)
+                rt['ROAS'] = np.where(rt['spend'] > 0, (rt['sales'] / rt['spend']) * 100, 0)
+                res['by_region'] = rt.sort_values('p_date')
         return res
 
     def get_region_summary(self):

@@ -25,6 +25,7 @@ class AdOptimizerApp(ctk.CTk):
         self.analyzer = CoupangAdAnalyzer()
         self.current_data = None
         self.memos = self._load_memos()
+        self.editing_memo_id = None
         self.keyword_classes = self._load_keyword_classes()
         
         self._init_context_menu()
@@ -85,6 +86,7 @@ class AdOptimizerApp(ctk.CTk):
         self.tab_memos = self.tabview.add("📝 일별 기록 / 메모")
         self.tab_diagnosis = self.tabview.add("🛡️ AI 전략 나침반")
         self.tab_calculator = self.tabview.add("🧮 ROAS 순익 계산기")
+        self.tab_region_metrics = self.tabview.add("🌐 노출 영역별 분석")
         
         self._setup_dashboard_tab()
         self._setup_keyword_tab()
@@ -96,6 +98,7 @@ class AdOptimizerApp(ctk.CTk):
         self._setup_memos_tab()
         self._setup_diagnosis_tab()
         self._setup_calculator_tab()
+        self._setup_region_metrics_tab()
         
         self._refresh_management_tabs()
 
@@ -382,14 +385,26 @@ class AdOptimizerApp(ctk.CTk):
                 return
                 
             for p in products:
-                # 매출 발생 판정 (매출액 총합 > 0)
+                # 매출 발생 판정
                 sales_val = self.product_sales_dict.get(p, 0)
+                dir_val = self.product_dir_sales_dict.get(p, 0)
+                indir_val = self.product_indir_sales_dict.get(p, 0)
                 is_sales_plus = sales_val > 0
                 
-                # 디자인 설정 (매출 발생 상품은 파란색 계열, 무매출은 회백색)
-                txt_color = "#60A5FA" if is_sales_plus else "#E2E8F0"
-                prefix = "🟢 [매출 발생]  " if is_sales_plus else "⚪ [무매출]  "
-                btn_txt = f"{prefix}{p} (총 매출: {int(sales_val):,}원)" if is_sales_plus else f"{prefix}{p}"
+                # 디자인 설정 (직접 매출 유무 및 간접 매출 유무에 따라 세분화)
+                if is_sales_plus:
+                    if dir_val > 0:
+                        txt_color = "#60A5FA"  # 직접 매출 발생: 선명한 파란색
+                        prefix = "🟢 [매출 발생]  "
+                        btn_txt = f"{prefix}{p}\n(직접 매출: {int(dir_val):,}원 / 간접 매출: {int(indir_val):,}원 | 총 매출: {int(sales_val):,}원)"
+                    else:
+                        txt_color = "#FB923C"  # 간접 매출만 발생: 네온 오렌지
+                        prefix = "⚪ [무매출 (간접만 발생)]  "
+                        btn_txt = f"{prefix}{p}\n(직접 매출: 0원 / 간접 매출: {int(indir_val):,}원 | 총 매출: {int(sales_val):,}원)"
+                else:
+                    txt_color = "#E2E8F0"  # 완전 무매출: 회백색
+                    prefix = "⚪ [무매출]  "
+                    btn_txt = f"{prefix}{p}"
                 
                 # 긴 상품명이 잘리지 않도록 줄바꿈(wraplength)이 지원되는 CTkLabel을 탑재한 CTkFrame 카드 형태로 구현
                 item_frame = ctk.CTkFrame(self.popup_scroll, fg_color="#18182D", corner_radius=6, border_width=1, border_color="#2E2E4A")
@@ -441,18 +456,38 @@ class AdOptimizerApp(ctk.CTk):
         if self.analyzer.raw_df is None:
             self.selected_product_var.set("데이터 분석을 먼저 진행해주세요.")
             self.product_sales_dict = {}
+            self.product_dir_sales_dict = {}
+            self.product_indir_sales_dict = {}
             return
             
         m = self.analyzer._get_column_mapping(self.analyzer.raw_df)
         pname_col = m.get('pname')
         sales_col = m.get('sales')
+        dir_sales_col = m.get('dir_sales')
+        indir_sales_col = m.get('indir_sales')
         
-        # 상품별 총 매출액 집계
+        # 상품별 총 매출액, 직접 매출액, 간접 매출액 집계
         self.product_sales_dict = {}
-        if pname_col and sales_col and pname_col in self.analyzer.raw_df.columns:
+        self.product_dir_sales_dict = {}
+        self.product_indir_sales_dict = {}
+        
+        if pname_col and pname_col in self.analyzer.raw_df.columns:
             df_clean = self.analyzer.raw_df.copy()
-            df_clean[sales_col] = pd.to_numeric(df_clean[sales_col].astype(str).str.replace(',', '').str.replace('₩', '').str.replace('원', ''), errors='coerce').fillna(0)
-            self.product_sales_dict = df_clean.groupby(pname_col)[sales_col].sum().to_dict()
+            
+            # 총 매출액
+            if sales_col:
+                df_clean[sales_col] = pd.to_numeric(df_clean[sales_col].astype(str).str.replace(',', '').str.replace('₩', '').str.replace('원', ''), errors='coerce').fillna(0)
+                self.product_sales_dict = df_clean.groupby(pname_col)[sales_col].sum().to_dict()
+            
+            # 직접 매출액
+            if dir_sales_col:
+                df_clean[dir_sales_col] = pd.to_numeric(df_clean[dir_sales_col].astype(str).str.replace(',', '').str.replace('₩', '').str.replace('원', ''), errors='coerce').fillna(0)
+                self.product_dir_sales_dict = df_clean.groupby(pname_col)[dir_sales_col].sum().to_dict()
+                
+            # 간접 매출액
+            if indir_sales_col:
+                df_clean[indir_sales_col] = pd.to_numeric(df_clean[indir_sales_col].astype(str).str.replace(',', '').str.replace('₩', '').str.replace('원', ''), errors='coerce').fillna(0)
+                self.product_indir_sales_dict = df_clean.groupby(pname_col)[indir_sales_col].sum().to_dict()
             
             # 고유 상품명 추출 및 정렬
             products = self.analyzer.raw_df[pname_col].dropna().unique().tolist()
@@ -472,7 +507,7 @@ class AdOptimizerApp(ctk.CTk):
             self.selected_product_var.set("상품명 컬럼을 찾을 수 없습니다.")
 
     def _draw_product_charts(self):
-        """선택한 상품의 데이터로 기존 10대 차트를 필터링 렌더링"""
+        """선택한 상품의 데이터로 기존 10대 차트를 필터링 렌더링 및 12대 성과 카드 실시간 업데이트"""
         for w in self.prod_metrics_scroll.winfo_children():
             w.destroy()
             
@@ -503,18 +538,170 @@ class AdOptimizerApp(ctk.CTk):
             sub_analyzer.raw_df = raw_filtered
             sub_analyzer.process()
             
-            if sub_analyzer.trend_df is not None and not sub_analyzer.trend_df.empty:
-                df = sub_analyzer.trend_df
-                kw_data = sub_analyzer.summary_df
-                
-                # 공용 10대 차트 렌더러 호출
-                self._render_large_trend_chart(df, kw_data, self.prod_metrics_scroll)
+            # --- [Part 1] 상단 12대 성능 요약 카드 렌더링 (6x2) + 영역별 세부 분류 ---
+            overall = sub_analyzer.get_overall_summary()
+            region_summary = sub_analyzer.get_region_summary()
+            if overall:
+                self._render_kpi_summary_cards(overall, region_summary, self.prod_metrics_scroll)
+
+            # --- [Part 2] 가이드라인 박스 렌더링 ---
+            guide_box = ctk.CTkFrame(self.prod_metrics_scroll, fg_color="#101026", border_width=2, border_color="#FBBF24", corner_radius=15)
+            guide_box.pack(fill="x", padx=10, pady=15)
+            
+            # 타이틀
+            ctk.CTkLabel(guide_box, text="🧭 대표님을 위한 2대 광고투자 경영 나침반 가이드라인 (오른쪽날개 X 쇼팡식)", 
+                         font=("Malgun Gothic", 16, "bold"), text_color="#34D399").pack(anchor="w", padx=25, pady=(20, 10))
+            
+            # 실시간 데이터 분석 변수 바인딩
+            roas = 0.0
+            spend_ratio = 0.0
+            if overall:
+                roas = overall.get('ROAS', 0.0)
+                spend = overall.get('spend', 0.0)
+                sales = overall.get('sales', 0.0)
+                spend_ratio = (spend / sales * 100) if sales > 0 else 0.0
+    
+            # ROAS 및 광고비 비중 실시간 판정 멘트 빌드
+            if overall:
+                q1_verdict = (
+                    f"현재 이 상품의 광고 ROAS는 {roas:.1f}%입니다. "
+                    + ("기준선(330%)을 초과하여 흐름이 양호한 편이나, 사입 원가와 배송비를 감안하여 '가짜 흑자' 여부를 꼭 검증하셔야 합니다!" 
+                       if roas >= 330 else 
+                       "기준선(330%) 미만으로 저조하여 적자 장사일 위험이 큽니다! 아래 3대 차트로 증액 여부를 냉정히 판정해 보세요.")
+                )
+                q2_verdict = (
+                    f"현재 이 상품의 매출 대비 광고비 비중은 {spend_ratio:.1f}%입니다. "
+                    + (f"광고비 비중이 전체 매출의 10%를 돌파({spend_ratio:.1f}%)하여 위험 수위입니다! 행동 강령에 따라 즉시 제외 키워드를 정리하고 CVR을 끌어올려 광고비 비중을 마진율 밑으로 낮추셔야 합니다." 
+                       if spend_ratio > 10 else 
+                       "광고비 비중이 10% 이하로 안정 영역에서 잘 방어되고 있습니다. 마진율 마지노선 이하인지 계속 모니터링하세요.")
+                )
             else:
-                ctk.CTkLabel(self.prod_metrics_scroll, text="⚠️ 해당 상품의 일별 추이 데이터를 추출할 수 없습니다.", text_color="#EF4444", font=("Malgun Gothic", 14, "bold")).pack(pady=40)
+                q1_verdict = "ROAS가 500% 이상으로 좋아 보여도, 사입 원가와 배송비가 비싸면 매달 100만 원씩 내 통장서 돈이 까이는 '가짜 흑자'일 수 있습니다! 아래 3대 핵심 차트를 입체적으로 교차 검증하여 증액 여부를 판정하셔야 합니다."
+                q2_verdict = "택배를 열심히 포장해서 잘 파는 것처럼 보여도, 광고비가 내 마진을 갉아먹어 실제로 남는 돈이 줄어드는 '돈이 새는 늪'에 빠졌을 수 있습니다!"
+
+            # Q1 섹션 프레임
+            q1_section = ctk.CTkFrame(guide_box, fg_color="#070C16", corner_radius=10)
+            q1_section.pack(fill="x", padx=20, pady=(0, 10))
+            
+            # Q1 질문
+            q1_title = ctk.CTkLabel(q1_section, text=f"❓ Q1. 광고수익률(ROAS)이 좋아지면 무조건 광고비를 더 투자(증액)해도 될까요?\n➡️ [경영 판정법] : {q1_verdict}", 
+                                    font=("Malgun Gothic", 12, "bold"), text_color="#F8FAFC", justify="left", wraplength=1050)
+            q1_title.pack(anchor="w", padx=15, pady=(15, 5))
+            
+            # Q1 버튼 프레임 (오른쪽 정렬)
+            q1_btn_frame = ctk.CTkFrame(q1_section, fg_color="transparent")
+            q1_btn_frame.pack(fill="x", padx=15, pady=(0, 5))
+            
+            # Q1 상세 프레임 (기본적으로는 숨겨져 있음)
+            q1_detail_frame = ctk.CTkFrame(q1_section, fg_color="transparent")
+            
+            q1_detail_text = (
+                "  1️⃣ [최우선 판정선 - 12번 차트: 광고 차감 후 최종 순수익 vs 광고비 추이]\n"
+                "    • [판단 기준] : 지출 광고비(빨간 선)를 우상향으로 증액했을 때, 하늘색 실선인 [진짜 최종 순이익]이 빨간 선보다 높은 위치에서 함께 평행하게 우상향하며 뻗어 올라가야만 진정한 성공 증액 상태입니다!\n"
+                "    • [⚠️ 위험 신호] : 광고비 빨간 선은 쭉쭉 뻗어 올라가는데 하늘색 순이익 선이 아래로 꺾이거나 0원 밑(영하 적자 구간)으로 처박힌다면, 겉으로만 포장이 바쁘고 실제로는 '가짜 흑자 독수독과' 장사이므로 즉시 증액을 멈춰야 합니다.\n\n"
+                f"  2️⃣ [효율 검증 - 3번 차트: 광고비 vs ROAS 추이]\n"
+                f"    • [현재 상태] : 현재 상품의 평균 광고 ROAS는 {roas:.1f}%로, 흑자 기준선(330%) 대비 " + (
+                    "안정권 위에 있습니다. 일별 실시간 추이에서도 무너지지 않는지 대조해 보세요." if roas >= 330 else
+                    "저조하여 비효율 헛클릭 키워드에 예산이 새고 있을 가능성이 높습니다! 즉시 제외 키워드를 점검하십시오."
+                ) + "\n\n"
+                "  3️⃣ [이익 안전 마진띠 - 8번 차트: 날짜별 광고비·광고매출 추이]\n"
+                "    • [판단 기준] : 아래 빨간 실선(광고비)과 위 하늘색 실선(광고매출액) 사이의 벌어진 간격(이익 공간)이 좁혀지지 않고 점점 더 아득히 멀어지는 '확장형 대칭'을 이루고 있는지 확인하세요. 이 간격이 태평양처럼 넓어질수록 사장님의 주머니가 두둑해집니다.\n"
+                "    • [⚠️ 위험 신호] : 광고비 예산을 쏟아부었는데 두 선의 간격이 서로 키스하듯 달라붙거나 심지어 교차한다면, 번 돈의 100%를 쿠팡 광고비로 기부하고 있는 비상 적자 상태이므로 절대 광고비를 1원도 올리시면 안 됩니다!"
+            )
+            
+            q1_detail_label = ctk.CTkLabel(q1_detail_frame, text=q1_detail_text, font=("Malgun Gothic", 12), text_color="#F8FAFC", justify="left", wraplength=1050)
+            q1_detail_label.pack(anchor="w", padx=15, pady=(5, 15))
+            
+            def toggle_q1():
+                if q1_detail_frame.winfo_viewable():
+                    q1_detail_frame.pack_forget()
+                    q1_btn.configure(text="자세한 내용 보기 🔽", fg_color="#1E293B")
+                else:
+                    q1_detail_frame.pack(fill="x")
+                    q1_btn.configure(text="자세한 내용 접기 🔼", fg_color="#3B82F6")
+                    
+            q1_btn = ctk.CTkButton(q1_btn_frame, text="자세한 내용 보기 🔽", font=("Malgun Gothic", 11, "bold"), 
+                                   width=130, height=28, fg_color="#1E293B", hover_color="#2D3748", command=toggle_q1)
+            q1_btn.pack(side="right")
+
+
+            # Q2 섹션 프레임
+            q2_section = ctk.CTkFrame(guide_box, fg_color="#070C16", corner_radius=10)
+            q2_section.pack(fill="x", padx=20, pady=(0, 20))
+            
+            # Q2 질문
+            q2_title = ctk.CTkLabel(q2_section, text=f"❓ Q2. 광고비가 더 나가지만 판매량(주문수)도 증가하면 줄이지 말고 계속 더 투자해야 할까요?\n➡️ [경영 판정법] : {q2_verdict}", 
+                                    font=("Malgun Gothic", 12, "bold"), text_color="#F8FAFC", justify="left", wraplength=1050)
+            q2_title.pack(anchor="w", padx=15, pady=(15, 5))
+            
+            # Q2 버튼 프레임 (오른쪽 정렬)
+            q2_btn_frame = ctk.CTkFrame(q2_section, fg_color="transparent")
+            q2_btn_frame.pack(fill="x", padx=15, pady=(0, 5))
+            
+            # Q2 상세 프레임 (기본적으로는 숨겨져 있음)
+            q2_detail_frame = ctk.CTkFrame(q2_section, fg_color="transparent")
+            
+            q2_detail_text = (
+                "  1️⃣ [집중 관찰 영역 - 11번 차트: 광고비 비중 및 광고 기여도 추이]\n"
+                f"    • [비법 분석] : 노란색 [매출 대비 광고비 비중 선]이 사장님이 계산기 탭에 적은 [내 마진율 점선(초록색)]보다 높게 치솟았다면 100% 적자 장사입니다! (현재 이 상품의 광고비 비중은 {spend_ratio:.1f}%)\n"
+                "    • [행동 강령] : 특히 광고비 비중이 전체 매출의 10%를 넘어가면(빨간 땡땡이 경고선 돌파 시) 즉시 제외 키워드를 정리하고, 썸네일과 상세페이지를 뜯어고쳐 전환율(CVR)을 끌어올려 광고비 비중을 마진율 밑으로 강제로 밀어 넣으셔야 합니다!"
+            )
+            
+            q2_detail_label = ctk.CTkLabel(q2_detail_frame, text=q2_detail_text, font=("Malgun Gothic", 12), text_color="#F8FAFC", justify="left", wraplength=1050)
+            q2_detail_label.pack(anchor="w", padx=15, pady=(5, 15))
+            
+            def toggle_q2():
+                if q2_detail_frame.winfo_viewable():
+                    q2_detail_frame.pack_forget()
+                    q2_btn.configure(text="자세한 내용 보기 🔽", fg_color="#1E293B")
+                else:
+                    q2_detail_frame.pack(fill="x")
+                    q2_btn.configure(text="자세한 내용 접기 🔼", fg_color="#3B82F6")
+                    
+            q2_btn = ctk.CTkButton(q2_btn_frame, text="자세한 내용 보기 🔽", font=("Malgun Gothic", 11, "bold"), 
+                                   width=130, height=28, fg_color="#1E293B", hover_color="#2D3748", command=toggle_q2)
+            q2_btn.pack(side="right")
+
+            # --- [Part 2.5] 광고효율 돋보기 분석 및 처방전 렌더링 ---
+            pd_data = sub_analyzer.get_daily_performance()
+            if pd_data and not pd_data['total'].empty:
+                sub_df = pd_data['total'].copy()
+                sub_df = sub_df.sort_values('p_date')
+                by_region_data = pd_data.get('by_region', pd.DataFrame())
+                
+                # 영역별 진단 처방전 렌더링
+                try:
+                    self._render_magnifier_diagnosis(sub_df, self.prod_metrics_scroll, by_region_df=by_region_data)
+                except Exception as e:
+                    import traceback; traceback.print_exc()
+                    ctk.CTkLabel(self.prod_metrics_scroll, text=f"⚠️ 돋보기 진단 오류: {e}", text_color="#EF4444", font=("Malgun Gothic", 12)).pack(pady=20)
+
+                # 영역별 상대 지수 차트 렌더링
+                chart_card = ctk.CTkFrame(self.prod_metrics_scroll, fg_color="#0B0B1A", border_width=1, border_color="#333", corner_radius=12)
+                chart_card.pack(fill="x", padx=10, pady=10)
+                
+                try:
+                    self._render_magnifier_chart(sub_df, chart_card, by_region_df=by_region_data)
+                except Exception as e:
+                    import traceback; traceback.print_exc()
+                    ctk.CTkLabel(chart_card, text=f"⚠️ 돋보기 차트 렌더링 중 오류 발생: {e}", text_color="#EF4444", font=("Malgun Gothic", 12)).pack(pady=20)
+
+            # --- [Part 3] 성과 추이 차트 렌더링 ---
+            pd_data = sub_analyzer.get_daily_performance()
+            if pd_data and not pd_data['total'].empty:
+                sub_df = pd_data['total']
+                sub_kw = sub_analyzer.summary_df
+                
+                try:
+                    # _render_large_trend_chart를 통해 상품 전용 10대 대형 추이 차트 렌더링
+                    self._render_large_trend_chart(sub_df, sub_kw, self.prod_metrics_scroll)
+                except Exception as e:
+                    import traceback; traceback.print_exc()
+                    ctk.CTkLabel(self.prod_metrics_scroll, text=f"⚠️ 상품 차트 렌더링 중 오류 발생: {e}", text_color="#EF4444", font=("Malgun Gothic", 12)).pack(pady=20)
         except Exception as e:
             import traceback; traceback.print_exc()
-            ctk.CTkLabel(self.prod_metrics_scroll, text=f"⚠️ 상품 차트 렌더링 오류: {e}", text_color="#EF4444", font=("Malgun Gothic", 12)).pack(pady=20)
-
+            ctk.CTkLabel(self.prod_metrics_scroll, text=f"⚠️ 상품 데이터 분석 중 오류 발생: {e}", text_color="#EF4444", font=("Malgun Gothic", 14, "bold")).pack(pady=40)
+            
     def _setup_memos_tab(self):
         self.memo_frame = ctk.CTkFrame(self.tab_memos, fg_color="transparent")
         self.memo_frame.pack(fill="both", expand=True, padx=30, pady=20)
@@ -549,8 +736,10 @@ class AdOptimizerApp(ctk.CTk):
         
         # 오늘 메모 불러오기
         today_str = datetime.now().strftime("%Y-%m-%d")
-        if today_str in self.memos:
-            self.memo_input.insert("0.0", self.memos[today_str])
+        today_parsed = self._parse_memo_date_to_key(today_str)
+        today_memos = [m for m in self.memos if self._parse_memo_date_to_key(m['date']) == today_parsed]
+        if today_memos:
+            self.memo_input.insert("0.0", today_memos[-1]['memo'])
         
         btn_row = ctk.CTkFrame(left, fg_color="transparent")
         btn_row.pack(fill="x", pady=5)
@@ -576,17 +765,47 @@ class AdOptimizerApp(ctk.CTk):
         
         self._refresh_memo_list()
 
+    def _parse_memo_date_to_key(self, date_str):
+        """메모 날짜 문자열을 정렬/비교에 적합한 YYYY-MM-DD 형식으로 변환"""
+        ds = str(date_str).strip()
+        try:
+            # YYYY-MM-DD 또는 YY-MM-DD
+            if '-' in ds:
+                parts = ds.split('-')
+                year = int(parts[0])
+                if year < 100:  # 2자리 연도 처리
+                    year += 2000
+                return f"{year:04d}-{int(parts[1]):02d}-{int(parts[2]):02d}"
+            # YYMMDD (예: 260428)
+            if len(ds) == 6 and ds.isdigit():
+                year = 2000 + int(ds[0:2])
+                month = int(ds[2:4])
+                day = int(ds[4:6])
+                return f"{year:04d}-{month:02d}-{day:02d}"
+            # YYYYMMDD (예: 20260428)
+            if len(ds) == 8 and ds.isdigit():
+                year = int(ds[0:4])
+                month = int(ds[4:6])
+                day = int(ds[6:8])
+                return f"{year:04d}-{month:02d}-{day:02d}"
+        except:
+            pass
+        return ds
+
     def _refresh_memo_list(self):
         for w in self.memo_list_frame.winfo_children(): w.destroy()
         
-        sorted_dates = sorted(self.memos.keys(), reverse=True)
-        if not sorted_dates:
+        if not self.memos:
             ctk.CTkLabel(self.memo_list_frame, text="저장된 기록이 없습니다.", 
                          font=("Malgun Gothic", 13), text_color="#6B7280").pack(pady=20)
             return
+
+        sorted_memos = sorted(self.memos, key=lambda m: self._parse_memo_date_to_key(m['date']), reverse=True)
         
-        for date_str in sorted_dates:
-            memo_text = self.memos[date_str]
+        for memo_item in sorted_memos:
+            memo_id = memo_item['id']
+            date_str = memo_item['date']
+            memo_text = memo_item['memo']
             preview = memo_text[:35] + "..." if len(memo_text) > 35 else memo_text
             
             row = ctk.CTkFrame(self.memo_list_frame, fg_color="#0B0B1A", corner_radius=8)
@@ -602,27 +821,29 @@ class AdOptimizerApp(ctk.CTk):
             btn_frame = ctk.CTkFrame(row, fg_color="transparent")
             btn_frame.pack(anchor="e", padx=10, pady=(0, 8))
             
-            d = date_str
             ctk.CTkButton(btn_frame, text="수정", width=60, height=26, fg_color="#2563EB", 
                           font=("Malgun Gothic", 11), 
-                          command=lambda d=d: self._edit_memo(d)).pack(side="left", padx=3)
+                          command=lambda m_id=memo_id: self._edit_memo(m_id)).pack(side="left", padx=3)
             ctk.CTkButton(btn_frame, text="삭제", width=60, height=26, fg_color="#DC2626",
                           font=("Malgun Gothic", 11),
-                          command=lambda d=d: self._delete_memo(d)).pack(side="left", padx=3)
+                          command=lambda m_id=memo_id: self._delete_memo(m_id)).pack(side="left", padx=3)
 
-    def _edit_memo(self, date_str):
+    def _edit_memo(self, memo_id):
         """기존 메모를 좌측 편집 영역에 불러오기 (수정 모드)"""
-        if date_str in self.memos:
-            self.memo_date_var.set(date_str)
+        memo_item = next((m for m in self.memos if m['id'] == memo_id), None)
+        if memo_item:
+            self.editing_memo_id = memo_id
+            self.memo_date_var.set(memo_item['date'])
             self.memo_input.delete("0.0", "end")
-            self.memo_input.insert("0.0", self.memos[date_str])
-            self.memo_edit_label.configure(text=f"[{date_str} 수정 중]", text_color="#F59E0B")
+            self.memo_input.insert("0.0", memo_item['memo'])
+            self.memo_edit_label.configure(text=f"[{memo_item['date']} 수정 중]", text_color="#F59E0B")
 
-    def _load_memo(self, date_str):
-        self._edit_memo(date_str)
+    def _load_memo(self, memo_id):
+        self._edit_memo(memo_id)
 
     def _new_memo(self):
         """새 메모 작성 모드로 전환"""
+        self.editing_memo_id = None
         self.memo_date_var.set(datetime.now().strftime("%Y-%m-%d"))
         self.memo_input.delete("0.0", "end")
         self.memo_edit_label.configure(text="[새 메모]", text_color="#10B981")
@@ -637,19 +858,42 @@ class AdOptimizerApp(ctk.CTk):
         if not memo:
             messagebox.showwarning("알림", "메모 내용을 입력해주세요.")
             return
-        self.memos[date_str] = memo
+
+        if getattr(self, 'editing_memo_id', None) is not None:
+            memo_item = next((m for m in self.memos if m['id'] == self.editing_memo_id), None)
+            if memo_item:
+                memo_item['date'] = date_str
+                memo_item['memo'] = memo
+                message_text = f"{date_str} 기록이 수정되었습니다."
+            else:
+                memo_id = datetime.now().strftime("%Y%m%d%H%M%S%f")
+                self.memos.append({"id": memo_id, "date": date_str, "memo": memo})
+                message_text = f"{date_str} 기록이 저장되었습니다."
+        else:
+            memo_id = datetime.now().strftime("%Y%m%d%H%M%S%f")
+            self.memos.append({"id": memo_id, "date": date_str, "memo": memo})
+            message_text = f"{date_str} 기록이 저장되었습니다."
+
         with open("ad_memos.json", "w", encoding="utf-8") as f:
             json.dump(self.memos, f, ensure_ascii=False, indent=4)
+        
+        self.editing_memo_id = None
         self._refresh_memo_list()
         self.memo_edit_label.configure(text=f"[{date_str} 저장 완료]", text_color="#10B981")
-        messagebox.showinfo("알림", f"{date_str} 기록이 저장되었습니다.")
+        messagebox.showinfo("알림", message_text)
 
-    def _delete_memo(self, date_str):
-        if date_str in self.memos:
-            if messagebox.askyesno("확인", f"{date_str} 기록을 삭제하시겠습니까?"):
-                del self.memos[date_str]
+    def _delete_memo(self, memo_id):
+        memo_item = next((m for m in self.memos if m['id'] == memo_id), None)
+        if memo_item:
+            if messagebox.askyesno("확인", f"{memo_item['date']} 기록을 삭제하시겠습니까?"):
+                self.memos = [m for m in self.memos if m['id'] != memo_id]
                 with open("ad_memos.json", "w", encoding="utf-8") as f:
                     json.dump(self.memos, f, ensure_ascii=False, indent=4)
+                
+                if getattr(self, 'editing_memo_id', None) == memo_id:
+                    self.editing_memo_id = None
+                    self._new_memo()
+                    
                 self._refresh_memo_list()
 
     def _setup_diagnosis_tab(self):
@@ -681,6 +925,19 @@ class AdOptimizerApp(ctk.CTk):
         lbl_input_title = ctk.CTkLabel(left_panel, text="📥 제품 및 광고정보 입력하기", font=("Malgun Gothic", 18, "bold"), text_color="#38BDF8")
         lbl_input_title.pack(pady=15, padx=20, anchor="w")
         
+        # 💡 계산기 목적 안내 가이드 문구 배너 추가
+        info_banner = ctk.CTkFrame(left_panel, fg_color="#1E1E38", border_width=1, border_color="#3B82F6", corner_radius=8)
+        info_banner.pack(fill="x", padx=20, pady=(0, 10))
+        
+        info_lbl = ctk.CTkLabel(
+            info_banner,
+            text="💡 이 계산기는 해당 상품의 정보와 일정 기간 동안 소비한 광고비 총액, 팔린 수량을 입력하여\n    이 광고로 내가 실제로 돈을 번 것인지, 아니면 마이너스 적자로 운영 중인지 판가름하기 위해 설계되었습니다.",
+            font=("Malgun Gothic", 12),
+            text_color="#93C5FD",
+            justify="left"
+        )
+        info_lbl.pack(padx=15, pady=10, anchor="w")
+        
         form_frame = ctk.CTkFrame(left_panel, fg_color="transparent")
         form_frame.pack(fill="x", padx=20, pady=5)
         
@@ -699,8 +956,16 @@ class AdOptimizerApp(ctk.CTk):
         
         self.calc_vars = {}
         for idx, (label_txt, var_name, def_val) in enumerate(inputs):
-            lbl = ctk.CTkLabel(form_frame, text=label_txt, font=("Malgun Gothic", 13, "bold"), text_color="#E2E8F0")
-            lbl.grid(row=idx, column=0, padx=10, pady=6, sticky="w")
+            # 레이블을 감싸는 컨테이너 프레임 생성 (가로 정렬용)
+            lbl_container = ctk.CTkFrame(form_frame, fg_color="transparent")
+            lbl_container.grid(row=idx, column=0, padx=10, pady=6, sticky="w")
+            
+            lbl = ctk.CTkLabel(lbl_container, text=label_txt, font=("Malgun Gothic", 13, "bold"), text_color="#E2E8F0")
+            lbl.pack(side="left")
+            
+            if var_name in ["p_qty", "p_ad_spend"]:
+                req_lbl = ctk.CTkLabel(lbl_container, text=" (입력필요)", font=("Malgun Gothic", 12, "bold"), text_color="#F87171")
+                req_lbl.pack(side="left")
             
             entry = ctk.CTkEntry(form_frame, width=320, height=32, font=("Malgun Gothic", 13), fg_color="#1E1E38", text_color="white", border_color="#3B82F6")
             entry.insert(0, def_val)
@@ -937,6 +1202,306 @@ class AdOptimizerApp(ctk.CTk):
             lbl_err = ctk.CTkLabel(self.calc_res_frame, text=f"입력값을 확인해주세요.\n({ex})", font=("Malgun Gothic", 12), text_color="#EF4444")
             lbl_err.pack(pady=20)
 
+    def _setup_region_metrics_tab(self):
+        # 탭 스크롤 영역 생성
+        self.region_metrics_scroll = ctk.CTkScrollableFrame(self.tab_region_metrics, fg_color="#0B0B1A")
+        self.region_metrics_scroll.pack(fill="both", expand=True)
+
+        # 타이틀 레이블
+        title_lbl = ctk.CTkLabel(self.region_metrics_scroll, text="🌐 노출 영역별 성과 분석 (검색 / 비검색 / 오디언스)", font=("Malgun Gothic", 26, "bold"), text_color="#60A5FA")
+        title_lbl.pack(pady=20)
+
+        # 1. 요약 테이블 컨테이너
+        self.reg_summary_container = ctk.CTkFrame(self.region_metrics_scroll, fg_color="#1A1A2E", corner_radius=15)
+        self.reg_summary_container.pack(fill="x", padx=25, pady=15)
+        
+        table_lbl = ctk.CTkLabel(self.reg_summary_container, text="📋 노출 영역별 상세 성과 (매출/광고비 점유율 포함)", font=("Malgun Gothic", 18, "bold"), text_color="#34D399")
+        table_lbl.pack(pady=(20, 10), padx=25, anchor="w")
+        
+        self.reg_summary_frame = ctk.CTkFrame(self.reg_summary_container, fg_color="transparent")
+        self.reg_summary_frame.pack(fill="x", padx=15, pady=15)
+        
+        self.reg_cols = ("노출 영역", "노출수", "클릭", "주문", "클릭률", "전환율", "CPM", "CPC", "광고비", "광고매출", "ROAS", "전환당비용", "객단가")
+        self.reg_summary_tree = ttk.Treeview(self.reg_summary_frame, columns=self.reg_cols, show="headings", height=5)
+        for col in self.reg_cols:
+            self.reg_summary_tree.heading(col, text=col)
+            self.reg_summary_tree.column(col, anchor="center", width=115)
+        self.reg_summary_tree.pack(fill="x", expand=True)
+
+        # 2. 그래프 영역 컨테이너
+        self.reg_charts_container = ctk.CTkFrame(self.region_metrics_scroll, fg_color="transparent")
+        self.reg_charts_container.pack(fill="both", expand=True, padx=25, pady=15)
+
+    def _populate_region_metrics_table(self):
+        for item in self.reg_summary_tree.get_children(): 
+            self.reg_summary_tree.delete(item)
+            
+        if self.analyzer.raw_df is None: 
+            return
+            
+        df = self.analyzer.raw_df.copy()
+        m = self.analyzer._get_column_mapping(df)
+        if not m['region']: 
+            return
+            
+        for k in ['imp', 'click', 'spend', 'sales', 'orders']:
+            if m[k]: 
+                df[m[k]] = pd.to_numeric(
+                    df[m[k]].astype(str).str.replace(',', '').str.replace('₩', '').str.replace('원', ''), 
+                    errors='coerce'
+                ).fillna(0)
+                
+        def _map_region_group(region_name):
+            r_name = str(region_name).strip()
+            if '비검색' in r_name:
+                return '비검색'
+            elif '검색' in r_name:
+                return '검색'
+            elif any(k in r_name for k in ['오디언스', '외부', '리타게팅', '오피니언']):
+                return '오디언스'
+            return '기타'
+            
+        df['grouped_region'] = df[m['region']].apply(_map_region_group)
+        
+        s = df.groupby('grouped_region').agg({
+            m['sales']: 'sum', 
+            m['spend']: 'sum', 
+            m['orders']: 'sum', 
+            m['click']: 'sum', 
+            m['imp']: 'sum'
+        }).reset_index()
+        s.columns = ['region', 'sales', 'spend', 'orders', 'click', 'imp']
+        
+        # Sort order
+        order_map = {'검색': 0, '비검색': 1, '오디언스': 2, '기타': 3}
+        s['order'] = s['region'].map(order_map).fillna(4)
+        s = s.sort_values('order').drop(columns=['order'])
+        
+        total_sales = s['sales'].sum()
+        total_spend = s['spend'].sum()
+        total_orders = s['orders'].sum()
+        total_click = s['click'].sum()
+        total_imp = s['imp'].sum()
+        
+        def format_row(row_name, sales, spend, orders, click, imp):
+            ctr = (click / imp * 100) if imp > 0 else 0
+            cvr = (orders / click * 100) if click > 0 else 0
+            cpm = (spend / imp * 1000) if imp > 0 else 0
+            cpc = (spend / click) if click > 0 else 0
+            roas = (sales / spend * 100) if spend > 0 else 0
+            cpa = (spend / orders) if orders > 0 else 0
+            aov = (sales / orders) if orders > 0 else 0
+            
+            spend_pct = (spend / total_spend * 100) if total_spend > 0 else 0
+            spend_text = f"{int(spend):,}원 ({spend_pct:.0f}%)" if row_name != "합계" else f"{int(spend):,}원 (100%)"
+            
+            sales_pct = (sales / total_sales * 100) if total_sales > 0 else 0
+            sales_text = f"{int(sales):,}원 ({sales_pct:.0f}%)" if row_name != "합계" else f"{int(sales):,}원 (100%)"
+            
+            return (
+                row_name,
+                f"{int(imp):,}",
+                f"{int(click):,}",
+                f"{int(orders):,}",
+                f"{ctr:.2f}%",
+                f"{cvr:.2f}%",
+                f"{int(cpm):,}",
+                f"{int(cpc):,}원",
+                spend_text,
+                sales_text,
+                f"{roas:.0f}%",
+                f"{int(cpa):,}원" if orders > 0 else "0원",
+                f"{int(aov):,}원" if orders > 0 else "0원"
+            )
+            
+        for _, r in s.iterrows():
+            vals = format_row(r['region'], r['sales'], r['spend'], r['orders'], r['click'], r['imp'])
+            self.reg_summary_tree.insert("", "end", values=vals)
+            
+        total_vals = format_row("합계", total_sales, total_spend, total_orders, total_click, total_imp)
+        self.reg_summary_tree.insert("", "end", values=total_vals)
+
+    def _render_region_trend_charts(self, df, by_region, master):
+        plt.rcParams['font.family'] = 'Malgun Gothic'
+        pe = [path_effects.withStroke(linewidth=2.5, foreground='black')]
+        
+        fig = Figure(figsize=(12, 10), dpi=100)
+        fig.patch.set_facecolor('#0B0B1A')
+        
+        def _map_region_group(region_name):
+            r_name = str(region_name).strip()
+            if '비검색' in r_name:
+                return '비검색'
+            elif '검색' in r_name:
+                return '검색'
+            elif any(k in r_name for k in ['오디언스', '외부', '리타게팅', '오피니언']):
+                return '오디언스'
+            return '기타'
+            
+        by_region = by_region.copy()
+        by_region['grouped_region'] = by_region['region'].apply(_map_region_group)
+        
+        pivot_df = by_region.groupby(['date_s', 'grouped_region']).agg({
+            'sales': 'sum',
+            'spend': 'sum'
+        }).reset_index()
+        
+        sales_pivot = pivot_df.pivot(index='date_s', columns='grouped_region', values='sales').fillna(0)
+        spend_pivot = pivot_df.pivot(index='date_s', columns='grouped_region', values='spend').fillna(0)
+        
+        for col in ['검색', '비검색', '오디언스']:
+            if col not in sales_pivot.columns: sales_pivot[col] = 0.0
+            if col not in spend_pivot.columns: spend_pivot[col] = 0.0
+            
+        dates = df['date_s'].tolist()
+        sales_pivot = sales_pivot.reindex(dates).fillna(0)
+        spend_pivot = spend_pivot.reindex(dates).fillna(0)
+        
+        # 2번 이미지와 동일한 색상 매핑 (적층 순서: 오디언스→비검색→검색)
+        colors = {
+            '검색': '#2196F3',
+            '비검색': '#8BC34A',
+            '오디언스': '#78909C'
+        }
+        
+        bar_w = 0.8  # 2번 이미지처럼 촘촘하게 꽉 찬 넓은 막대
+        
+        def setup_ax(ax):
+            ax.set_facecolor('#0B0B1A')
+            ax.tick_params(axis='x', labelcolor='#94A3B8', labelsize=9, rotation=0)
+            ax.grid(True, axis='y', color='#1F2937', linestyle='--', alpha=0.4)
+            for sp in ax.spines.values(): sp.set_color('#1F2937')
+            
+        # ─── 차트 1: 매출 및 ROAS 추이 (상단) ── 2번 이미지와 동일한 적층형 ───
+        ax1 = fig.add_subplot(2, 1, 1)
+        setup_ax(ax1)
+        ax1.set_title("노출 영역별 매출 및 효율(ROAS) 추이", color='white', pad=25, fontdict={'size': 14, 'weight': 'bold'})
+        
+        s_non_search = sales_pivot['비검색'].values
+        s_search = sales_pivot['검색'].values
+        s_audience = sales_pivot['오디언스'].values
+        
+        # 2번 이미지 적층 순서: 바닥부터 오디언스 → 비검색 → 검색
+        ax1.bar(dates, s_audience, color=colors['오디언스'], width=bar_w, alpha=0.9, label='오디언스매출')
+        ax1.bar(dates, s_non_search, bottom=s_audience, color=colors['비검색'], width=bar_w, alpha=0.9, label='비검색매출')
+        ax1.bar(dates, s_search, bottom=s_audience+s_non_search, color=colors['검색'], width=bar_w, alpha=0.9, label='검색매출')
+        
+        ax1.set_ylabel('매출/광고비 (원)', color='white', size=10, weight='bold')
+        ax1.tick_params(axis='y', labelcolor='#94A3B8', labelsize=8)
+        
+        daily_spend = spend_pivot.sum(axis=1).values
+        ax1.plot(dates, daily_spend, color='#FFA726', linewidth=2.5, marker='o', markersize=3, label='광고비', 
+                 path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+        
+        ax1_twin = ax1.twinx()
+        daily_sales = sales_pivot.sum(axis=1).values
+        daily_roas = np.where(daily_spend > 0, (daily_sales / daily_spend) * 100, 0)
+        
+        ax1_twin.plot(dates, daily_roas, color='#42A5F5', marker='o', markersize=4, linewidth=2, label='ROAS',
+                      path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+        
+        ax1_twin.set_ylabel('ROAS (%)', color='#42A5F5', size=10, weight='bold')
+        ax1_twin.tick_params(axis='y', labelcolor='#42A5F5', labelsize=8)
+        ax1_twin.spines['right'].set_color('#42A5F5')
+        
+        h1, l1 = ax1.get_legend_handles_labels()
+        h2, l2 = ax1_twin.get_legend_handles_labels()
+        
+        # ⭐️ 메모 연동 마커 ⭐️
+        star_dates = []
+        star_roas = []
+        star_memos = []
+        for d in dates:
+            day_memos = [m for m in self.memos if self._memo_date_to_mmdd(m['date']) == d]
+            if day_memos:
+                idx = dates.index(d)
+                roas_val = daily_roas[idx]
+                star_dates.append(d)
+                star_roas.append(roas_val)
+                combined_memo = "\n".join([f"({m['date']}) {m['memo']}" for m in day_memos])
+                star_memos.append(combined_memo)
+                
+        if star_dates:
+            scatter_marker = ax1_twin.scatter(star_dates, star_roas, color='#FBBF24', marker='*', s=180, edgecolor='black', 
+                                              linewidth=1, zorder=12, label='메모 기록')
+            h2.append(scatter_marker)
+            l2.append('메모 기록')
+            
+        ax1.legend(h1+h2, l1+l2, loc='upper left', fontsize=8.5, 
+                   facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
+                   
+        # ─── 차트 2: 광고비 점유 추이 (하단) ── 동일한 적층형 ───
+        ax2 = fig.add_subplot(2, 1, 2)
+        setup_ax(ax2)
+        ax2.set_title("노출 영역별 광고비 점유 추이", color='white', pad=25, fontdict={'size': 14, 'weight': 'bold'})
+        
+        sp_non_search = spend_pivot['비검색'].values
+        sp_search = spend_pivot['검색'].values
+        sp_audience = spend_pivot['오디언스'].values
+        
+        # 동일한 적층 순서: 바닥부터 오디언스 → 비검색 → 검색
+        ax2.bar(dates, sp_audience, color=colors['오디언스'], width=bar_w, alpha=0.9, label='오디언스광고비')
+        ax2.bar(dates, sp_non_search, bottom=sp_audience, color=colors['비검색'], width=bar_w, alpha=0.9, label='비검색광고비')
+        ax2.bar(dates, sp_search, bottom=sp_audience+sp_non_search, color=colors['검색'], width=bar_w, alpha=0.9, label='검색광고비')
+        
+        ax2.set_ylabel('광고비 (원)', color='white', size=10, weight='bold')
+        ax2.tick_params(axis='y', labelcolor='#94A3B8', labelsize=8)
+        ax2.legend(loc='upper left', fontsize=8.5, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
+        
+        # 메모 세로선(점선) 추가
+        self._draw_memo_vlines([ax1, ax2], dates, pe, fontsize=8)
+        
+        fig.tight_layout(pad=3.0)
+        
+        canvas = FigureCanvasTkAgg(fig, master=master)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=5, pady=5)
+        
+        tooltip = ax1_twin.annotate("", xy=(0,0), xytext=(30,-30), textcoords="offset points",
+                                    bbox=dict(boxstyle="round,pad=0.6", fc="white", ec="#C2185B", lw=3, alpha=1.0),
+                                    arrowprops=dict(arrowstyle="->", color="#C2185B", lw=2),
+                                    color="black", fontsize=11, weight="bold", zorder=20)
+        tooltip.set_visible(False)
+        
+        def on_hover(event):
+            if event.inaxes is None:
+                if tooltip.get_visible():
+                    tooltip.set_visible(False)
+                    canvas.draw_idle()
+                return
+                
+            ax = event.inaxes
+            if ax == ax1 or ax == ax1_twin:
+                x_val = event.xdata
+                if x_val is not None:
+                    idx = int(round(x_val))
+                    if 0 <= idx < len(dates):
+                        d = dates[idx]
+                        day_memos = [m for m in self.memos if self._memo_date_to_mmdd(m['date']) == d]
+                        if day_memos:
+                            roas_val = daily_roas[idx]
+                            
+                            # 사용자 이미지와 100% 매칭되는 서식으로 주석 텍스트 가공
+                            txt_parts = [f"ROAS: {roas_val:.0f}", ""]
+                            for m in day_memos:
+                                d_key = self._parse_memo_date_to_key(m['date'])
+                                txt_parts.append(d_key)
+                                txt_parts.append(m['memo'])
+                                txt_parts.append("")
+                            txt = "\n".join(txt_parts[:-1])
+                            
+                            tooltip.xy = (idx, roas_val)
+                            tooltip.set_text(txt)
+                            tooltip.set_visible(True)
+                            canvas.draw_idle()
+                            return
+                            
+            if tooltip.get_visible():
+                tooltip.set_visible(False)
+                canvas.draw_idle()
+                
+        fig.canvas.mpl_connect("motion_notify_event", on_hover)
+
     def _execute_analysis(self):
         if not self.analyzer.file_path:
             messagebox.showwarning("경고", "엑셀 파일을 먼저 선택해주세요.")
@@ -1069,7 +1634,7 @@ class AdOptimizerApp(ctk.CTk):
 
     def _draw_all_charts(self):
         # 모든 차트 프레임 초기화
-        for f in [self.chart_frame_tl, self.chart_frame_tr, self.chart_frame_bl, self.chart_frame_br, self.metrics_scroll]:
+        for f in [self.chart_frame_tl, self.chart_frame_tr, self.chart_frame_bl, self.chart_frame_br, self.metrics_scroll, self.reg_charts_container]:
             for w in f.winfo_children(): w.destroy()
             
         pd_data = self.analyzer.get_daily_performance()
@@ -1092,13 +1657,435 @@ class AdOptimizerApp(ctk.CTk):
                     ctk.CTkLabel(frame, text=f"⚠️ 차트 오류: {e}", text_color="#EF4444", 
                                 font=("Malgun Gothic", 11)).pack(pady=20)
             
-            # 2. 성과 추이 탭 전용 대형 10대 차트들 (5×2)
+            # 2. 성과 추이 탭 전용: 영역별 KPI 요약 카드 + 돋보기 1초 진단 + 상대 지수 차트
+            try:
+                region_summary = self.analyzer.get_region_summary()
+                self._render_kpi_summary_cards(overall, region_summary, self.metrics_scroll)
+            except Exception as e:
+                import traceback; traceback.print_exc()
+
+            try:
+                by_region_data = pd_data.get('by_region', pd.DataFrame())
+                self._render_magnifier_diagnosis(df, self.metrics_scroll, by_region_df=by_region_data)
+                mag_frame = ctk.CTkFrame(self.metrics_scroll, fg_color="#0B0B1A", border_width=1, border_color="#EC4899", corner_radius=12)
+                mag_frame.pack(fill="x", padx=5, pady=10)
+                self._render_magnifier_chart(df, mag_frame, by_region_df=by_region_data)
+            except Exception as e:
+                import traceback; traceback.print_exc()
+                ctk.CTkLabel(self.metrics_scroll, text=f"⚠️ 돋보기 차트 오류: {e}", text_color="#EF4444",
+                            font=("Malgun Gothic", 11)).pack(pady=20)
+
+            # 3. 성과 추이 탭 전용 대형 10대 차트들 (5×2)
             try:
                 self._render_large_trend_chart(df, kw_data, self.metrics_scroll)
             except Exception as e:
                 import traceback; traceback.print_exc()
                 ctk.CTkLabel(self.metrics_scroll, text=f"⚠️ 추이 차트 오류: {e}", text_color="#EF4444",
                             font=("Malgun Gothic", 11)).pack(pady=20)
+
+            # 4. 노출 영역별 성과 탭 전용 차트 및 테이블 갱신
+            try:
+                self._populate_region_metrics_table()
+                self._render_region_trend_charts(df, pd_data['by_region'], self.reg_charts_container)
+            except Exception as e:
+                import traceback; traceback.print_exc()
+                ctk.CTkLabel(self.reg_charts_container, text=f"⚠️ 노출 영역별 차트 오류: {e}", text_color="#EF4444",
+                            font=("Malgun Gothic", 12)).pack(pady=20)
+
+    def _render_kpi_summary_cards(self, overall, region_summary, master):
+        """
+        전체 합산 KPI 요약 카드(6x2)를 렌더링하면서,
+        각 카드 아래 영역별(검색/비검색/오디언스) 세부 값을 서브라벨로 표시합니다.
+        overall: get_overall_summary() 결과 dict
+        region_summary: get_region_summary() 결과 DataFrame
+        master: pack할 부모 위젯
+        """
+        if not overall:
+            return
+            
+        # 영역 표준화 헬퍼
+        def normalize_region(name):
+            s = str(name).replace(' ', '')
+            if '검색' in s and '비검색' not in s and '비' not in s[:1]:
+                return '검색'
+            elif '비검색' in s or '상세' in s or '추천' in s or s == '-':
+                return '비검색'
+            elif '오디언스' in s or '오프사이트' in s or 'off' in s.lower() or '외부' in s:
+                return '오디언스'
+            return s
+            
+        # 영역별 합산 딕셔너리 구성
+        region_data = {'검색': {}, '비검색': {}, '오디언스': {}}
+        if region_summary is not None and not region_summary.empty:
+            rs = region_summary.copy()
+            rs['norm_region'] = rs['region'].apply(normalize_region)
+            for region_name in ['검색', '비검색', '오디언스']:
+                rr = rs[rs['norm_region'] == region_name]
+                if not rr.empty:
+                    region_data[region_name] = {
+                        'spend': rr['spend'].sum(), 'sales': rr['sales'].sum(),
+                        'orders': rr['orders'].sum(), 'imp': rr['imp'].sum(),
+                        'click': rr['click'].sum(),
+                    }
+                    rd = region_data[region_name]
+                    rd['ROAS'] = (rd['sales'] / rd['spend'] * 100) if rd['spend'] > 0 else 0
+                    rd['CTR'] = (rd['click'] / rd['imp'] * 100) if rd['imp'] > 0 else 0
+                    rd['CVR'] = (rd['orders'] / rd['click'] * 100) if rd['click'] > 0 else 0
+                else:
+                    region_data[region_name] = {'spend': 0, 'sales': 0, 'orders': 0, 'imp': 0, 'click': 0, 'ROAS': 0, 'CTR': 0, 'CVR': 0}
+        
+        metrics_frame = ctk.CTkFrame(master, fg_color="transparent")
+        metrics_frame.pack(fill="x", padx=10, pady=(10, 10))
+        
+        metrics = [
+            ("전체 광고비", "spend", "원"), ("실현 광고비", "spend", "원"),
+            ("전환 매출", "sales", "원"), ("전체 매출", "sales", "원"),
+            ("전체 판매수", "orders", "회"), ("노출수", "imp", "회"),
+            ("클릭수", "click", "회"), ("클릭률", "CTR", "%"),
+            ("전환 판매수", "orders", "회"), ("전환 주문수", "orders", "회"),
+            ("수익률(ROAS)", "ROAS", "%"), ("전환율(CVR)", "CVR", "%")
+        ]
+        
+        region_emojis = {'검색': '🔵', '비검색': '🟡', '오디언스': '🟢'}
+        
+        for i, (t, k, u) in enumerate(metrics):
+            r, c = divmod(i, 6)
+            card = ctk.CTkFrame(
+                metrics_frame, 
+                fg_color="#1E293B",
+                border_width=2, 
+                border_color="#3B82F6",
+                corner_radius=12
+            )
+            card.grid(row=r, column=c, padx=6, pady=6, sticky="nsew")
+            metrics_frame.grid_columnconfigure(c, weight=1)
+            
+            if "광고비" in t:
+                color = "#FBBF24"
+            elif "매출" in t:
+                color = "#34D399"
+            elif t in ["전체 판매수", "노출수", "클릭수", "전환 판매수", "전환 주문수"]:
+                color = "#60A5FA"
+            else:
+                color = "#FB923C"
+            
+            # 메트릭 제목
+            ctk.CTkLabel(card, text=t, font=("Malgun Gothic", 14, "bold"), 
+                         text_color="#E2E8F0").pack(pady=(10, 0))
+            
+            # 전체 합산 값
+            val = overall.get(k, 0.0)
+            if u == "원" or u == "회": 
+                text = f"{int(val):,} {u}"
+            else: 
+                text = f"{val:.2f} {u}"
+                
+            ctk.CTkLabel(card, text=text, font=("Malgun Gothic", 24, "bold"), 
+                         text_color=color).pack(pady=(3, 0))
+            
+            # 영역별 세부 분류 서브라벨 (검색/비검색/오디언스) — 가로 한 줄 배치
+            if region_summary is not None and not region_summary.empty:
+                parts = []
+                for rn in ['검색', '비검색', '오디언스']:
+                    rd = region_data.get(rn, {})
+                    rv = rd.get(k, 0.0)
+                    emoji = region_emojis.get(rn, '⚪')
+                    if u == "원" or u == "회":
+                        parts.append(f"{emoji}{rn} {int(rv):,}")
+                    else:
+                        parts.append(f"{emoji}{rn} {rv:.2f}%")
+                
+                ctk.CTkLabel(card, text=" / ".join(parts), font=("Malgun Gothic", 9),
+                             text_color="#94A3B8").pack(pady=(2, 8))
+
+    def _render_magnifier_diagnosis(self, df, master, by_region_df=None):
+        """
+        영역별(검색/비검색/오디언스) 돋보기 1초 진단 처방전 UI 카드를 렌더링합니다.
+        df: 전체 일별 추이 DataFrame (p_date, imp, CTR, CVR, ROAS 등)
+        by_region_df: 영역별 일별 DataFrame (region, imp, CTR, CVR, ROAS 등)
+        master: 카드를 pack할 부모 위젯
+        """
+        def normalize_region(name):
+            s = str(name).replace(' ', '')
+            if '검색' in s and '비검색' not in s and '비' not in s[:1]:
+                return '검색 영역'
+            elif '비검색' in s or '상세' in s or '추천' in s or s == '-':
+                return '비검색 영역'
+            elif '오디언스' in s or '오프사이트' in s or 'off' in s.lower() or '외부' in s:
+                return '오디언스'
+            return s
+        
+        region_colors = {
+            '검색 영역': ('#3B82F6', '🔵'),
+            '비검색 영역': ('#F59E0B', '🟡'),
+            '오디언스': ('#10B981', '🟢')
+        }
+        region_labels = ['검색 영역', '비검색 영역', '오디언스']
+        
+        # 분석 대상 데이터프레임들 준비 (전체 + 영역별)
+        analysis_targets = []
+        
+        # 1) 전체 합산 진단
+        analysis_targets.append(('📊 전체 합산', df, '#EC4899'))
+        
+        # 2) 영역별 진단
+        if by_region_df is not None and not by_region_df.empty:
+            rdf = by_region_df.copy()
+            rdf['norm_region'] = rdf['region'].apply(normalize_region)
+            
+            for region_name in region_labels:
+                rdata = rdf[rdf['norm_region'] == region_name].copy()
+                if rdata.empty:
+                    continue
+                # 날짜별 합산
+                rdata = rdata.groupby(['date_s']).agg({
+                    'imp': 'sum', 'click': 'sum', 'spend': 'sum',
+                    'sales': 'sum', 'orders': 'sum'
+                }).reset_index()
+                rdata['CTR'] = np.where(rdata['imp'] > 0, (rdata['click'] / rdata['imp']) * 100, 0)
+                rdata['CVR'] = np.where(rdata['click'] > 0, (rdata['orders'] / rdata['click']) * 100, 0)
+                rdata['ROAS'] = np.where(rdata['spend'] > 0, (rdata['sales'] / rdata['spend']) * 100, 0)
+                
+                rc, emoji = region_colors.get(region_name, ('#FFFFFF', '⚪'))
+                analysis_targets.append((f'{emoji} {region_name}', rdata, rc))
+        
+        # 메인 진단 카드 프레임
+        diag_card = ctk.CTkFrame(master, fg_color="#10102B", border_width=2, border_color="#EC4899", corner_radius=15)
+        diag_card.pack(fill="x", padx=10, pady=10)
+        
+        ctk.CTkLabel(diag_card, text="🔎 AI 광고효율 돋보기 1초 진단 처방전 (영역별 분석)",
+                     font=("Malgun Gothic", 16, "bold"), text_color="#F472B6").pack(anchor="w", padx=25, pady=(20, 10))
+        
+        for target_name, target_df, border_color in analysis_targets:
+            n_days = len(target_df)
+            if n_days < 2:
+                continue
+            
+            split_idx = max(1, n_days - 3) if n_days >= 4 else 1
+            recent_df = target_df.iloc[split_idx:]
+            prev_df = target_df.iloc[:split_idx]
+            
+            recent_roas = recent_df['ROAS'].mean()
+            prev_roas = prev_df['ROAS'].mean()
+            recent_imp = recent_df['imp'].mean()
+            prev_imp = prev_df['imp'].mean()
+            recent_ctr = recent_df['CTR'].mean()
+            prev_ctr = prev_df['CTR'].mean()
+            recent_cvr = recent_df['CVR'].mean()
+            prev_cvr = prev_df['CVR'].mean()
+            
+            chg_roas = ((recent_roas - prev_roas) / prev_roas * 100) if prev_roas > 0 else (100.0 if recent_roas > 0 else 0)
+            chg_imp = ((recent_imp - prev_imp) / prev_imp * 100) if prev_imp > 0 else (100.0 if recent_imp > 0 else 0)
+            chg_ctr = ((recent_ctr - prev_ctr) / prev_ctr * 100) if prev_ctr > 0 else (100.0 if recent_ctr > 0 else 0)
+            chg_cvr = ((recent_cvr - prev_cvr) / prev_cvr * 100) if prev_cvr > 0 else (100.0 if recent_cvr > 0 else 0)
+            
+            lamp_imp = "🟢 양호" if chg_imp >= -5 else ("🟡 주의" if chg_imp >= -20 else "🔴 위험")
+            lamp_ctr = "🟢 양호" if chg_ctr >= -5 else ("🟡 주의" if chg_ctr >= -20 else "🔴 위험")
+            lamp_cvr = "🟢 양호" if chg_cvr >= -5 else ("🟡 주의" if chg_cvr >= -20 else "🔴 위험")
+            
+            # 영역별 서브카드
+            sub_card = ctk.CTkFrame(diag_card, fg_color="#1A1A2E", border_width=1, border_color=border_color, corner_radius=10)
+            sub_card.pack(fill="x", padx=20, pady=8)
+            
+            ctk.CTkLabel(sub_card, text=f"【{target_name}】", font=("Malgun Gothic", 14, "bold"),
+                         text_color=border_color).pack(anchor="w", padx=15, pady=(10, 5))
+            
+            # 신호등 정보판
+            signal_frame = ctk.CTkFrame(sub_card, fg_color="transparent")
+            signal_frame.pack(fill="x", padx=15, pady=3)
+            
+            for lbl_text, lbl_color in [
+                (f"💎 노출수 [{lamp_imp}] ({chg_imp:+.1f}%)", "#00E5FF"),
+                (f"🍊 클릭률 [{lamp_ctr}] ({chg_ctr:+.1f}%)", "#FB923C"),
+                (f"🍋 전환율 [{lamp_cvr}] ({chg_cvr:+.1f}%)", "#10B981"),
+                (f"🌸 ROAS [{'📈' if chg_roas>=0 else '📉'}] ({chg_roas:+.1f}%)", "#FF00FF"),
+            ]:
+                ctk.CTkLabel(signal_frame, text=lbl_text, font=("Malgun Gothic", 12, "bold"),
+                             width=200, height=36, fg_color="#1A1D36", corner_radius=6,
+                             text_color=lbl_color).pack(side="left", padx=4)
+            
+            # 핵심 한 줄 처방전
+            if chg_roas < 0:
+                min_val = min(chg_imp, chg_ctr, chg_cvr)
+                if min_val == chg_ctr:
+                    verdict = f"⚠️ 클릭률 급감이 주요 원인! 썸네일/상품명 교체 검토 필요"
+                elif min_val == chg_cvr:
+                    verdict = f"⚠️ 전환율 하락이 주요 원인! 상세페이지/가격/리뷰 점검 필요"
+                else:
+                    verdict = f"⚠️ 노출 부족이 주요 원인! 입찰가 인상 검토 필요"
+                v_color = "#F87171"
+            else:
+                max_val = max(chg_imp, chg_ctr, chg_cvr)
+                if max_val == chg_ctr:
+                    verdict = f"🎉 클릭률 상승세! 썸네일 전략이 효과적"
+                elif max_val == chg_cvr:
+                    verdict = f"🎉 전환율 폭발! 상세페이지 설득력 우수"
+                else:
+                    verdict = f"🎉 노출 확대! 입찰 전략 적중"
+                v_color = "#34D399"
+            
+            ctk.CTkLabel(sub_card, text=verdict, font=("Malgun Gothic", 12, "bold"),
+                         text_color=v_color, justify="left", wraplength=900).pack(anchor="w", padx=15, pady=(3, 10))
+
+    def _render_magnifier_chart(self, df, master, by_region_df=None):
+        """
+        영역별(검색/비검색/오디언스) 상대 지수 돋보기 차트를 렌더링합니다.
+        by_region_df가 제공되면 영역별 서브플롯으로, 없으면 전체 합산 단일 차트로 동작합니다.
+        """
+        plt.rcParams['font.family'] = 'Malgun Gothic'
+        pe = [path_effects.withStroke(linewidth=2, foreground='black')]
+        
+        # 영역 표준화 헬퍼
+        def normalize_region(name):
+            s = str(name).replace(' ', '')
+            if '검색' in s and '비검색' not in s and '비' not in s[:1]:
+                return '검색 영역'
+            elif '비검색' in s or '상세' in s or '추천' in s or s == '-':
+                return '비검색 영역'
+            elif '오디언스' in s or '오프사이트' in s or 'off' in s.lower() or '외부' in s:
+                return '오디언스'
+            return s
+        
+        region_colors = {
+            '검색 영역': '#3B82F6',
+            '비검색 영역': '#F59E0B',
+            '오디언스': '#10B981'
+        }
+        region_labels = ['검색 영역', '비검색 영역', '오디언스']
+        
+        # 영역별 데이터가 있는 경우
+        if by_region_df is not None and not by_region_df.empty:
+            rdf = by_region_df.copy()
+            rdf['norm_region'] = rdf['region'].apply(normalize_region)
+            
+            # 존재하는 영역만 필터링
+            available_regions = [r for r in region_labels if r in rdf['norm_region'].unique()]
+            if not available_regions:
+                available_regions = region_labels[:1]
+            
+            n_regions = len(available_regions)
+            fig = Figure(figsize=(16, 4.5 * n_regions + 1), dpi=100)
+            fig.patch.set_facecolor('#0B0B1A')
+            
+            fig.suptitle("0. 영역별 광고효율 돋보기 상대 지수 분석 (첫 날 = 100% 기준)", 
+                        color='white', fontsize=16, fontweight='bold', y=0.995)
+            
+            for idx, region_name in enumerate(available_regions):
+                rdata = rdf[rdf['norm_region'] == region_name].copy()
+                if rdata.empty:
+                    continue
+                    
+                # 날짜별 합산 (같은 영역 내 중복 날짜 합산)
+                rdata = rdata.groupby('date_s').agg({
+                    'imp': 'sum', 'click': 'sum', 'spend': 'sum', 
+                    'sales': 'sum', 'orders': 'sum'
+                }).reset_index()
+                rdata['CTR'] = np.where(rdata['imp'] > 0, (rdata['click'] / rdata['imp']) * 100, 0)
+                rdata['CVR'] = np.where(rdata['click'] > 0, (rdata['orders'] / rdata['click']) * 100, 0)
+                rdata['ROAS'] = np.where(rdata['spend'] > 0, (rdata['sales'] / rdata['spend']) * 100, 0)
+                
+                if len(rdata) < 1:
+                    continue
+                
+                ax = fig.add_subplot(n_regions, 1, idx + 1)
+                ax.set_facecolor('#0B0B1A')
+                ax.tick_params(axis='x', labelcolor='#94A3B8', labelsize=9, rotation=25)
+                ax.tick_params(axis='y', labelcolor='#94A3B8', labelsize=9)
+                ax.grid(True, axis='y', color='#1F2937', linestyle='--', alpha=0.4)
+                
+                # 기준값 계산 (첫날 또는 평균, 0 방지)
+                def get_base(series):
+                    val = series.iloc[0]
+                    if val > 0: return val
+                    mean_val = series.mean()
+                    if mean_val > 0: return mean_val
+                    return 1.0
+                
+                base_imp = get_base(rdata['imp'])
+                base_ctr = get_base(rdata['CTR'])
+                base_cvr = get_base(rdata['CVR'])
+                base_roas = get_base(rdata['ROAS'])
+                
+                rdata['imp_idx'] = rdata['imp'] / base_imp * 100
+                rdata['ctr_idx'] = rdata['CTR'] / base_ctr * 100
+                rdata['cvr_idx'] = rdata['CVR'] / base_cvr * 100
+                rdata['roas_idx'] = rdata['ROAS'] / base_roas * 100
+                
+                dates = rdata['date_s'].tolist()
+                rc = region_colors.get(region_name, '#FFFFFF')
+                
+                ax.plot(dates, rdata['imp_idx'], color='#00E5FF', marker='o', markersize=5, linewidth=2.0, 
+                        label='💎 노출수 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+                ax.plot(dates, rdata['ctr_idx'], color='#FB923C', marker='s', markersize=5, linewidth=2.0, 
+                        label='🍊 클릭률(CTR) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+                ax.plot(dates, rdata['cvr_idx'], color='#10B981', marker='^', markersize=5, linewidth=2.0, 
+                        label='🍋 전환율(CVR) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+                ax.plot(dates, rdata['roas_idx'], color='#FF00FF', marker='D', markersize=6, linewidth=3.0, 
+                        label='🌸 광고효율(ROAS) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+                
+                ax.axhline(y=100, color='#FFFFFF', linestyle='--', linewidth=1.2, alpha=0.5, label='— 첫 날 기준선 (100%)')
+                
+                # 영역별 타이틀 (영역 대표 색상 적용)
+                ax.set_title(f"【{region_name}】 노출·클릭률·전환율·ROAS 상대 지수 추이", 
+                            color=rc, pad=12, fontdict={'size': 13, 'weight': 'bold'})
+                ax.set_ylabel('상대 지수 (%)', color='white', size=10, weight='bold')
+                ax.legend(loc='upper left', fontsize=8, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
+                
+                # 메모 세로선 연동
+                self._draw_memo_vlines([ax], dates, pe, fontsize=7)
+            
+            fig.tight_layout(pad=2.0, rect=[0, 0, 1, 0.98])
+        else:
+            # by_region이 없는 경우 전체 합산 단일 차트 (기존 방식 유지)
+            fig = Figure(figsize=(16, 5), dpi=100)
+            fig.patch.set_facecolor('#0B0B1A')
+            
+            ax = fig.add_subplot(1, 1, 1)
+            ax.set_facecolor('#0B0B1A')
+            ax.tick_params(axis='x', labelcolor='#94A3B8', labelsize=9, rotation=25)
+            ax.tick_params(axis='y', labelcolor='#94A3B8', labelsize=9)
+            ax.grid(True, axis='y', color='#1F2937', linestyle='--', alpha=0.4)
+            
+            def get_base(col):
+                val = df[col].iloc[0]
+                if val > 0: return val
+                mean_val = df[col].mean()
+                if mean_val > 0: return mean_val
+                return 1.0
+                
+            base_imp = get_base('imp')
+            base_ctr = get_base('CTR')
+            base_cvr = get_base('CVR')
+            base_roas = get_base('ROAS')
+            
+            df_copy = df.copy()
+            df_copy['imp_idx'] = df_copy['imp'] / base_imp * 100
+            df_copy['ctr_idx'] = df_copy['CTR'] / base_ctr * 100
+            df_copy['cvr_idx'] = df_copy['CVR'] / base_cvr * 100
+            df_copy['roas_idx'] = df_copy['ROAS'] / base_roas * 100
+            
+            dates = df_copy['date_s'].tolist()
+            
+            ax.plot(dates, df_copy['imp_idx'], color='#00E5FF', marker='o', markersize=5, linewidth=2.0, 
+                    label='💎 노출수 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+            ax.plot(dates, df_copy['ctr_idx'], color='#FB923C', marker='s', markersize=5, linewidth=2.0, 
+                    label='🍊 클릭률(CTR) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+            ax.plot(dates, df_copy['cvr_idx'], color='#10B981', marker='^', markersize=5, linewidth=2.0, 
+                    label='🍋 전환율(CVR) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+            ax.plot(dates, df_copy['roas_idx'], color='#FF00FF', marker='D', markersize=6, linewidth=3.0, 
+                    label='🌸 광고효율(ROAS) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+            ax.axhline(y=100, color='#FFFFFF', linestyle='--', linewidth=1.2, alpha=0.5, label='— 첫 날 기준선 (100%)')
+            
+            ax.set_ylabel('상대 지수 (%)', color='white', size=10, weight='bold')
+            ax.set_title("0. 광고효율 돋보기 상대 지수 분석 (첫 날 데이터 = 100% 기준)", color='white', pad=15, fontdict={'size': 14, 'weight': 'bold'})
+            ax.legend(loc='upper left', fontsize=9, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
+            
+            self._draw_memo_vlines([ax], dates, pe, fontsize=8)
+            fig.tight_layout(pad=2.0)
+        
+        canvas = FigureCanvasTkAgg(fig, master=master)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=5, pady=5)
 
     def _render_large_trend_chart(self, df, kw_data, master):
         plt.rcParams['font.family'] = 'Malgun Gothic'
@@ -1108,8 +2095,8 @@ class AdOptimizerApp(ctk.CTk):
         fs_title = 15; fs_guide = 8.5; fs_ann = 8; fs_label = 10; fs_tick = 8; fs_leg = 9
         ms = 4; lw = 2
         
-        # 10대 차트 출력을 위해 높이를 32인치로 대폭 확장하여 5행 2열 레이아웃을 여유 있게 그립니다.
-        fig = Figure(figsize=(18, 32), dpi=100)
+        # 12대 차트 출력을 위해 높이를 38인치로 대폭 확장하여 6행 2열 레이아웃을 여유 있게 그립니다.
+        fig = Figure(figsize=(18, 38), dpi=100)
         fig.patch.set_facecolor('#0B0B1A')
         
         def add_legend(ax, ax2):
@@ -1124,7 +2111,7 @@ class AdOptimizerApp(ctk.CTk):
             ax.grid(True, axis='y', color='#1F2937', linestyle='--', alpha=0.4)
         
         # ─── 1. 광고비 vs 광고매출 [좌상 1] ───
-        ax1 = fig.add_subplot(521); setup_ax(ax1)
+        ax1 = fig.add_subplot(6, 2, 1); setup_ax(ax1)
         ax1.set_title("1. 광고비 vs 광고매출 추이", color='white', pad=65, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
         guide_str1 = (
             "용돈 지출[광고비 막대] = 순수 집행된 광고비   |   열매 수확[광고매출 선] = 광고로 창출한 매출\n"
@@ -1152,7 +2139,7 @@ class AdOptimizerApp(ctk.CTk):
         add_legend(ax1, ax1_2)
 
         # ─── 2. 클릭수 vs 광고매출 [우상 1] ───
-        ax2 = fig.add_subplot(522); setup_ax(ax2)
+        ax2 = fig.add_subplot(6, 2, 2); setup_ax(ax2)
         ax2.set_title("2. 클릭수 vs 광고매출 추이", color='white', pad=65, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
         guide_str2 = (
             "손님 입장[클릭수 막대] = 구경하러 들어온 고객 수   |   지갑 오픈[광고매출 선] = 실제 결제한 총 매출액\n"
@@ -1167,162 +2154,163 @@ class AdOptimizerApp(ctk.CTk):
         ax2.tick_params(axis='y', labelcolor='#F59E0B', labelsize=fs_tick)
         
         ax2_2 = ax2.twinx()
-        ax2_2.plot(df['date_s'], df['sales'], color='#10B981', marker='^', linewidth=lw, markersize=ms,
+        ax2_2.plot(df['date_s'], df['sales'], color='#00E5FF', marker='o', markersize=ms, linewidth=lw, 
                    label='— 광고매출액', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
-        ax2_2.set_ylabel('광고매출액 (원)', color='#10B981', weight='bold', fontsize=fs_label)
-        ax2_2.tick_params(axis='y', labelcolor='#10B981', labelsize=fs_tick)
+        ax2_2.set_ylabel('광고매출액 (원)', color='#00E5FF', weight='bold', fontsize=fs_label)
+        ax2_2.tick_params(axis='y', labelcolor='#00E5FF', labelsize=fs_tick)
         for i, v in enumerate(df['sales']):
             if v == 0: continue
             offset_y = -14 if i % 2 == 0 else 10
             ax2_2.annotate(self._fmt_val(v, 'won'), (df['date_s'].iloc[i], v), 
-                           xytext=(0, offset_y), textcoords="offset points", ha='center', color='#10B981', 
+                           xytext=(0, offset_y), textcoords="offset points", ha='center', color='#00E5FF', 
                            weight='bold', fontsize=fs_ann, path_effects=pe)
         add_legend(ax2, ax2_2)
 
         # ─── 3. 광고비 vs ROAS [좌상 2] ───
-        ax3 = fig.add_subplot(523); setup_ax(ax3)
+        ax3 = fig.add_subplot(6, 2, 3); setup_ax(ax3)
         ax3.set_title("3. 광고비 vs ROAS 추이", color='white', pad=65, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
         guide_str3 = (
-            "투자 비용[광고비 막대] = 광고 투자 원금   |   수익 효율[ROAS 선] = 투자 대비 회수 비율 (적정: 330%↑)\n"
-            "☞ [예산 과다] 광고비를 증액할 때 ROAS 선이 꺾이는지 점검   |   ☞ [고효율 수성] 적은 예산으로 고ROAS 유지\n"
-            "💡 [이렇게 보면 좋은 것?] 학비(광고비)는 아주 쬐끔 줬는데 성적표(ROAS)는 100점 만점으로 높이 나는 상태가 기적!"
+            "마중물 투입[광고비 막대] = 집행 광고비   |   마법의 효율[ROAS 선] = 투자 대비 몇 배 매출인지\n"
+            "☞ [비효율 경고] 광고비는 늘리는데 ROAS 선이 고꾸라짐   |   ☞ [증액 타이밍] 광고비를 올려도 ROAS가 330%선 지탱\n"
+            "💡 [이렇게 보면 좋은 것?] 광고비(막대)를 늘릴 때, ROAS선이 안정 기준선(330%) 위에서 흔들림 없이 버티는 형태!"
         )
         ax3.text(0.5, 1.02, guide_str3, transform=ax3.transAxes,
                 ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, style='normal', weight='bold',
-                bbox=dict(boxstyle='round,pad=0.4', facecolor='#111122', edgecolor='#EC4899', alpha=0.95))
+                bbox=dict(boxstyle='round,pad=0.4', facecolor='#111122', edgecolor='#10B981', alpha=0.95))
         ax3.bar(df['date_s'], df['spend'], color='#EF4444', alpha=0.35, label='■ 광고비')
         ax3.set_ylabel('광고비 (원)', color='#EF4444', weight='bold', fontsize=fs_label)
         ax3.tick_params(axis='y', labelcolor='#EF4444', labelsize=fs_tick)
         
         ax3_2 = ax3.twinx()
-        ax3_2.plot(df['date_s'], df['ROAS'], color='#FF00FF', marker='o', markersize=ms, linewidth=lw, 
+        ax3_2.plot(df['date_s'], df['ROAS'], color='#10B981', marker='o', markersize=ms, linewidth=lw, 
                    label='— ROAS%', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
-        ax3_2.set_ylabel('ROAS (%)', color='#FF00FF', weight='bold', fontsize=fs_label)
-        ax3_2.tick_params(axis='y', labelcolor='#FF00FF', labelsize=fs_tick)
+        ax3_2.axhline(y=330, color='#F59E0B', linestyle='--', linewidth=1.2, label='— 흑자 안전 기준선 (330%)')
+        ax3_2.set_ylabel('ROAS (%)', color='#10B981', weight='bold', fontsize=fs_label)
+        ax3_2.tick_params(axis='y', labelcolor='#10B981', labelsize=fs_tick)
         for i, v in enumerate(df['ROAS']):
             if v == 0: continue
             offset_y = -14 if i % 2 == 0 else 10
             ax3_2.annotate(f"{v:.0f}%", (df['date_s'].iloc[i], v), 
-                           xytext=(0, offset_y), textcoords="offset points", ha='center', color='#FF00FF', 
+                           xytext=(0, offset_y), textcoords="offset points", ha='center', color='#10B981', 
                            weight='bold', fontsize=fs_ann, path_effects=pe)
         add_legend(ax3, ax3_2)
 
-        # ─── 4. 노출수 vs 클릭률(CTR) [우상 2] ───
-        ax4 = fig.add_subplot(524); setup_ax(ax4)
-        ax4.set_title("4. 노출수 vs 클릭률(CTR) 추이", color='white', pad=65, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+        # ─── 4. 노출수 vs 클릭수 [우상 2] ───
+        ax4 = fig.add_subplot(6, 2, 4); setup_ax(ax4)
+        ax4.set_title("4. 노출수 vs 클릭수 추이", color='white', pad=65, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
         guide_str4 = (
-            "전단지 배포[노출수 막대] = 고객 눈앞 노출수   |   첫인상 매력[클릭률 선] = 호기심의 비율 (적정: 0.5%↑)\n"
-            "☞ [눈길 안 줌] 노출은 많은데 클릭률 선이 바닥 점검   |   ☞ [썸네일 성공] 스치기만 해도 클릭하는 높은 매력\n"
-            "💡 [이렇게 보면 좋은 것?] 전단지는 적게 돌렸는데 들어오는 비율(클릭률)이 하늘을 찌르는 알짜배기 형태!"
+            "스쳐 지나감[노출수 막대] = 쿠팡에 노출된 횟수   |   발길 멈춤[클릭수 선] = 상품을 눌러본 고객수\n"
+            "☞ [썸네일 매력 부족] 노출은 태평양인데 클릭 선이 바닥   |   ☞ [인기 만점] 노출 대비 클릭 선이 솟아오름\n"
+            "💡 [이렇게 보면 좋은 것?] 노출 막대를 디딤돌 삼아 고객 발길(클릭) 선이 하늘을 향해 시원하게 날아오르는 추세!"
         )
         ax4.text(0.5, 1.02, guide_str4, transform=ax4.transAxes,
                 ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, style='normal', weight='bold',
-                bbox=dict(boxstyle='round,pad=0.4', facecolor='#111122', edgecolor='#3B82F6', alpha=0.95))
-        ax4.bar(df['date_s'], df['imp'], color='#60A5FA', alpha=0.35, label='■ 노출수')
+                bbox=dict(boxstyle='round,pad=0.4', facecolor='#111122', edgecolor='#60A5FA', alpha=0.95))
+        ax4.bar(df['date_s'], df['imp'], color='#60A5FA', alpha=0.25, label='■ 노출수')
         ax4.set_ylabel('노출수 (회)', color='#60A5FA', weight='bold', fontsize=fs_label)
         ax4.tick_params(axis='y', labelcolor='#60A5FA', labelsize=fs_tick)
         
         ax4_2 = ax4.twinx()
-        ax4_2.plot(df['date_s'], df['CTR'], color='#22C55E', marker='D', linewidth=lw, markersize=ms,
-                   label='— CTR%', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
-        ax4_2.set_ylabel('CTR (%)', color='#22C55E', weight='bold', fontsize=fs_label)
-        ax4_2.tick_params(axis='y', labelcolor='#22C55E', labelsize=fs_tick)
-        for i, v in enumerate(df['CTR']):
+        ax4_2.plot(df['date_s'], df['click'], color='#3B82F6', marker='o', markersize=ms, linewidth=lw, 
+                   label='— 클릭수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+        ax4_2.set_ylabel('클릭수 (회)', color='#3B82F6', weight='bold', fontsize=fs_label)
+        ax4_2.tick_params(axis='y', labelcolor='#3B82F6', labelsize=fs_tick)
+        for i, v in enumerate(df['click']):
             if v == 0: continue
             offset_y = -14 if i % 2 == 0 else 10
-            ax4_2.annotate(f"{v:.2f}%", (df['date_s'].iloc[i], v), 
-                           xytext=(0, offset_y), textcoords="offset points", ha='center', color='#22C55E', 
+            ax4_2.annotate(f"{int(v):,}", (df['date_s'].iloc[i], v), 
+                           xytext=(0, offset_y), textcoords="offset points", ha='center', color='#3B82F6', 
                            weight='bold', fontsize=fs_ann, path_effects=pe)
         add_legend(ax4, ax4_2)
 
-        # ─── 5. 클릭률(CTR) vs 전환율(CVR) [좌상 3] ───
-        ax5 = fig.add_subplot(525); setup_ax(ax5)
-        ax5.set_title("5. CTR 및 CVR 분석", color='white', pad=65, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+        # ─── 5. 클릭수 vs CTR [좌상 3] ───
+        ax5 = fig.add_subplot(6, 2, 5); setup_ax(ax5)
+        ax5.set_title("5. 클릭수 vs CTR 추이", color='white', pad=65, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
         guide_str5 = (
-            "첫인상 매력[CTR 막대] = 대표이미지/가격 매력도   |   설득력 성적[CVR 선] = 상세페이지/리뷰 신뢰도\n"
-            "☞ [CTR 낮음] 대표이미지/상품명 개선 필요   |   ☞ [CVR 낮음] 상세페이지/혜택/리뷰 보완 필요\n"
-            "💡 [이렇게 보면 좋은 것?] CTR(막대)도 높게 솟구쳐 있고 CVR(선)도 하늘 위로 높게 솟아올라 있을 때가 완벽한 상황!"
+            "매장 입장[클릭수 막대] = 매장을 구경하는 고객   |   호기심 지수[CTR 선] = 노출 대비 클릭 클릭률\n"
+            "☞ [흥미 없음] 노출은 많은데 CTR 선이 0.5% 미만 점검   |   ☞ [자석 썸네일] CTR 선이 1.5% 돌파 및 우상향\n"
+            "💡 [이렇게 보면 좋은 것?] 클릭 막대가 두툼하게 커지며 클릭률(CTR) 선이 1.5% 위 안전 영역에 안착하는 그림!"
         )
         ax5.text(0.5, 1.02, guide_str5, transform=ax5.transAxes,
                 ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, style='normal', weight='bold',
-                bbox=dict(boxstyle='round,pad=0.4', facecolor='#111122', edgecolor='#10B981', alpha=0.95))
-        ax5.bar(df['date_s'], df['CTR'], color='#10B981', alpha=0.35, label='■ CTR%')
-        ax5.set_ylabel('CTR (%)', color='#10B981', weight='bold', fontsize=fs_label)
-        ax5.tick_params(axis='y', labelcolor='#10B981', labelsize=fs_tick)
+                bbox=dict(boxstyle='round,pad=0.4', facecolor='#111122', edgecolor='#FB923C', alpha=0.95))
+        ax5.bar(df['date_s'], df['click'], color='#F59E0B', alpha=0.35, label='■ 클릭수')
+        ax5.set_ylabel('클릭수 (회)', color='#F59E0B', weight='bold', fontsize=fs_label)
+        ax5.tick_params(axis='y', labelcolor='#F59E0B', labelsize=fs_tick)
         
         ax5_2 = ax5.twinx()
-        cvr = np.where(df['click'] > 0, (df['orders'] / df['click']) * 100, 0)
-        ax5_2.plot(df['date_s'], cvr, color='#6366F1', marker='s', linewidth=lw, markersize=ms,
-                   label='— CVR%', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
-        ax5_2.set_ylabel('CVR (%)', color='#6366F1', weight='bold', fontsize=fs_label)
-        ax5_2.tick_params(axis='y', labelcolor='#6366F1', labelsize=fs_tick)
-        for i, v in enumerate(cvr):
+        ax5_2.plot(df['date_s'], df['CTR'], color='#FB923C', marker='o', markersize=ms, linewidth=lw, 
+                   label='— CTR%', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+        ax5_2.axhline(y=1.0, color='#6B7280', linestyle='--', linewidth=1.2, label='— 평균 기준선 (1.0%)')
+        ax5_2.set_ylabel('CTR (%)', color='#FB923C', weight='bold', fontsize=fs_label)
+        ax5_2.tick_params(axis='y', labelcolor='#FB923C', labelsize=fs_tick)
+        for i, v in enumerate(df['CTR']):
             if v == 0: continue
             offset_y = -14 if i % 2 == 0 else 10
-            ax5_2.annotate(f"{v:.1f}%", (df['date_s'].iloc[i], v), 
-                           xytext=(0, offset_y), textcoords="offset points", ha='center', color='#6366F1', 
+            ax5_2.annotate(f"{v:.2f}%", (df['date_s'].iloc[i], v), 
+                           xytext=(0, offset_y), textcoords="offset points", ha='center', color='#FB923C', 
                            weight='bold', fontsize=fs_ann, path_effects=pe)
         add_legend(ax5, ax5_2)
 
-        # ─── 6. CPC vs ROAS [우상 3] ───
-        ax6 = fig.add_subplot(526); setup_ax(ax6)
-        ax6.set_title("6. CPC vs ROAS 추이", color='white', pad=65, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+        # ─── 6. 클릭수 vs CVR [우상 3] ───
+        ax6 = fig.add_subplot(6, 2, 6); setup_ax(ax6)
+        ax6.set_title("6. 클릭수 vs CVR 추이", color='white', pad=65, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
         guide_str6 = (
-            "입장 단가[CPC 막대] = 클릭당 나가는 평균 비용   |   수익 효율[ROAS 선] = 최종 광고 마진 비율\n"
-            "☞ [수익 갉아먹음] 경쟁 심화로 CPC 상승 시 ROAS 추락 점검   |   ☞ [저렴한 입장료] 낮은 CPC로 높은 ROAS\n"
-            "💡 [이렇게 보면 좋은 것?] 입장료(CPC) 막대는 바닥에 납작 엎드리고, 효도 점수(ROAS)는 하늘 높이 솟구치는 자태!"
+            "매장 입장[클릭수 막대] = 상품을 눌러본 총 클릭   |   구매 설득력[CVR 선] = 클릭 대비 구매 전환율\n"
+            "☞ [상상 연애 중] 들어는 오는데 CVR이 3% 미만 탈출   |   ☞ [완벽한 설득] CVR 선이 5~10% 이상으로 유지\n"
+            "💡 [이렇게 보면 좋은 것?] 클릭(막대)이 유입되는 것과 보조를 맞춰 전환율(CVR) 선이 8%선 이상으로 비상하는 형태!"
         )
         ax6.text(0.5, 1.02, guide_str6, transform=ax6.transAxes,
                 ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, style='normal', weight='bold',
-                bbox=dict(boxstyle='round,pad=0.4', facecolor='#111122', edgecolor='#8B5CF6', alpha=0.95))
-        cpc = np.where(df['click'] > 0, df['spend'] / df['click'], 0)
-        ax6.bar(df['date_s'], cpc, color='#EC4899', alpha=0.35, label='■ CPC')
-        ax6.set_ylabel('CPC (원)', color='#EC4899', weight='bold', fontsize=fs_label)
-        ax6.tick_params(axis='y', labelcolor='#EC4899', labelsize=fs_tick)
+                bbox=dict(boxstyle='round,pad=0.4', facecolor='#111122', edgecolor='#EC4899', alpha=0.95))
+        ax6.bar(df['date_s'], df['click'], color='#F59E0B', alpha=0.35, label='■ 클릭수')
+        ax6.set_ylabel('클릭수 (회)', color='#F59E0B', weight='bold', fontsize=fs_label)
+        ax6.tick_params(axis='y', labelcolor='#F59E0B', labelsize=fs_tick)
         
         ax6_2 = ax6.twinx()
-        ax6_2.plot(df['date_s'], df['ROAS'], color='#34D399', marker='o', markersize=ms, linewidth=lw,
-                   label='— ROAS%', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
-        ax6_2.set_ylabel('ROAS (%)', color='#34D399', weight='bold', fontsize=fs_label)
-        ax6_2.tick_params(axis='y', labelcolor='#34D399', labelsize=fs_tick)
-        for i, v in enumerate(df['ROAS']):
+        ax6_2.plot(df['date_s'], df['CVR'], color='#EC4899', marker='o', markersize=ms, linewidth=lw, 
+                   label='— CVR%', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+        ax6_2.axhline(y=5.0, color='#6B7280', linestyle='--', linewidth=1.2, label='— 평균 기준선 (5.0%)')
+        ax6_2.set_ylabel('CVR (%)', color='#EC4899', weight='bold', fontsize=fs_label)
+        ax6_2.tick_params(axis='y', labelcolor='#EC4899', labelsize=fs_tick)
+        for i, v in enumerate(df['CVR']):
             if v == 0: continue
             offset_y = -14 if i % 2 == 0 else 10
-            ax6_2.annotate(f"{v:.0f}%", (df['date_s'].iloc[i], v), 
-                           xytext=(0, offset_y), textcoords="offset points", ha='center', color='#34D399', 
+            ax6_2.annotate(f"{v:.1f}%", (df['date_s'].iloc[i], v), 
+                           xytext=(0, offset_y), textcoords="offset points", ha='center', color='#EC4899', 
                            weight='bold', fontsize=fs_ann, path_effects=pe)
         add_legend(ax6, ax6_2)
 
-        # ─── 7. 전환율(CVR) vs ROAS [좌상 4] ───
-        ax7 = fig.add_subplot(527); setup_ax(ax7)
-        ax7.set_title("7. 전환율(CVR) vs ROAS 추이", color='white', pad=65, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+        # ─── 7. 클릭수 vs 평균 클릭비용(CPC) [좌상 4] ───
+        ax7 = fig.add_subplot(6, 2, 7); setup_ax(ax7)
+        ax7.set_title("7. 클릭수 vs 평균 클릭비용(CPC) 추이", color='white', pad=65, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
         guide_str7 = (
-            "구매 전환율[CVR 막대] = 구경꾼 대비 진짜 산 비율   |   수익률[ROAS 선] = 광고비 가성비 점수\n"
-            "☞ [효율 동조] CVR이 상승할 때 ROAS도 우상향하는지 확인   |   ☞ [가성비 하락] 전환은 좋은데 마진 대비 예산 과다 점검\n"
-            "💡 [이렇게 보면 좋은 것?] 들어와서 결제하는 비율(CVR) 막대도 높고, 광고비 가성비(ROAS) 선도 구름 위를 나는 상황!"
+            "매장 구경[클릭수 막대] = 클릭으로 모신 손님   |   손님 단가[CPC 선] = 1클릭당 쿠팡에 준 입찰 단가\n"
+            "☞ [출혈 경쟁 구간] 클릭 단가 CPC 선이 고공행진 점검   |   ☞ [꿀 매물 유입] 저렴한 CPC 선 단가로 많은 고객 모심\n"
+            "💡 [이렇게 보면 좋은 것?] CPC 단가 선은 지하실로 안착하고, 유입 클릭 막대는 성곽처럼 높게 쌓이는 모범적인 모습!"
         )
         ax7.text(0.5, 1.02, guide_str7, transform=ax7.transAxes,
                 ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, style='normal', weight='bold',
-                bbox=dict(boxstyle='round,pad=0.4', facecolor='#111122', edgecolor='#6366F1', alpha=0.95))
-        ax7.bar(df['date_s'], cvr, color='#8B5CF6', alpha=0.35, label='■ CVR%')
-        ax7.set_ylabel('CVR (%)', color='#8B5CF6', weight='bold', fontsize=fs_label)
-        ax7.tick_params(axis='y', labelcolor='#8B5CF6', labelsize=fs_tick)
+                bbox=dict(boxstyle='round,pad=0.4', facecolor='#111122', edgecolor='#8B5CF6', alpha=0.95))
+        ax7.bar(df['date_s'], df['click'], color='#F59E0B', alpha=0.35, label='■ 클릭수')
+        ax7.set_ylabel('클릭수 (회)', color='#F59E0B', weight='bold', fontsize=fs_label)
+        ax7.tick_params(axis='y', labelcolor='#F59E0B', labelsize=fs_tick)
         
         ax7_2 = ax7.twinx()
-        ax7_2.plot(df['date_s'], df['ROAS'], color='#FF00FF', marker='^', markersize=ms, linewidth=lw,
-                   label='— ROAS%', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
-        ax7_2.set_ylabel('ROAS (%)', color='#FF00FF', weight='bold', fontsize=fs_label)
-        ax7_2.tick_params(axis='y', labelcolor='#FF00FF', labelsize=fs_tick)
-        for i, v in enumerate(df['ROAS']):
+        ax7_2.plot(df['date_s'], df['CPC'], color='#8B5CF6', marker='o', markersize=ms, linewidth=lw, 
+                   label='— CPC (₩)', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+        ax7_2.set_ylabel('CPC (원)', color='#8B5CF6', weight='bold', fontsize=fs_label)
+        ax7_2.tick_params(axis='y', labelcolor='#8B5CF6', labelsize=fs_tick)
+        for i, v in enumerate(df['CPC']):
             if v == 0: continue
             offset_y = -14 if i % 2 == 0 else 10
-            ax7_2.annotate(f"{v:.0f}%", (df['date_s'].iloc[i], v), 
-                           xytext=(0, offset_y), textcoords="offset points", ha='center', color='#FF00FF', 
+            ax7_2.annotate(f"{int(v)}원", (df['date_s'].iloc[i], v), 
+                           xytext=(0, offset_y), textcoords="offset points", ha='center', color='#8B5CF6', 
                            weight='bold', fontsize=fs_ann, path_effects=pe)
         add_legend(ax7, ax7_2)
 
         # ─── 8. 날짜별 광고비·광고매출 추이 [우상 4] ───
-        ax8 = fig.add_subplot(528); setup_ax(ax8)
+        ax8 = fig.add_subplot(6, 2, 8); setup_ax(ax8)
         ax8.set_title("8. 날짜별 광고비·광고매출 추이", color='white', pad=65, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
         guide_str8 = (
             "매일 쓰는 돈[광고비 선] = 집행 광고비 추세   |   매일 버는 돈[광고매출 선] = 매출 발생 추세\n"
@@ -1345,7 +2333,7 @@ class AdOptimizerApp(ctk.CTk):
         ax8.legend(loc='upper left', fontsize=fs_leg, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
 
         # ─── 9. 날짜별 ROAS 추이 [좌상 5] ───
-        ax9 = fig.add_subplot(529); setup_ax(ax9)
+        ax9 = fig.add_subplot(6, 2, 9); setup_ax(ax9)
         ax9.set_title("9. 날짜별 ROAS 추이", color='white', pad=65, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
         guide_str9 = (
             "가성비 맥박수[ROAS 선] = 일별 광고 수익 효율   |   기준선[300%/330%] = 적자와 흑자의 생명선\n"
@@ -1369,7 +2357,7 @@ class AdOptimizerApp(ctk.CTk):
         ax9.legend(loc='upper left', fontsize=fs_leg, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
 
         # ─── 10. 키워드별 광고비 대비 전환수 [우상 5] ───
-        ax10 = fig.add_subplot(5, 2, 10); ax10.set_facecolor('#0B0B1A')
+        ax10 = fig.add_subplot(6, 2, 10); ax10.set_facecolor('#0B0B1A')
         ax10.tick_params(axis='y', labelcolor='#94A3B8', labelsize=fs_tick)
         ax10.grid(True, axis='y', color='#1F2937', linestyle='--', alpha=0.4)
         ax10.set_title("10. 키워드별 광고비 대비 전환수", color='white', pad=65, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
@@ -1385,51 +2373,106 @@ class AdOptimizerApp(ctk.CTk):
         # 키워드 데이터 처리: 광고비 기준 상위 10개 키워드 추출
         if kw_data is not None and not kw_data.empty:
             top_kws = kw_data.sort_values('spend', ascending=False).head(10).copy()
-            # 💡 [줄바꿈 기법 적용] 글자를 잘라내지 않고 8글자마다 줄바꿈(\n)하여 전체를 온전히 표시
             def wrap_kw(text, width=8):
                 if not text: return ""
                 t = str(text).strip()
                 return '\n'.join([t[i:i+width] for i in range(0, len(t), width)])
             
             top_kws['kw_wrapped'] = top_kws['kw'].apply(lambda x: wrap_kw(x, 8))
-            
             x_indices = list(range(len(top_kws)))
             x_labels = top_kws['kw_wrapped'].tolist()
             
-            # 정수 인덱스 기준으로 막대그래프 렌더링 (중복 범주 매핑 꼬임 원천 차단)
             ax10.bar(x_indices, top_kws['spend'], color='#EF4444', alpha=0.35, label='■ 광고비')
             ax10.set_ylabel('광고비 (원)', color='#EF4444', weight='bold', fontsize=fs_label)
             ax10.tick_params(axis='y', labelcolor='#EF4444', labelsize=fs_tick)
             
-            # 줄바꿈된 텍스트이므로 회전하지 않고 똑바로 세우며(rotation=0, ha='center'), 폰트를 살짝 낮추어 줄바꿈 가독성 극대화
             ax10.set_xticks(x_indices)
             ax10.set_xticklabels(x_labels, color='white', fontsize=fs_tick - 1.5, rotation=0, ha='center')
             ax10.tick_params(axis='x', labelcolor='white', labelsize=fs_tick - 1.5)
             
             ax10_2 = ax10.twinx()
-            # 동일한 정수 인덱스를 공유하여 선그래프 렌더링 (x축 정밀 일치)
             ax10_2.plot(x_indices, top_kws['orders'], color='#10B981', marker='s', markersize=ms, linewidth=lw, label='— 주문수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
             ax10_2.set_ylabel('주문수 (건)', color='#10B981', weight='bold', fontsize=fs_label)
             ax10_2.tick_params(axis='y', labelcolor='#10B981', labelsize=fs_tick)
             
             for i, v in enumerate(top_kws['orders']):
                 if v == 0: continue
-                # 정수 위치(x_indices[i])에 정확하게 텍스트 애노테이션 추가
                 ax10_2.annotate(f"{int(v)}건", (x_indices[i], v), xytext=(0, 10), textcoords="offset points", ha='center', color='#10B981', weight='bold', fontsize=fs_ann, path_effects=pe)
             add_legend(ax10, ax10_2)
         else:
             ax10.text(0.5, 0.5, "표시할 키워드 데이터가 없습니다.", transform=ax10.transAxes, ha='center', va='center', color='#94A3B8', fontsize=12)
 
-        # ─── 모든 서브플롯에 메모 세로 점선 표시 (10번 차트는 키워드 축이므로 세로 메모 점선에서 제외) ───
-        all_axes = [ax1, ax2, ax3, ax4, ax5, ax6, ax7, ax8, ax9]
-        self._draw_memo_vlines(all_axes, df['date_s'].tolist(), pe, fs_ann)
+        # ─── 11. 광고비 비중 및 광고 기여도 추이 [좌상 6] ───
+        ax11 = fig.add_subplot(6, 2, 11); setup_ax(ax11)
+        ax11.set_title("11. 광고비 비중 및 광고 기여도 추이", color='white', pad=65, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+        guide_str11 = (
+            "가성비 노란등[광고비 비중 선] = 매출 대비 광고비 비율   |   마진 안전선[초록 점선] = 내 마진율 마지노선\n"
+            "☞ [위험 구간] 광고비 비중이 내 마진율 선 위로 치솟음   |   ☞ [안전 상태] 비중 선이 10% 경고선 밑에 안정되게 방어됨\n"
+            "💡 [이렇게 보면 좋은 것?] 노란 광고비 비중 선이 초록 마진선 아래, 그리고 10% 경고선 밑에 납작하게 처박히는 그림!"
+        )
+        ax11.text(0.5, 1.02, guide_str11, transform=ax11.transAxes,
+                ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, style='normal', weight='bold',
+                bbox=dict(boxstyle='round,pad=0.4', facecolor='#111122', edgecolor='#FBBF24', alpha=0.95))
+        
+        spend_ratio_series = (df['spend'] / df['sales'] * 100).fillna(0)
+        ax11.plot(df['date_s'], spend_ratio_series, color='#FBBF24', marker='o', markersize=ms, linewidth=lw, label='— 광고비 비중 (%)')
+        ax11.axhline(y=30, color='#10B981', linestyle='--', linewidth=1.2, alpha=0.8, label='— 내 마진율 (30%)')
+        ax11.axhline(y=10, color='#EF4444', linestyle=':', linewidth=1.2, alpha=0.8, label='— 경고선 (10%)')
+        ax11.set_ylabel('비중 (%)', color='white', weight='bold', fontsize=fs_label)
+        ax11.tick_params(axis='y', labelcolor='white', labelsize=fs_tick)
+        for i, v in enumerate(spend_ratio_series):
+            if v == 0: continue
+            offset_y = -14 if i % 2 == 0 else 10
+            ax11.annotate(f"{v:.1f}%", (df['date_s'].iloc[i], v), 
+                           xytext=(0, offset_y), textcoords="offset points", ha='center', color='#FBBF24', 
+                           weight='bold', fontsize=fs_ann, path_effects=pe)
+        ax11.legend(loc='upper left', fontsize=fs_leg, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
 
-        # bottom 여백을 0.04에서 0.06으로 늘려 5행(9번, 10번 차트)의 긴 x축 라벨이 캔버스 밖으로 잘려 나가는 것을 완전 차단
-        fig.subplots_adjust(left=0.06, right=0.94, top=0.96, bottom=0.06, hspace=0.35, wspace=0.35)
+        # ─── 12. 광고 차감 후 최종 순수익 vs 광고비 추이 [우상 6] ───
+        ax12 = fig.add_subplot(6, 2, 12); setup_ax(ax12)
+        ax12.set_title("12. 광고 차감 후 최종 순수익 vs 광고비 추이", color='white', pad=65, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+        guide_str12 = (
+            "진짜 최종 순수익[하늘색 선] = 마진액에서 광고비를 차감한 알짜 순이익   |   광고비 예산[빨간 선] = 집행 광고비\n"
+            "☞ [가짜 흑자 독수독과] 빨간 광고비 선은 우상향하는데 하늘색 순이익 선은 아래로 꺾이거나 영하 적자 구간 돌파\n"
+            "💡 [이렇게 보면 좋은 것?] 지출 광고비 선보다 최종 순이익 선이 훨씬 높은 위치에서 평행하게 손 잡고 올라가는 그림!"
+        )
+        ax12.text(0.5, 1.02, guide_str12, transform=ax12.transAxes,
+                ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, style='normal', weight='bold',
+                bbox=dict(boxstyle='round,pad=0.4', facecolor='#111122', edgecolor='#34D399', alpha=0.95))
+        
+        margin_rate = 0.3
+        gross_profit = df['sales'] * margin_rate
+        net_profit = gross_profit - df['spend']
+        
+        ax12.bar(df['date_s'], gross_profit, color='#94A3B8', alpha=0.15, label='■ 광고 전 마진액 (₩)')
+        ax12.plot(df['date_s'], df['spend'], color='#EF4444', marker='x', linewidth=lw-0.5, markersize=ms, linestyle='--', label='— 지출 광고비 (₩)')
+        ax12.plot(df['date_s'], net_profit, color='#00E5FF', marker='o', linewidth=lw+1, markersize=ms+1, label='— 진짜 최종 순이익 (₩)',
+                  path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+        ax12.axhline(y=0, color='white', linestyle='-', linewidth=0.8, alpha=0.5)
+        ax12.set_ylabel('금액 (원)', color='white', fontsize=fs_label)
+        ax12.tick_params(axis='y', labelcolor='white', labelsize=fs_tick)
+        for i, v in enumerate(net_profit):
+            if v == 0: continue
+            offset_y = -14 if i % 2 == 0 else 10
+            ann_color = '#00E5FF' if v >= 0 else '#FF4444'
+            ax12.annotate(self._fmt_val(v, 'won'), (df['date_s'].iloc[i], v), 
+                           xytext=(0, offset_y), textcoords="offset points", ha='center', color=ann_color, 
+                           weight='bold', fontsize=fs_ann-0.5, path_effects=pe)
+        ax12.legend(loc='upper left', fontsize=fs_leg, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
+
+        # ─── 모든 차트에 메모 수직선 표시 ───
+        date_labels = df['date_s'].tolist()
+        all_axes = [ax1, ax2, ax3, ax4, ax5, ax6, ax7, ax8, ax9, ax11, ax12]
+        try:
+            self._draw_memo_vlines(all_axes, date_labels, pe, fontsize=7)
+        except Exception:
+            pass
+
+        # bottom 여백을 늘려 6행(11번, 12번 차트)의 라벨 잘림 완전 차단
+        fig.subplots_adjust(left=0.06, right=0.94, top=0.97, bottom=0.05, hspace=0.35, wspace=0.35)
         canvas = FigureCanvasTkAgg(fig, master=master); canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
         self._add_hover_tooltip(fig, canvas)
-
     def _add_hover_tooltip(self, fig, canvas):
         """모든 서브플롯에 마우스 호버 툴팁을 추가"""
         annots = {}
@@ -1444,6 +2487,10 @@ class AdOptimizerApp(ctk.CTk):
             annots[ax] = annot
 
         def _get_clean_label(chk_ax, bar, lbl, is_horiz):
+            # 개발자가 주입한 명시적 커스텀 라벨이 있으면 최우선 반환
+            if hasattr(bar, 'custom_label') and bar.custom_label:
+                return bar.custom_label
+                
             # 시스템 기본 컨테이너 명칭이거나 비어있는 경우 한글 틱 라벨에서 추적
             if not lbl or '_container' in lbl or lbl.startswith('_'):
                 try:
@@ -1665,16 +2712,38 @@ class AdOptimizerApp(ctk.CTk):
         memo_colors = ['#FFD700', '#FF6B6B', '#69DB7C', '#74C0FC', '#DA77F2']
         color_idx = 0
         
-        for memo_date, memo_text in sorted(self.memos.items()):
+        sorted_memos = sorted(self.memos, key=lambda m: self._parse_memo_date_to_key(m['date']))
+        seen_mmdd_counts = {}
+        
+        for m in sorted_memos:
+            memo_date = m['date']
+            memo_text = m['memo']
+            
             mmdd = self._memo_date_to_mmdd(memo_date)
             if mmdd is None or mmdd not in date_labels:
                 continue
             
             x_pos = date_labels.index(mmdd)
-            # 글자수 제한 해제하여 100% 표기
-            summary = memo_text 
             color = memo_colors[color_idx % len(memo_colors)]
             color_idx += 1
+            
+            mmdd_count = seen_mmdd_counts.get(mmdd, 0)
+            seen_mmdd_counts[mmdd] = mmdd_count + 1
+            
+            if mmdd_count == 0:
+                ha_val = 'right'
+                summary = memo_text
+            elif mmdd_count == 1:
+                ha_val = 'left'
+                summary = memo_text
+            else:
+                padding_spaces = "   " * (mmdd_count // 2)
+                if mmdd_count % 2 == 0:
+                    ha_val = 'right'
+                    summary = memo_text + padding_spaces
+                else:
+                    ha_val = 'left'
+                    summary = padding_spaces + memo_text
             
             for ax in axes:
                 # 💡 범주형 x축 상에서 점선이 누락되는 현상을 완벽 차단하기 위해 정수 인덱스 대신 문자열(mmdd)을 직접 x로 지정
@@ -1683,7 +2752,7 @@ class AdOptimizerApp(ctk.CTk):
                 y_pos = ylim[1] * 0.92
                 # 텍스트 출력 위치 또한 범주형 눈금 명칭(mmdd)을 기준으로 지정하여 정밀 일치시킴
                 # 글꼴 크기를 기존 fontsize보다 1 줄여서 전체 표시에 유리하도록 함
-                ax.text(mmdd, y_pos, summary, rotation=90, va='top', ha='right',
+                ax.text(mmdd, y_pos, summary, rotation=90, va='top', ha=ha_val,
                        color=color, fontsize=max(6, fontsize-1), weight='bold', alpha=0.85,
                        path_effects=pe)
 
@@ -1736,7 +2805,28 @@ class AdOptimizerApp(ctk.CTk):
         
         # 순수익 바
         p_color = '#10B981' if profit >= 0 else '#EF4444'
-        ax.bar(['순수익'], [profit], color=p_color, width=0.5, alpha=0.8)
+        p_bars = ax.bar(['순수익'], [profit], color=p_color, width=0.5, alpha=0.8)
+        
+        # 막대 위에 상시 값 표시 레이블 추가 및 호버용 커스텀 라벨 주입
+        for i, bar in enumerate(bars):
+            bar.custom_label = cats[i]
+            height = bar.get_height()
+            va_dir = 'bottom' if height >= 0 else 'top'
+            offset_y = 5 if height >= 0 else -15
+            txt = f"{int(height):,}원"
+            ax.text(bar.get_x() + bar.get_width()/2., height + offset_y, txt,
+                    ha='center', va=va_dir, color='white', weight='bold', fontsize=9, path_effects=pe)
+                    
+        for bar in p_bars:
+            bar.custom_label = '순수익'
+            height = bar.get_height()
+            va_dir = 'bottom' if height >= 0 else 'top'
+            offset_y = 5 if height >= 0 else -15
+            txt = f"{int(height):,}원"
+            # 순수익 값의 긍정/부정에 맞는 예쁜 네온 그린/레드 컬러 부여
+            text_color = '#34D399' if height >= 0 else '#F87171'
+            ax.text(bar.get_x() + bar.get_width()/2., height + offset_y, txt,
+                    ha='center', va=va_dir, color=text_color, weight='bold', fontsize=9, path_effects=pe)
         
         # ROAS 표시
         roas_color = '#10B981' if roas >= 330 else '#F59E0B' if roas >= 100 else '#EF4444'
@@ -2164,9 +3254,24 @@ class AdOptimizerApp(ctk.CTk):
 
     def _load_memos(self):
         if os.path.exists("ad_memos.json"):
-            with open("ad_memos.json", "r", encoding="utf-8") as f:
-                return json.load(f)
-        return {}
+            try:
+                with open("ad_memos.json", "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, dict):
+                        # Convert old dict format to new list of dicts format
+                        memos_list = []
+                        for k, v in data.items():
+                            memos_list.append({
+                                "id": k,
+                                "date": k,
+                                "memo": v
+                            })
+                        return memos_list
+                    elif isinstance(data, list):
+                        return data
+            except Exception as e:
+                print(f"Error loading memos: {e}")
+        return []
 
     def _sort_by_column(self, col, reverse):
         l = [(self.kw_tree.set(k, col), k) for k in self.kw_tree.get_children('')]

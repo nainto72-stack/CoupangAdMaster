@@ -3418,6 +3418,13 @@ class AdOptimizerApp(ctk.CTk):
         ax1.legend(h1+h2, l1+l2, loc='upper right', fontsize=9, 
                    facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
         
+        # ─── 메모 수직선 표시 ───
+        try:
+            pe = [path_effects.withStroke(linewidth=2, foreground='black')]
+            self._draw_memo_vlines([ax1], dates, pe, fontsize=8)
+        except Exception as memo_err:
+            pass
+            
         fig.tight_layout()
         
         canvas = FigureCanvasTkAgg(fig, master=master)

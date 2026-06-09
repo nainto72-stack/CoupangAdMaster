@@ -3136,6 +3136,27 @@ class AdOptimizerApp(ctk.CTk):
                         if text_item not in seen:
                             seen.add(text_item)
                             lines_text.append(text_item)
+                    
+                    # 대표 앵커 좌표계 설정 및 날짜별 메모 팝업 연동
+                    repr_c = closest_candidates[0]
+                    dx, dy, target_ax = repr_c['dx'], repr_c['dy'], repr_c['ax']
+                    try:
+                        xticklabels = [t.get_text() for t in target_ax.get_xticklabels() if t.get_text()]
+                        idx = int(round(dx))
+                        if 0 <= idx < len(xticklabels):
+                            tick_val = xticklabels[idx]
+                            
+                            # 날짜 문자열 정규화 (예: '06/03(수)' -> '06.03')
+                            norm_date = tick_val.strip().split('(')[0].replace('/', '.')
+                            
+                            day_memos = [m for m in self.memos if self._memo_date_to_mmdd(m['date']) == norm_date]
+                            if day_memos:
+                                lines_text.append("────────────────")
+                                lines_text.append(f"📅 {tick_val} 메모")
+                                for i, m in enumerate(day_memos, 1):
+                                    lines_text.append(f"{i}. {m['memo']}")
+                    except Exception as memo_err:
+                        pass
                             
                     if lines_text:
                         text = "\n".join(lines_text)
@@ -3246,125 +3267,6 @@ class AdOptimizerApp(ctk.CTk):
                        color=color, fontsize=max(6, fontsize-1), weight='bold', alpha=0.85,
                        path_effects=pe)
 
-        # ─── ⭐️ 마우스 호버 시 메모 100% 팝업 기능 (누적형 구현) ⭐️ ───
-        fig = axes[0].figure
-        
-        # 피겨 객체에 메모 호버링 상태 누적 관리용 딕셔너리 초기화
-        if not hasattr(fig, '_memo_hover_info'):
-            fig._memo_hover_info = {
-                'axes': [],
-                'date_labels': date_labels,
-                'tooltips': {}
-            }
-            
-        info = fig._memo_hover_info
-        
-        # 현재 호출된 axes 및 툴팁 추가
-        for ax in axes:
-            if ax not in info['axes']:
-                info['axes'].append(ax)
-            
-            # 기존에 이 ax에 툴팁이 등록되어 있지 않은 경우에만 새로 생성
-            if ax not in info['tooltips']:
-                tooltip = ax.annotate("", xy=(0,0), xytext=(-30, 40), textcoords="offset points",
-                                      bbox=dict(boxstyle="round,pad=0.6", fc="#1E293B", ec="#FBBF24", lw=2, alpha=0.95),
-                                      color="white", fontsize=10, fontfamily="Malgun Gothic", weight="bold", zorder=999)
-                tooltip.set_visible(False)
-                info['tooltips'][ax] = tooltip
-
-        def on_hover(event):
-            vis_changed = False
-            
-            # 마우스가 유효한 축 영역 바깥에 있으면 툴팁을 전부 숨김
-            if event.inaxes is None or event.inaxes not in info['axes']:
-                for ax, tt in info['tooltips'].items():
-                    if tt.get_visible():
-                        tt.set_visible(False)
-                        vis_changed = True
-                if vis_changed:
-                    fig.canvas.draw_idle()
-                return
-
-            curr_ax = event.inaxes
-            
-            # twinx 등 축 공유 케이스를 위한 매칭
-            target_ax = None
-            if curr_ax in info['axes']:
-                target_ax = curr_ax
-            else:
-                for ax in info['axes']:
-                    try:
-                        if (abs(ax.bbox.x0 - curr_ax.bbox.x0) < 5 and 
-                            abs(ax.bbox.y0 - curr_ax.bbox.y0) < 5):
-                            target_ax = ax
-                            break
-                    except:
-                        pass
-            
-            if target_ax is None:
-                for ax, tt in info['tooltips'].items():
-                    if tt.get_visible():
-                        tt.set_visible(False)
-                        vis_changed = True
-                if vis_changed:
-                    fig.canvas.draw_idle()
-                return
-
-            x_val = event.xdata
-            if x_val is not None:
-                try:
-                    idx = int(round(x_val))
-                    if 0 <= idx < len(info['date_labels']):
-                        # 호버링 인접 반경을 0.45로 넓혀서 그 날짜의 x축 근처에만 가도 팝업이 바로 뜨도록 함
-                        if abs(x_val - idx) < 0.45:
-                            d = info['date_labels'][idx]
-                            day_memos = [m for m in self.memos if self._memo_date_to_mmdd(m['date']) == d]
-                            
-                            if day_memos:
-                                txt_parts = [f"📅 {d} 메모"]
-                                for i, m in enumerate(day_memos, 1):
-                                    txt_parts.append(f"{i}. {m['memo']}")
-                                txt = "\n".join(txt_parts)
-                                
-                                ylim = target_ax.get_ylim()
-                                y_pos = event.ydata if event.ydata is not None else (ylim[0] + ylim[1])/2
-                                
-                                tt = info['tooltips'][target_ax]
-                                tt.xy = (idx, y_pos)
-                                tt.set_text(txt)
-                                if not tt.get_visible():
-                                    tt.set_visible(True)
-                                    vis_changed = True
-                                
-                                # 활성화된 축 이외의 다른 축 툴팁은 숨김
-                                for ax, other_tt in info['tooltips'].items():
-                                    if ax != target_ax and other_tt.get_visible():
-                                        other_tt.set_visible(False)
-                                        vis_changed = True
-                                        
-                                if vis_changed:
-                                    fig.canvas.draw_idle()
-                                return
-                except:
-                    pass
-
-            # 조건에 맞지 않으면 모두 끄기
-            for ax, tt in info['tooltips'].items():
-                if tt.get_visible():
-                    tt.set_visible(False)
-                    vis_changed = True
-            if vis_changed:
-                fig.canvas.draw_idle()
-
-        # 기존 콜백이 등록되어 있으면 해제하고 새로 등록
-        if hasattr(fig, '_memo_hover_cid'):
-            try:
-                fig.canvas.mpl_disconnect(fig._memo_hover_cid)
-            except:
-                pass
-        
-        cid = fig.canvas.mpl_connect("motion_notify_event", on_hover)
-        fig._memo_hover_cid = cid
 
     def _fmt_val(self, v, kind):
         """값을 가독성 좋게 포맷: 원 → 만원/k, % → 소수점"""

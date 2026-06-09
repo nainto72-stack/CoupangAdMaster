@@ -3101,9 +3101,16 @@ class AdOptimizerApp(ctk.CTk):
                     lbl = lbl.replace('— ', '')
                     if lbl.startswith('_'):
                         continue
-                    try:
-                        for idx in range(len(xdata)):
-                            disp = chk_ax.transData.transform((float(xdata[idx]), float(ydata[idx])))
+                    
+                    for idx in range(len(xdata)):
+                        try:
+                            # xdata[idx]가 수치형이면 그대로 변환해 쓰고, 변환 불가(문자열 등) 시 인덱스 idx를 좌표로 차선책 활용
+                            try:
+                                x_val = float(xdata[idx])
+                            except (ValueError, TypeError):
+                                x_val = float(idx)
+                                
+                            disp = chk_ax.transData.transform((x_val, float(ydata[idx])))
                             dist_x = abs(event.x - disp[0])
                             dist_y = abs(event.y - disp[1])
                             
@@ -3114,13 +3121,13 @@ class AdOptimizerApp(ctk.CTk):
                                     'dist_y': dist_y,
                                     'label': lbl,
                                     'val': float(ydata[idx]),
-                                    'dx': float(xdata[idx]),
+                                    'dx': x_val,
                                     'dy': float(ydata[idx]),
                                     'ax': chk_ax,
                                     'type': 'line'
                                 })
-                    except (ValueError, TypeError):
-                        continue
+                        except (ValueError, TypeError, IndexError):
+                            continue
 
             if candidates:
                 # 가장 X축상으로 근접한 점을 기준으로 필터링

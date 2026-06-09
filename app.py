@@ -115,20 +115,25 @@ class AdOptimizerApp(ctk.CTk):
         # 1. 성과 카드
         self._setup_performance_cards()
         
-        # 2. 4분할 그래프 레이아웃 (2x2)
+        # 2. 그래프 레이아웃 (대형 성과그래프 + 4분할 그래프)
         self.chart_grid = ctk.CTkFrame(self.dashboard_scroll, fg_color="transparent")
         self.chart_grid.pack(fill="both", expand=True, padx=15, pady=10)
         self.chart_grid.grid_columnconfigure((0, 1), weight=1)
-        self.chart_grid.grid_rowconfigure((0, 1), weight=1)
+        self.chart_grid.grid_rowconfigure((0, 1, 2), weight=1) # 3행 구조
         
+        # 대형 성과그래프 (row=0, columnspan=2)
+        self.chart_frame_top_trend = ctk.CTkFrame(self.chart_grid, height=380, fg_color="#0B0B1A", corner_radius=12, border_width=1, border_color="#10B981")
+        self.chart_frame_top_trend.grid(row=0, column=0, columnspan=2, padx=8, pady=8, sticky="nsew")
+        
+        # 기존 4분할
         self.chart_frame_tl = ctk.CTkFrame(self.chart_grid, height=450, fg_color="#0B0B1A", corner_radius=12, border_width=1, border_color="#1A3A4A")
-        self.chart_frame_tl.grid(row=0, column=0, padx=8, pady=8, sticky="nsew")
+        self.chart_frame_tl.grid(row=1, column=0, padx=8, pady=8, sticky="nsew")
         self.chart_frame_tr = ctk.CTkFrame(self.chart_grid, height=450, fg_color="#0B0B1A", corner_radius=12, border_width=1, border_color="#3A1A1A")
-        self.chart_frame_tr.grid(row=0, column=1, padx=8, pady=8, sticky="nsew")
+        self.chart_frame_tr.grid(row=1, column=1, padx=8, pady=8, sticky="nsew")
         self.chart_frame_bl = ctk.CTkFrame(self.chart_grid, height=400, fg_color="#0B0B1A", corner_radius=12, border_width=1, border_color="#1A2A1A")
-        self.chart_frame_bl.grid(row=1, column=0, padx=8, pady=8, sticky="nsew")
+        self.chart_frame_bl.grid(row=2, column=0, padx=8, pady=8, sticky="nsew")
         self.chart_frame_br = ctk.CTkFrame(self.chart_grid, height=400, fg_color="#0B0B1A", corner_radius=12, border_width=1, border_color="#1A1A3A")
-        self.chart_frame_br.grid(row=1, column=1, padx=8, pady=8, sticky="nsew")
+        self.chart_frame_br.grid(row=2, column=1, padx=8, pady=8, sticky="nsew")
 
         # 3. 하단 상세 요약 표
         self.summary_container = ctk.CTkFrame(self.dashboard_scroll, fg_color="#1A1A2E", corner_radius=15)
@@ -2111,7 +2116,7 @@ class AdOptimizerApp(ctk.CTk):
 
     def _draw_all_charts(self):
         # 모든 차트 프레임 초기화
-        for f in [self.chart_frame_tl, self.chart_frame_tr, self.chart_frame_bl, self.chart_frame_br, self.metrics_scroll, self.reg_charts_container]:
+        for f in [self.chart_frame_top_trend, self.chart_frame_tl, self.chart_frame_tr, self.chart_frame_bl, self.chart_frame_br, self.metrics_scroll, self.reg_charts_container]:
             for w in f.winfo_children(): w.destroy()
             
         pd_data = self.analyzer.get_daily_performance()
@@ -2119,6 +2124,14 @@ class AdOptimizerApp(ctk.CTk):
             df = pd_data['total']
             overall = self.analyzer.get_overall_summary()
             kw_data = self.analyzer.summary_df
+            
+            # 대형 메인 성과 그래프 렌더링
+            try:
+                self._render_dash_performance_trend(df, self.chart_frame_top_trend)
+            except Exception as e:
+                import traceback; traceback.print_exc()
+                ctk.CTkLabel(self.chart_frame_top_trend, text=f"⚠️ 성과 그래프 오류: {e}", text_color="#EF4444", 
+                            font=("Malgun Gothic", 11)).pack(pady=20)
             
             # 1. 대시보드 4분할 (성과추이와 겹치지 않는 고유 차트)
             for func, args, frame in [
@@ -3319,6 +3332,70 @@ class AdOptimizerApp(ctk.CTk):
         fig.tight_layout(rect=[0, 0, 1, 0.82])
         canvas = FigureCanvasTkAgg(fig, master=master); canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=5, pady=5)
+        self._add_hover_tooltip(fig, canvas)
+
+    def _render_dash_performance_trend(self, df, master):
+        """📈 대시보드 메인 성과 그래프: 집행 광고비 vs 광고 전환 매출 (이중 Y축)"""
+        plt.rcParams['font.family'] = 'Malgun Gothic'
+        
+        # 가로로 긴 비율로 피겨 설정
+        fig = Figure(figsize=(13, 3.8), dpi=95)
+        fig.patch.set_facecolor('#0B0B1A')
+        
+        ax1 = fig.add_subplot(111)
+        ax1.set_facecolor('#0B0B1A')
+        
+        # 타이틀 설정
+        ax1.set_title("성과 그래프", color='white', pad=25, loc='left',
+                     fontdict={'size': 14, 'weight': 'bold', 'family': 'Malgun Gothic'})
+        
+        dates = df['date_s'].tolist()
+        spend = df['spend'].tolist()
+        sales = df['sales'].tolist()
+        
+        # 1. 좌측 Y축: 집행 광고비 (파란색)
+        color_spend = '#3B82F6' # 밝은 파란색
+        ax1.plot(dates, spend, color=color_spend, marker='s', markersize=5, linewidth=2.5, 
+                 label='집행 광고비', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+        ax1.set_ylabel('집행 광고비 (원)', color='white', fontsize=10, weight='bold')
+        ax1.tick_params(axis='y', labelcolor=color_spend, labelsize=9)
+        
+        # 천원 단위(천) 포맷터
+        def format_y_thousand(val, pos):
+            if val == 0: return '0'
+            return f"{int(val/1000)}천"
+        ax1.yaxis.set_major_formatter(plt.FuncFormatter(format_y_thousand))
+        
+        # 2. 우측 Y축: 광고 전환 매출 (초록색)
+        ax2 = ax1.twinx()
+        color_sales = '#10B981' # 밝은 초록색
+        ax2.plot(dates, sales, color=color_sales, marker='s', markersize=5, linewidth=2.5,
+                 label='광고 전환 매출', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+        ax2.set_ylabel('광고 전환 매출 (원)', color='white', fontsize=10, weight='bold')
+        ax2.tick_params(axis='y', labelcolor=color_sales, labelsize=9)
+        ax2.yaxis.set_major_formatter(plt.FuncFormatter(format_y_thousand))
+        
+        # X축 눈금 설정
+        ax1.tick_params(axis='x', labelcolor='#94A3B8', labelsize=9)
+        ax1.grid(True, axis='y', color='#1F2937', linestyle='--', alpha=0.4)
+        
+        # 테두리 색상 설정
+        for sp in ax1.spines.values(): sp.set_color('#1F2937')
+        for sp in ax2.spines.values(): sp.set_color('#1F2937')
+        
+        # 범례 표시
+        h1, l1 = ax1.get_legend_handles_labels()
+        h2, l2 = ax2.get_legend_handles_labels()
+        ax1.legend(h1+h2, l1+l2, loc='upper right', fontsize=9, 
+                   facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
+        
+        fig.tight_layout()
+        
+        canvas = FigureCanvasTkAgg(fig, master=master)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # 툴팁 활성화
         self._add_hover_tooltip(fig, canvas)
 
     def _render_dash_top_keywords(self, kw_data, master):

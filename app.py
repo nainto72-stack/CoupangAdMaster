@@ -4487,20 +4487,20 @@ class AdOptimizerApp(ctk.CTk):
                 else:
                     return f"{val:.2f}{metric_unit}"
             
-            lines_text.append(f"📊 {metric_name} (쿠팡): {fmt(v_coupang)}")
+            lines_text.append(f"📊 {metric_name} (쿠팡시스템 기준): {fmt(v_coupang)}")
             
             if not is_fixed:
-                lines_text.append(f"📊 {metric_name} (보정): {fmt(v_real)}")
+                lines_text.append(f"📊 {metric_name} (실판매가 기준): {fmt(v_real)}")
                 diff = v_real - v_coupang
                 sign = "+" if diff >= 0 else ""
                 
                 if metric_unit == "%":
-                    lines_text.append(f"💡 차이: {sign}{diff:.2f}%p")
+                    lines_text.append(f"💡 차액 (이익 변동): {sign}{diff:.2f}%p")
                 elif metric_unit == "원":
                     pct = (diff / v_coupang * 100) if v_coupang > 0 else 0
-                    lines_text.append(f"💡 차이: {sign}{int(diff):,}원 ({sign}{pct:.1f}%)")
+                    lines_text.append(f"💡 차액 (이익 변동): {sign}{int(diff):,}원 ({sign}{pct:.1f}%)")
                 else:
-                    lines_text.append(f"💡 차이: {sign}{int(diff):,}{metric_unit}")
+                    lines_text.append(f"💡 차액 (이익 변동): {sign}{int(diff):,}{metric_unit}")
             else:
                 lines_text.append("💡 보정 영향 없음 (동일값)")
                 

@@ -4152,7 +4152,6 @@ class AdOptimizerApp(ctk.CTk):
             formatted = f"{int(val_clean):,}"
             self.real_price_var.set(formatted)
             self.real_price_entry.icursor(len(formatted))
-        self._update_real_price_tab()
 
     def _update_real_price_tab(self):
         if self.current_data is None:

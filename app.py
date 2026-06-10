@@ -4034,10 +4034,10 @@ class AdOptimizerApp(ctk.CTk):
         
         ctk.CTkLabel(self.real_input_frame, text="⚙️ 보정 기준:", font=("Malgun Gothic", 14, "bold"), text_color="#94A3B8").pack(side="left", padx=(10, 5), pady=18)
         
-        self.real_calc_base_var = tk.StringVar(value="주문수 기준 (건수)")
+        self.real_calc_base_var = tk.StringVar(value="내 판매가 기준")
         self.real_calc_base_seg = ctk.CTkSegmentedButton(
             self.real_input_frame, 
-            values=["주문수 기준 (건수)", "판매수 기준 (개수)"],
+            values=["쿠팡시스템 기준", "내 판매가 기준"],
             variable=self.real_calc_base_var,
             font=("Malgun Gothic", 13, "bold"),
             command=lambda v: self._update_real_price_tab()
@@ -4121,7 +4121,7 @@ class AdOptimizerApp(ctk.CTk):
         self.real_table_frame = ctk.CTkFrame(self.real_price_scroll, fg_color="#1A1A2E", corner_radius=12)
         self.real_table_frame.pack(fill="x", padx=15, pady=15)
         
-        ctk.CTkLabel(self.real_table_frame, text="📋 쿠팡시스템 기준 vs 실판매가 기준 상세 대조표 (가로형)", font=("Malgun Gothic", 16, "bold"), text_color="#60A5FA").pack(pady=(15, 10), padx=25, anchor="w")
+        ctk.CTkLabel(self.real_table_frame, text="📋 쿠팡시스템 기준 vs 내 판매가 기준 상세 대조표 (가로형)", font=("Malgun Gothic", 16, "bold"), text_color="#60A5FA").pack(pady=(15, 10), padx=25, anchor="w")
         
         # 가로형 컬럼 정의
         self.real_table_cols = (
@@ -4163,17 +4163,13 @@ class AdOptimizerApp(ctk.CTk):
         except:
             p_val = 0.0
             
-        calc_base = self.real_calc_base_var.get()
-        
         overall = self.analyzer.get_overall_summary()
         if not overall:
             return
             
         sales_coupang = overall.get('sales', 0)
-        if calc_base == "주문수 기준 (건수)":
-            sales_real = p_val * overall.get('orders', 0)
-        else:
-            sales_real = p_val * overall.get('conv_qty', 0)
+        # 연산은 항상 '주문수 (건수)' 기준으로 고정
+        sales_real = p_val * overall.get('orders', 0)
             
         spend = overall.get('spend', 0)
         roas_coupang = overall.get('ROAS', 0)
@@ -4240,7 +4236,7 @@ class AdOptimizerApp(ctk.CTk):
                 info['lbl_real'].configure(text="동일값")
                 info['lbl_diff'].configure(text="보정 영향 없음", text_color="#AAAAAA")
             else:
-                info['lbl_real'].configure(text=f"실판매가 기준: {txt_real}")
+                info['lbl_real'].configure(text=f"내 판매가 기준: {txt_real}")
                 diff = v_real - v_coupang
                 if k in ["ROAS", "CVR", "CTR"]:
                     sign = "+" if diff >= 0 else ""
@@ -4254,7 +4250,7 @@ class AdOptimizerApp(ctk.CTk):
             self.real_table.delete(item)
             
         row_coupang = ["쿠팡시스템 기준"]
-        row_real = ["실판매가 기준"]
+        row_real = ["내 판매가 기준"]
         row_diff = ["차액 (이익 변동)"]
         
         row_coupang.append(f"{int(sales_coupang):,}원")
@@ -4350,10 +4346,8 @@ class AdOptimizerApp(ctk.CTk):
             conv_qty = r.get('conv_qty', 0)
             total_qty = r.get('total_qty', 0)
             
-            if calc_base == "주문수 기준 (건수)":
-                s_real = p_val * orders
-            else:
-                s_real = p_val * conv_qty
+            # 연산은 항상 '주문수 (건수)' 기준으로 고정
+            s_real = p_val * orders
             
             roas_real = (s_real / spend * 100) if spend > 0 else 0
             ts_real = p_val * total_qty
@@ -4398,13 +4392,14 @@ class AdOptimizerApp(ctk.CTk):
         ax = fig.add_subplot(111)
         ax.set_facecolor('#0B0B1A')
         
-        ax.set_title(f"실판매가 반영 보정 추이 (광고 전환매출)", color='white', pad=25, loc='left',
-                     fontdict={'size': 14, 'weight': 'bold', 'family': 'Malgun Gothic'})
-        
-        ax.plot(dates, coupang_vals, color='#3B82F6', marker='o', markersize=6, linewidth=2.5, label='쿠팡시스템 기준')
-        
-        if not is_fixed:
-            ax.plot(dates, real_vals, color='#10B981', marker='s', markersize=6, linewidth=2.5, label='실판매가 기준')
+        if calc_base == "쿠팡시스템 기준":
+            ax.set_title(f"쿠팡시스템 기준 추이 ({metric_name})", color='white', pad=25, loc='left',
+                         fontdict={'size': 14, 'weight': 'bold', 'family': 'Malgun Gothic'})
+            ax.plot(dates, coupang_vals, color='#3B82F6', marker='o', markersize=6, linewidth=2.5, label='쿠팡시스템 기준')
+        else:
+            ax.set_title(f"내 판매가 기준 추이 ({metric_name})", color='white', pad=25, loc='left',
+                         fontdict={'size': 14, 'weight': 'bold', 'family': 'Malgun Gothic'})
+            ax.plot(dates, real_vals, color='#10B981', marker='s', markersize=6, linewidth=2.5, label='내 판매가 기준')
             
         ax.set_ylabel(f"{metric_name} ({metric_unit})", color='white', fontsize=10, weight='bold')
         ax.tick_params(axis='y', labelcolor='white', labelsize=9)
@@ -4490,7 +4485,7 @@ class AdOptimizerApp(ctk.CTk):
             lines_text.append(f"📊 {metric_name} (쿠팡시스템 기준): {fmt(v_coupang)}")
             
             if not is_fixed:
-                lines_text.append(f"📊 {metric_name} (실판매가 기준): {fmt(v_real)}")
+                lines_text.append(f"📊 {metric_name} (내 판매가 기준): {fmt(v_real)}")
                 diff = v_real - v_coupang
                 sign = "+" if diff >= 0 else ""
                 

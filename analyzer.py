@@ -38,7 +38,8 @@ class CoupangAdAnalyzer:
         mapping = {
             'kw': None, 'imp': None, 'click': None, 'spend': None, 
             'sales': None, 'orders': None, 'rank': None, 'pname': None, 
-            'date': None, 'region': None, 'dir_sales': None, 'indir_sales': None
+            'date': None, 'region': None, 'dir_sales': None, 'indir_sales': None,
+            'conv_qty': None, 'total_qty': None
         }
         sales_locked = False
         dir_sales_locked = False
@@ -85,6 +86,12 @@ class CoupangAdAnalyzer:
             elif '출력영역' in c or '노출지면' in c or '지면' in c: mapping['region'] = col
             # 순위
             elif '순위' in c: mapping['rank'] = col
+            # 광고 전환 판매수
+            elif '전환' in c and '판매수' in c:
+                mapping['conv_qty'] = col
+            # 전체 판매수
+            elif '전체판매수' in c or '총판매수' in c or ('판매수' in c and '전환' not in c and '직접' not in c and '간접' not in c):
+                mapping['total_qty'] = col
             
         return mapping
 
@@ -113,7 +120,7 @@ class CoupangAdAnalyzer:
                 df[m['kw']]
             )
 
-        num_cols = ['imp', 'click', 'spend', 'sales', 'orders', 'dir_sales', 'indir_sales']
+        num_cols = ['imp', 'click', 'spend', 'sales', 'orders', 'dir_sales', 'indir_sales', 'conv_qty', 'total_qty']
         for k in num_cols:
             c = m[k]
             if c:
@@ -137,7 +144,8 @@ class CoupangAdAnalyzer:
                 agg_dict = {
                     m['imp']: 'sum', m['click']: 'sum', m['spend']: 'sum', 
                     m['sales']: 'sum', m['orders']: 'sum',
-                    m['dir_sales']: 'sum', m['indir_sales']: 'sum'
+                    m['dir_sales']: 'sum', m['indir_sales']: 'sum',
+                    m['conv_qty']: 'sum', m['total_qty']: 'sum'
                 }
                 if m['rank']: agg_dict[m['rank']] = 'mean'
                 if m['pname']: agg_dict[m['pname']] = 'first'
@@ -147,7 +155,8 @@ class CoupangAdAnalyzer:
                 rename_map = {
                     m['kw']: 'kw', m['imp']: 'imp', m['click']: 'click', 
                     m['spend']: 'spend', m['sales']: 'sales', m['orders']: 'orders',
-                    m['dir_sales']: 'dir_sales', m['indir_sales']: 'indir_sales'
+                    m['dir_sales']: 'dir_sales', m['indir_sales']: 'indir_sales',
+                    m['conv_qty']: 'conv_qty', m['total_qty']: 'total_qty'
                 }
                 if m['rank']: rename_map[m['rank']] = 'rank'
                 if m['pname']: rename_map[m['pname']] = 'pname'
@@ -186,11 +195,19 @@ class CoupangAdAnalyzer:
                 
                 self.summary_df = sum_df
                 
-                tr = df_c.groupby('p_date').agg({m['imp']: 'sum', m['click']: 'sum', m['spend']: 'sum', m['sales']: 'sum', m['orders']: 'sum'}).reset_index()
+                tr = df_c.groupby('p_date').agg({
+                    m['imp']: 'sum', m['click']: 'sum', m['spend']: 'sum', 
+                    m['sales']: 'sum', m['orders']: 'sum',
+                    m['conv_qty']: 'sum', m['total_qty']: 'sum'
+                }).reset_index()
                 tr['date_s'] = tr['p_date'].dt.strftime('%m.%d')
                 tr['ROAS'] = np.where(tr[m['spend']] > 0, (tr[m['sales']] / tr[m['spend']]) * 100, 0)
                 tr['CTR'] = np.where(tr[m['imp']] > 0, (tr[m['click']] / tr[m['imp']]) * 100, 0)
-                tr.rename(columns={m['imp']: 'imp', m['click']: 'click', m['spend']: 'spend', m['sales']: 'sales', m['orders']: 'orders'}, inplace=True)
+                tr.rename(columns={
+                    m['imp']: 'imp', m['click']: 'click', m['spend']: 'spend', 
+                    m['sales']: 'sales', m['orders']: 'orders',
+                    m['conv_qty']: 'conv_qty', m['total_qty']: 'total_qty'
+                }, inplace=True)
                 tr['CPC'] = np.where(tr['click'] > 0, tr['spend'] / tr['click'], 0)
                 tr['CVR'] = np.where(tr['click'] > 0, (tr['orders'] / tr['click']) * 100, 0)
                 self.trend_df = tr.sort_values('p_date')
@@ -204,7 +221,9 @@ class CoupangAdAnalyzer:
             'spend': s['spend'].sum(), 'sales': s['sales'].sum(), 
             'orders': s['orders'].sum(), 'imp': s['imp'].sum(), 'click': s['click'].sum(),
             'dir_sales': s['dir_sales'].sum() if 'dir_sales' in s.columns else 0,
-            'indir_sales': s['indir_sales'].sum() if 'indir_sales' in s.columns else 0
+            'indir_sales': s['indir_sales'].sum() if 'indir_sales' in s.columns else 0,
+            'conv_qty': s['conv_qty'].sum() if 'conv_qty' in s.columns else 0,
+            'total_qty': s['total_qty'].sum() if 'total_qty' in s.columns else 0
         }
         t['ROAS'] = (t['sales'] / t['spend'] * 100) if t['spend'] > 0 else 0
         t['CTR'] = (t['click'] / t['imp'] * 100) if t['imp'] > 0 else 0
@@ -223,7 +242,7 @@ class CoupangAdAnalyzer:
                 df['p_date'] = df[m['date']].apply(self.parse_date_robust)
                 
                 # 수치 데이터 안전 형변환 추가
-                for k in ['imp', 'spend', 'sales', 'click', 'orders']:
+                for k in ['imp', 'spend', 'sales', 'click', 'orders', 'conv_qty', 'total_qty']:
                     if m[k]:
                         df[m[k]] = pd.to_numeric(df[m[k]].astype(str).str.replace(',', '').str.replace('₩', '').str.replace('원', ''), errors='coerce').fillna(0)
                     else:
@@ -235,9 +254,11 @@ class CoupangAdAnalyzer:
                     m['spend']: 'sum', 
                     m['sales']: 'sum',
                     m['click']: 'sum',
-                    m['orders']: 'sum'
+                    m['orders']: 'sum',
+                    m['conv_qty']: 'sum',
+                    m['total_qty']: 'sum'
                 }).reset_index()
-                rt.columns = ['date_s', 'p_date', 'region', 'imp', 'spend', 'sales', 'click', 'orders']
+                rt.columns = ['date_s', 'p_date', 'region', 'imp', 'spend', 'sales', 'click', 'orders', 'conv_qty', 'total_qty']
                 rt['CTR'] = np.where(rt['imp'] > 0, (rt['click'] / rt['imp']) * 100, 0)
                 rt['CVR'] = np.where(rt['click'] > 0, (rt['orders'] / rt['click']) * 100, 0)
                 rt['ROAS'] = np.where(rt['spend'] > 0, (rt['sales'] / rt['spend']) * 100, 0)
@@ -249,10 +270,14 @@ class CoupangAdAnalyzer:
         df = self.raw_df.copy()
         m = self._get_column_mapping(df)
         if not m['region']: return pd.DataFrame()
-        for k in ['imp', 'click', 'spend', 'sales', 'orders']:
+        for k in ['imp', 'click', 'spend', 'sales', 'orders', 'conv_qty', 'total_qty']:
             if m[k]: df[m[k]] = pd.to_numeric(df[m[k]].astype(str).str.replace(',', '').str.replace('₩', '').str.replace('원', ''), errors='coerce').fillna(0)
-        s = df.groupby(m['region']).agg({m['sales']: 'sum', m['spend']: 'sum', m['orders']: 'sum', m['click']: 'sum', m['imp']: 'sum'}).reset_index()
-        s.columns = ['region', 'sales', 'spend', 'orders', 'click', 'imp']
+        s = df.groupby(m['region']).agg({
+            m['sales']: 'sum', m['spend']: 'sum', m['orders']: 'sum', 
+            m['click']: 'sum', m['imp']: 'sum', m['conv_qty']: 'sum', 
+            m['total_qty']: 'sum'
+        }).reset_index()
+        s.columns = ['region', 'sales', 'spend', 'orders', 'click', 'imp', 'conv_qty', 'total_qty']
         s['ROAS'] = np.where(s['spend'] > 0, (s['sales'] / s['spend']) * 100, 0)
         s['CTR'] = np.where(s['imp'] > 0, (s['click'] / s['imp']) * 100, 0)
         s['CVR'] = np.where(s['click'] > 0, (s['orders'] / s['click']) * 100, 0)

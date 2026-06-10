@@ -88,6 +88,7 @@ class AdOptimizerApp(ctk.CTk):
         self.tab_calculator = self.tabview.add("🧮 ROAS 순익 계산기")
         self.tab_region_metrics = self.tabview.add("🌐 노출 영역별 분석")
         self.tab_ai_simulator = self.tabview.add("🔮 AI 광고 시뮬레이터")
+        self.tab_real_price = self.tabview.add("📊 실판매 기준 광고분석")
         
         self._setup_dashboard_tab()
         self._setup_keyword_tab()
@@ -101,6 +102,7 @@ class AdOptimizerApp(ctk.CTk):
         self._setup_calculator_tab()
         self._setup_region_metrics_tab()
         self._setup_ai_simulator_tab()
+        self._setup_real_price_tab()
         
         self._refresh_management_tabs()
 
@@ -2015,6 +2017,7 @@ class AdOptimizerApp(ctk.CTk):
         self._draw_all_charts()
         self._update_diagnosis()
         self._update_product_selector()
+        self._update_real_price_tab()
         self.status_label.configure(text=f"✅ 분석 완료! ({self.analyzer.last_analysis_info})")
 
     def _populate_kw_tree(self, data):
@@ -3911,6 +3914,543 @@ class AdOptimizerApp(ctk.CTk):
             for _, r in s.iterrows():
                 vals = (r['region'], f"{int(r['sales']):,}", f"{int(r['spend']):,}", f"{r['ROAS']:.1f}%", f"{int(r['orders']):,}", f"{int(r['click']):,}", f"{int(r['imp']):,}", f"{r['CTR']:.2f}%", f"{r['CVR']:.1f}%", f"{int(r['CPC']):,}")
                 self.summary_tree.insert("", "end", values=vals)
+
+    def _setup_real_price_tab(self):
+        self.real_price_scroll = ctk.CTkScrollableFrame(self.tab_real_price, fg_color="#0B0B1A")
+        self.real_price_scroll.pack(fill="both", expand=True)
+
+        # 1. 상단: 실제판매가 입력 영역
+        self.real_input_frame = ctk.CTkFrame(self.real_price_scroll, fg_color="#1A1A2E", corner_radius=12)
+        self.real_input_frame.pack(fill="x", padx=15, pady=(15, 5))
+        
+        ctk.CTkLabel(self.real_input_frame, text="🏷️ 실제판매가 입력:", font=("Malgun Gothic", 16, "bold"), text_color="#60A5FA").pack(side="left", padx=(25, 10), pady=18)
+        
+        self.real_price_var = tk.StringVar(value="37,500")
+        self.real_price_entry = ctk.CTkEntry(self.real_input_frame, textvariable=self.real_price_var, width=150, height=38, font=("Malgun Gothic", 14, "bold"))
+        self.real_price_entry.pack(side="left", padx=10, pady=18)
+        self.real_price_entry.bind("<KeyRelease>", self._format_real_price_input)
+        self.real_price_entry.bind("<Return>", lambda e: self._update_real_price_tab())
+        
+        ctk.CTkLabel(self.real_input_frame, text="원", font=("Malgun Gothic", 14, "bold"), text_color="white").pack(side="left", padx=(0, 30), pady=18)
+        
+        ctk.CTkLabel(self.real_input_frame, text="⚙️ 보정 기준:", font=("Malgun Gothic", 14, "bold"), text_color="#94A3B8").pack(side="left", padx=(10, 5), pady=18)
+        
+        self.real_calc_base_var = tk.StringVar(value="광고 전환 주문수 기준")
+        self.real_calc_base_seg = ctk.CTkSegmentedButton(
+            self.real_input_frame, 
+            values=["광고 전환 주문수 기준", "광고 전환 판매수 기준"],
+            variable=self.real_calc_base_var,
+            font=("Malgun Gothic", 13, "bold"),
+            command=lambda v: self._update_real_price_tab()
+        )
+        self.real_calc_base_seg.pack(side="left", padx=10, pady=18)
+        
+        self.real_calc_btn = ctk.CTkButton(
+            self.real_input_frame, 
+            text="⚡ 계산 반영", 
+            command=self._update_real_price_tab,
+            fg_color="#2563EB", 
+            hover_color="#1D4ED8", 
+            width=120, 
+            height=38, 
+            font=("Malgun Gothic", 13, "bold")
+        )
+        self.real_calc_btn.pack(side="left", padx=20, pady=18)
+
+        # 2. 중단 1: 주요 지표 카드 영역
+        self.real_cards_grid = ctk.CTkFrame(self.real_price_scroll, fg_color="transparent")
+        self.real_cards_grid.pack(fill="x", padx=15, pady=8)
+        self.real_cards_grid.grid_columnconfigure((0, 1, 2, 3, 4, 5), weight=1)
+        self.real_cards_grid.grid_rowconfigure((0, 1), weight=1)
+        
+        self.real_metrics_def = [
+            ("광고수익률", "ROAS", "%", False),
+            ("오늘 누적 광고비", "today_spend", "원", True),
+            ("집행 광고비", "spend", "원", True),
+            ("광고 전환매출", "sales", "원", False),
+            ("전환율", "CVR", "%", True),
+            ("클릭률", "CTR", "%", True),
+            ("노출수", "imp", "회", True),
+            ("클릭수", "click", "회", True),
+            ("광고 전환 판매수", "conv_qty", "회", True),
+            ("광고 전환 주문수", "orders", "건", True),
+            ("전체 매출", "total_sales", "원", False),
+            ("전체 판매수", "total_qty", "개", True)
+        ]
+        
+        self.real_price_cards = {}
+        for i, (t, k, u, is_fixed) in enumerate(self.real_metrics_def):
+            r, c = divmod(i, 6)
+            card = ctk.CTkFrame(
+                self.real_cards_grid,
+                fg_color="#1E293B",
+                border_width=2,
+                border_color="#3B82F6",
+                corner_radius=12
+            )
+            card.grid(row=r, column=c, padx=6, pady=6, sticky="nsew")
+            
+            if "광고비" in t: color = "#FBBF24"
+            elif "매출" in t: color = "#34D399"
+            elif t in ["노출수", "클릭수", "광고 전환 판매수", "광고 전환 주문수", "전체 판매수"]: color = "#60A5FA"
+            else: color = "#FB923C"
+            
+            ctk.CTkLabel(card, text=t, font=("Malgun Gothic", 13, "bold"), text_color="#E2E8F0").pack(pady=(10, 5))
+            
+            lbl_coupang = ctk.CTkLabel(card, text="-", font=("Malgun Gothic", 14, "bold"), text_color="#AAAAAA")
+            lbl_coupang.pack(pady=2)
+            
+            lbl_real = ctk.CTkLabel(card, text="-", font=("Malgun Gothic", 16, "bold"), text_color=color)
+            lbl_real.pack(pady=2)
+            
+            lbl_diff = ctk.CTkLabel(card, text="-", font=("Malgun Gothic", 12, "bold"), text_color="#E2E8F0")
+            lbl_diff.pack(pady=(2, 10))
+            
+            self.real_price_cards[k] = {
+                'title': t,
+                'unit': u,
+                'is_fixed': is_fixed,
+                'lbl_coupang': lbl_coupang,
+                'lbl_real': lbl_real,
+                'lbl_diff': lbl_diff
+            }
+
+        # 3. 중단 2: 성과그래프 영역
+        self.real_chart_control_frame = ctk.CTkFrame(self.real_price_scroll, fg_color="transparent")
+        self.real_chart_control_frame.pack(fill="x", padx=15, pady=(15, 5))
+        
+        ctk.CTkLabel(self.real_chart_control_frame, text="📊 성과그래프 조회 지표 선택:", font=("Malgun Gothic", 14, "bold"), text_color="#60A5FA").pack(side="left", padx=(10, 10))
+        
+        self.real_chart_metric_cb = ctk.CTkOptionMenu(
+            self.real_chart_control_frame,
+            values=[m[0] for m in self.real_metrics_def],
+            font=("Malgun Gothic", 13, "bold"),
+            dropdown_font=("Malgun Gothic", 13),
+            width=200,
+            command=lambda v: self._draw_real_price_chart()
+        )
+        self.real_chart_metric_cb.pack(side="left", padx=5)
+        self.real_chart_metric_cb.set("광고 전환매출")
+        
+        self.real_chart_container = ctk.CTkFrame(self.real_price_scroll, fg_color="#0B0B1A", corner_radius=12, border_width=1, border_color="#10B981")
+        self.real_chart_container.pack(fill="both", expand=True, padx=15, pady=8)
+
+        # 4. 하단: 가로형 비교표 영역
+        self.real_table_frame = ctk.CTkFrame(self.real_price_scroll, fg_color="#1A1A2E", corner_radius=12)
+        self.real_table_frame.pack(fill="x", padx=15, pady=15)
+        
+        ctk.CTkLabel(self.real_table_frame, text="📋 쿠팡 표시 기준 vs 실제판매가 보정 기준 상세 대조표 (가로형)", font=("Malgun Gothic", 16, "bold"), text_color="#60A5FA").pack(pady=(15, 10), padx=25, anchor="w")
+        
+        # 가로형 컬럼 정의
+        self.real_table_cols = (
+            "구분", "광고 전환매출", "광고수익률", "전환율", "클릭률", 
+            "노출수", "클릭수", "광고 전환 판매수", "광고 전환 주문수", "전체 매출", "전체 판매수"
+        )
+        
+        table_container = ctk.CTkFrame(self.real_table_frame, fg_color="transparent")
+        table_container.pack(fill="x", padx=15, pady=10)
+        
+        self.real_table = ttk.Treeview(table_container, columns=self.real_table_cols, show="headings", height=3)
+        hsb = ttk.Scrollbar(table_container, orient="horizontal", command=self.real_table.xview)
+        self.real_table.configure(xscrollcommand=hsb.set)
+        
+        self.real_table.pack(fill="x", expand=True)
+        hsb.pack(fill="x")
+        
+        # 컬럼 속성 및 너비 세팅
+        for col in self.real_table_cols:
+            self.real_table.heading(col, text=col)
+            width = 160 if col == "구분" or "매출" in col else 115
+            self.real_table.column(col, anchor="center" if col == "구분" else "e", width=width)
+
+    def _format_real_price_input(self, event):
+        val = self.real_price_var.get()
+        val_clean = re.sub(r'[^\d]', '', val)
+        if val_clean:
+            formatted = f"{int(val_clean):,}"
+            self.real_price_var.set(formatted)
+            self.real_price_entry.icursor(len(formatted))
+
+    def _update_real_price_tab(self):
+        if self.current_data is None:
+            return
+            
+        try:
+            p_val = float(re.sub(r'[^\d]', '', self.real_price_var.get()))
+        except:
+            p_val = 0.0
+            
+        calc_base = self.real_calc_base_var.get()
+        
+        overall = self.analyzer.get_overall_summary()
+        if not overall:
+            return
+            
+        sales_coupang = overall.get('sales', 0)
+        if calc_base == "광고 전환 주문수 기준":
+            sales_real = p_val * overall.get('orders', 0)
+        else:
+            sales_real = p_val * overall.get('conv_qty', 0)
+            
+        spend = overall.get('spend', 0)
+        roas_coupang = overall.get('ROAS', 0)
+        roas_real = (sales_real / spend * 100) if spend > 0 else 0
+        
+        total_qty = overall.get('total_qty', 0)
+        total_sales_real = p_val * total_qty
+        
+        for k, info in self.real_price_cards.items():
+            t = info['title']
+            u = info['unit']
+            is_fixed = info['is_fixed']
+            
+            if k == "ROAS":
+                v_coupang = roas_coupang
+                v_real = roas_real
+            elif k == "today_spend":
+                v_coupang = overall.get('spend', 0)
+                v_real = v_coupang
+            elif k == "spend":
+                v_coupang = overall.get('spend', 0)
+                v_real = v_coupang
+            elif k == "sales":
+                v_coupang = sales_coupang
+                v_real = sales_real
+            elif k == "CVR":
+                v_coupang = overall.get('CVR', 0)
+                v_real = v_coupang
+            elif k == "CTR":
+                v_coupang = overall.get('CTR', 0)
+                v_real = v_coupang
+            elif k == "imp":
+                v_coupang = overall.get('imp', 0)
+                v_real = v_coupang
+            elif k == "click":
+                v_coupang = overall.get('click', 0)
+                v_real = v_coupang
+            elif k == "conv_qty":
+                v_coupang = overall.get('conv_qty', 0)
+                v_real = v_coupang
+            elif k == "orders":
+                v_coupang = overall.get('orders', 0)
+                v_real = v_coupang
+            elif k == "total_sales":
+                v_coupang = sales_coupang
+                v_real = total_sales_real
+            elif k == "total_qty":
+                v_coupang = total_qty
+                v_real = v_coupang
+            
+            if u == "원":
+                txt_coupang = f"{int(v_coupang):,} 원"
+                txt_real = f"{int(v_real):,} 원"
+            elif u == "회" or u == "건" or u == "개":
+                txt_coupang = f"{int(v_coupang):,} {u}"
+                txt_real = f"{int(v_real):,} {u}"
+            else:
+                txt_coupang = f"{v_coupang:.2f} {u}"
+                txt_real = f"{v_real:.2f} {u}"
+                
+            info['lbl_coupang'].configure(text=f"쿠팡 표시: {txt_coupang}")
+            
+            if is_fixed:
+                info['lbl_real'].configure(text="동일값")
+                info['lbl_diff'].configure(text="보정 영향 없음", text_color="#AAAAAA")
+            else:
+                info['lbl_real'].configure(text=f"실판매가: {txt_real}")
+                diff = v_real - v_coupang
+                if k in ["ROAS", "CVR", "CTR"]:
+                    sign = "+" if diff >= 0 else ""
+                    info['lbl_diff'].configure(text=f"차이: {sign}{diff:.2f}%p", text_color="#10B981" if diff >= 0 else "#EF4444")
+                else:
+                    sign = "+" if diff >= 0 else ""
+                    pct = (diff / v_coupang * 100) if v_coupang > 0 else 0
+                    info['lbl_diff'].configure(text=f"차이: {sign}{int(diff):,}원 ({sign}{pct:.1f}%)", text_color="#10B981" if diff >= 0 else "#EF4444")
+        
+        for item in self.real_table.get_children():
+            self.real_table.delete(item)
+            
+        row_coupang = ["쿠팡 표시 기준"]
+        row_real = ["실제판매가 보정 기준"]
+        row_diff = ["차이"]
+        
+        row_coupang.append(f"{int(sales_coupang):,}원")
+        row_real.append(f"{int(sales_real):,}원")
+        diff_sales = sales_real - sales_coupang
+        pct_sales = (diff_sales / sales_coupang * 100) if sales_coupang > 0 else 0
+        row_diff.append(f"+{int(diff_sales):,}원 (+{pct_sales:.1f}%)" if diff_sales >= 0 else f"{int(diff_sales):,}원 ({pct_sales:.1f}%)")
+        
+        row_coupang.append(f"{roas_coupang:.2f}%")
+        row_real.append(f"{roas_real:.2f}%")
+        diff_roas = roas_real - roas_coupang
+        row_diff.append(f"+{diff_roas:.2f}%p" if diff_roas >= 0 else f"{diff_roas:.2f}%p")
+        
+        row_coupang.append(f"{overall.get('CVR', 0):.2f}%")
+        row_real.append("동일값")
+        row_diff.append("0%p")
+        
+        row_coupang.append(f"{overall.get('CTR', 0):.2f}%")
+        row_real.append("동일값")
+        row_diff.append("0%p")
+        
+        row_coupang.append(f"{int(overall.get('imp', 0)):,}회")
+        row_real.append("동일값")
+        row_diff.append("-")
+        
+        row_coupang.append(f"{int(overall.get('click', 0)):,}회")
+        row_real.append("동일값")
+        row_diff.append("-")
+        
+        row_coupang.append(f"{int(overall.get('conv_qty', 0)):,}회")
+        row_real.append("동일값")
+        row_diff.append("-")
+        
+        row_coupang.append(f"{int(overall.get('orders', 0)):,}건")
+        row_real.append("동일값")
+        row_diff.append("-")
+        
+        row_coupang.append(f"{int(sales_coupang):,}원")
+        row_real.append(f"{int(total_sales_real):,}원")
+        diff_total_sales = total_sales_real - sales_coupang
+        pct_total_sales = (diff_total_sales / sales_coupang * 100) if sales_coupang > 0 else 0
+        row_diff.append(f"+{int(diff_total_sales):,}원 (+{pct_total_sales:.1f}%)" if diff_total_sales >= 0 else f"{int(diff_total_sales):,}원 ({pct_total_sales:.1f}%)")
+        
+        row_coupang.append(f"{int(total_qty):,}개")
+        row_real.append("동일값")
+        row_diff.append("-")
+        
+        self.real_table.insert("", "end", values=row_coupang)
+        self.real_table.insert("", "end", values=row_real)
+        self.real_table.insert("", "end", values=row_diff)
+        
+        self._draw_real_price_chart()
+
+    def _draw_real_price_chart(self):
+        for w in self.real_chart_container.winfo_children():
+            w.destroy()
+            
+        if self.current_data is None:
+            ctk.CTkLabel(self.real_chart_container, text="⚠️ 데이터 분석을 먼저 실행해주세요.", text_color="#EF4444", font=("Malgun Gothic", 14, "bold")).pack(pady=100)
+            return
+            
+        pd_data = self.analyzer.get_daily_performance()
+        if pd_data['total'].empty:
+            ctk.CTkLabel(self.real_chart_container, text="⚠️ 표시할 날짜별 추이 데이터가 없습니다.", text_color="#EF4444", font=("Malgun Gothic", 14, "bold")).pack(pady=100)
+            return
+            
+        df = pd_data['total'].copy()
+        
+        try:
+            p_val = float(re.sub(r'[^\d]', '', self.real_price_var.get()))
+        except:
+            p_val = 0.0
+        calc_base = self.real_calc_base_var.get()
+        
+        metric_name = self.real_chart_metric_cb.get()
+        metric_key = next((m[1] for m in self.real_metrics_def if m[0] == metric_name), "sales")
+        metric_unit = next((m[2] for m in self.real_metrics_def if m[0] == metric_name), "원")
+        is_fixed = next((m[3] for m in self.real_metrics_def if m[0] == metric_name), False)
+        
+        df = df.sort_values('p_date')
+        dates = df['date_s'].tolist()
+        
+        coupang_vals = []
+        real_vals = []
+        
+        for _, r in df.iterrows():
+            spend = r.get('spend', 0)
+            sales = r.get('sales', 0)
+            orders = r.get('orders', 0)
+            click = r.get('click', 0)
+            imp = r.get('imp', 0)
+            conv_qty = r.get('conv_qty', 0)
+            total_qty = r.get('total_qty', 0)
+            
+            if calc_base == "광고 전환 주문수 기준":
+                s_real = p_val * orders
+            else:
+                s_real = p_val * conv_qty
+            
+            roas_real = (s_real / spend * 100) if spend > 0 else 0
+            ts_real = p_val * total_qty
+            
+            if metric_key == "ROAS":
+                coupang_vals.append(r.get('ROAS', 0))
+                real_vals.append(roas_real)
+            elif metric_key == "today_spend" or metric_key == "spend":
+                coupang_vals.append(spend)
+                real_vals.append(spend)
+            elif metric_key == "sales":
+                coupang_vals.append(sales)
+                real_vals.append(s_real)
+            elif metric_key == "CVR":
+                coupang_vals.append(r.get('CVR', 0))
+                real_vals.append(r.get('CVR', 0))
+            elif metric_key == "CTR":
+                coupang_vals.append(r.get('CTR', 0))
+                real_vals.append(r.get('CTR', 0))
+            elif metric_key == "imp":
+                coupang_vals.append(imp)
+                real_vals.append(imp)
+            elif metric_key == "click":
+                coupang_vals.append(click)
+                real_vals.append(click)
+            elif metric_key == "conv_qty":
+                coupang_vals.append(conv_qty)
+                real_vals.append(conv_qty)
+            elif metric_key == "orders":
+                coupang_vals.append(orders)
+                real_vals.append(orders)
+            elif metric_key == "total_sales":
+                coupang_vals.append(sales)
+                real_vals.append(ts_real)
+            elif metric_key == "total_qty":
+                coupang_vals.append(total_qty)
+                real_vals.append(total_qty)
+        
+        plt.rcParams['font.family'] = 'Malgun Gothic'
+        fig = Figure(figsize=(13, 4.2), dpi=95)
+        fig.patch.set_facecolor('#0B0B1A')
+        ax = fig.add_subplot(111)
+        ax.set_facecolor('#0B0B1A')
+        
+        ax.set_title(f"실판매가 반영 보정 추이: {metric_name}", color='white', pad=25, loc='left',
+                     fontdict={'size': 14, 'weight': 'bold', 'family': 'Malgun Gothic'})
+        
+        ax.plot(dates, coupang_vals, color='#3B82F6', marker='o', markersize=6, linewidth=2.5, label='쿠팡 표시 기준')
+        
+        if not is_fixed:
+            ax.plot(dates, real_vals, color='#10B981', marker='s', markersize=6, linewidth=2.5, label='실제판매가 보정 기준')
+            
+        ax.set_ylabel(f"{metric_name} ({metric_unit})", color='white', fontsize=10, weight='bold')
+        ax.tick_params(axis='y', labelcolor='white', labelsize=9)
+        ax.tick_params(axis='x', labelcolor='#94A3B8', labelsize=9)
+        ax.grid(True, axis='y', color='#1F2937', linestyle='--', alpha=0.4)
+        
+        if metric_unit == "원":
+            def format_y_thousand(val, pos):
+                if val == 0: return '0'
+                if abs(val) >= 1000000: return f"{val/1000000:.1f}백만"
+                return f"{int(val/1000)}천"
+            ax.yaxis.set_major_formatter(plt.FuncFormatter(format_y_thousand))
+            
+        for sp in ax.spines.values():
+            sp.set_color('#1F2937')
+            
+        ax.legend(loc='upper right', fontsize=9, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
+        
+        try:
+            pe = [path_effects.withStroke(linewidth=2, foreground='black')]
+            self._draw_memo_vlines([ax], dates, pe, fontsize=8)
+        except Exception:
+            pass
+            
+        fig.tight_layout()
+        
+        canvas = FigureCanvasTkAgg(fig, master=self.real_chart_container)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+        
+        self._add_hover_tooltip_real_price(fig, canvas, dates, coupang_vals, real_vals, is_fixed, metric_unit, metric_name)
+
+    def _add_hover_tooltip_real_price(self, fig, canvas, dates, coupang_vals, real_vals, is_fixed, metric_unit, metric_name):
+        annots = {}
+        for ax in fig.get_axes():
+            annot = ax.annotate("", xy=(0, 0), xytext=(20, 20),
+                               textcoords="offset points",
+                               bbox=dict(boxstyle="round,pad=0.5", fc="#1E293B", ec="#60A5FA", lw=1.5, alpha=0.95),
+                               fontsize=11, color="white", fontfamily="Malgun Gothic", fontweight="bold",
+                               arrowprops=dict(arrowstyle="->", color="#60A5FA", lw=1.5),
+                               zorder=999)
+            annot.set_visible(False)
+            annots[ax] = annot
+
+        def on_hover(event):
+            vis_changed = False
+            
+            if event.inaxes is None or event.xdata is None:
+                for annot in annots.values():
+                    if annot.get_visible():
+                        annot.set_visible(False)
+                        vis_changed = True
+                if vis_changed:
+                    canvas.draw_idle()
+                return
+
+            ax = event.inaxes
+            idx = int(round(event.xdata))
+            
+            if not (0 <= idx < len(dates)):
+                for annot in annots.values():
+                    if annot.get_visible():
+                        annot.set_visible(False)
+                        vis_changed = True
+                if vis_changed:
+                    canvas.draw_idle()
+                return
+                
+            tick_val = dates[idx]
+            v_coupang = coupang_vals[idx]
+            v_real = real_vals[idx]
+            
+            lines_text = [f"📅 {tick_val}"]
+            
+            def fmt(val):
+                if metric_unit == "원":
+                    return f"{int(val):,}원"
+                elif metric_unit == "회" or metric_unit == "건" or metric_unit == "개":
+                    return f"{int(val):,}{metric_unit}"
+                else:
+                    return f"{val:.2f}{metric_unit}"
+            
+            lines_text.append(f"📊 {metric_name} (쿠팡): {fmt(v_coupang)}")
+            
+            if not is_fixed:
+                lines_text.append(f"📊 {metric_name} (보정): {fmt(v_real)}")
+                diff = v_real - v_coupang
+                sign = "+" if diff >= 0 else ""
+                
+                if metric_unit == "%":
+                    lines_text.append(f"💡 차이: {sign}{diff:.2f}%p")
+                elif metric_unit == "원":
+                    pct = (diff / v_coupang * 100) if v_coupang > 0 else 0
+                    lines_text.append(f"💡 차이: {sign}{int(diff):,}원 ({sign}{pct:.1f}%)")
+                else:
+                    lines_text.append(f"💡 차이: {sign}{int(diff):,}{metric_unit}")
+            else:
+                lines_text.append("💡 보정 영향 없음 (동일값)")
+                
+            try:
+                norm_date = tick_val.strip().split('(')[0].replace('/', '.')
+                day_memos = [m for m in self.memos if self._memo_date_to_mmdd(m['date']) == norm_date]
+                if day_memos:
+                    lines_text.append("────────────────")
+                    lines_text.append(f"📝 메모")
+                    for i, m in enumerate(day_memos, 1):
+                        lines_text.append(f"{i}. {m['memo']}")
+            except Exception:
+                pass
+                
+            text = "\n".join(lines_text)
+            annot = annots[ax]
+            
+            y_anchor = event.ydata if event.ydata is not None else 0
+            annot.xy = (idx, y_anchor)
+            annot.set_text(text)
+            
+            if not annot.get_visible():
+                annot.set_visible(True)
+                vis_changed = True
+                
+            for other_ax, other_annot in annots.items():
+                if other_ax is not ax and other_annot.get_visible():
+                    other_annot.set_visible(False)
+                    vis_changed = True
+                    
+            if vis_changed:
+                canvas.draw_idle()
+                
+        fig.canvas.mpl_connect("motion_notify_event", on_hover)
 
 if __name__ == "__main__":
     app = AdOptimizerApp()

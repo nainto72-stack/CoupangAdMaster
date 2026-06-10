@@ -4034,10 +4034,10 @@ class AdOptimizerApp(ctk.CTk):
         
         ctk.CTkLabel(self.real_input_frame, text="⚙️ 보정 기준:", font=("Malgun Gothic", 14, "bold"), text_color="#94A3B8").pack(side="left", padx=(10, 5), pady=18)
         
-        self.real_calc_base_var = tk.StringVar(value="광고 전환 주문수 기준")
+        self.real_calc_base_var = tk.StringVar(value="주문수 기준 (건수)")
         self.real_calc_base_seg = ctk.CTkSegmentedButton(
             self.real_input_frame, 
-            values=["광고 전환 주문수 기준", "광고 전환 판매수 기준"],
+            values=["주문수 기준 (건수)", "판매수 기준 (개수)"],
             variable=self.real_calc_base_var,
             font=("Malgun Gothic", 13, "bold"),
             command=lambda v: self._update_real_price_tab()
@@ -4114,23 +4114,6 @@ class AdOptimizerApp(ctk.CTk):
                 'lbl_diff': lbl_diff
             }
 
-        # 3. 중단 2: 성과그래프 영역
-        self.real_chart_control_frame = ctk.CTkFrame(self.real_price_scroll, fg_color="transparent")
-        self.real_chart_control_frame.pack(fill="x", padx=15, pady=(15, 5))
-        
-        ctk.CTkLabel(self.real_chart_control_frame, text="📊 성과그래프 조회 지표 선택:", font=("Malgun Gothic", 14, "bold"), text_color="#60A5FA").pack(side="left", padx=(10, 10))
-        
-        self.real_chart_metric_cb = ctk.CTkOptionMenu(
-            self.real_chart_control_frame,
-            values=[m[0] for m in self.real_metrics_def],
-            font=("Malgun Gothic", 13, "bold"),
-            dropdown_font=("Malgun Gothic", 13),
-            width=200,
-            command=lambda v: self._draw_real_price_chart()
-        )
-        self.real_chart_metric_cb.pack(side="left", padx=5)
-        self.real_chart_metric_cb.set("광고 전환매출")
-        
         self.real_chart_container = ctk.CTkFrame(self.real_price_scroll, fg_color="#0B0B1A", corner_radius=12, border_width=1, border_color="#10B981")
         self.real_chart_container.pack(fill="both", expand=True, padx=15, pady=8)
 
@@ -4138,7 +4121,7 @@ class AdOptimizerApp(ctk.CTk):
         self.real_table_frame = ctk.CTkFrame(self.real_price_scroll, fg_color="#1A1A2E", corner_radius=12)
         self.real_table_frame.pack(fill="x", padx=15, pady=15)
         
-        ctk.CTkLabel(self.real_table_frame, text="📋 쿠팡 표시 기준 vs 실제판매가 보정 기준 상세 대조표 (가로형)", font=("Malgun Gothic", 16, "bold"), text_color="#60A5FA").pack(pady=(15, 10), padx=25, anchor="w")
+        ctk.CTkLabel(self.real_table_frame, text="📋 쿠팡시스템 기준 vs 실판매가 기준 상세 대조표 (가로형)", font=("Malgun Gothic", 16, "bold"), text_color="#60A5FA").pack(pady=(15, 10), padx=25, anchor="w")
         
         # 가로형 컬럼 정의
         self.real_table_cols = (
@@ -4169,6 +4152,7 @@ class AdOptimizerApp(ctk.CTk):
             formatted = f"{int(val_clean):,}"
             self.real_price_var.set(formatted)
             self.real_price_entry.icursor(len(formatted))
+        self._update_real_price_tab()
 
     def _update_real_price_tab(self):
         if self.current_data is None:
@@ -4186,7 +4170,7 @@ class AdOptimizerApp(ctk.CTk):
             return
             
         sales_coupang = overall.get('sales', 0)
-        if calc_base == "광고 전환 주문수 기준":
+        if calc_base == "주문수 기준 (건수)":
             sales_real = p_val * overall.get('orders', 0)
         else:
             sales_real = p_val * overall.get('conv_qty', 0)
@@ -4250,13 +4234,13 @@ class AdOptimizerApp(ctk.CTk):
                 txt_coupang = f"{v_coupang:.2f} {u}"
                 txt_real = f"{v_real:.2f} {u}"
                 
-            info['lbl_coupang'].configure(text=f"쿠팡 표시: {txt_coupang}")
+            info['lbl_coupang'].configure(text=f"쿠팡시스템 기준: {txt_coupang}")
             
             if is_fixed:
                 info['lbl_real'].configure(text="동일값")
                 info['lbl_diff'].configure(text="보정 영향 없음", text_color="#AAAAAA")
             else:
-                info['lbl_real'].configure(text=f"실판매가: {txt_real}")
+                info['lbl_real'].configure(text=f"실판매가 기준: {txt_real}")
                 diff = v_real - v_coupang
                 if k in ["ROAS", "CVR", "CTR"]:
                     sign = "+" if diff >= 0 else ""
@@ -4269,9 +4253,9 @@ class AdOptimizerApp(ctk.CTk):
         for item in self.real_table.get_children():
             self.real_table.delete(item)
             
-        row_coupang = ["쿠팡 표시 기준"]
-        row_real = ["실제판매가 보정 기준"]
-        row_diff = ["차이"]
+        row_coupang = ["쿠팡시스템 기준"]
+        row_real = ["실판매가 기준"]
+        row_diff = ["차액 (이익 변동)"]
         
         row_coupang.append(f"{int(sales_coupang):,}원")
         row_real.append(f"{int(sales_real):,}원")
@@ -4345,10 +4329,11 @@ class AdOptimizerApp(ctk.CTk):
             p_val = 0.0
         calc_base = self.real_calc_base_var.get()
         
-        metric_name = self.real_chart_metric_cb.get()
-        metric_key = next((m[1] for m in self.real_metrics_def if m[0] == metric_name), "sales")
-        metric_unit = next((m[2] for m in self.real_metrics_def if m[0] == metric_name), "원")
-        is_fixed = next((m[3] for m in self.real_metrics_def if m[0] == metric_name), False)
+        # 콤보박스 대신 고정 지표 설정 (매출액 보정)
+        metric_name = "광고 전환매출"
+        metric_key = "sales"
+        metric_unit = "원"
+        is_fixed = False
         
         df = df.sort_values('p_date')
         dates = df['date_s'].tolist()
@@ -4365,7 +4350,7 @@ class AdOptimizerApp(ctk.CTk):
             conv_qty = r.get('conv_qty', 0)
             total_qty = r.get('total_qty', 0)
             
-            if calc_base == "광고 전환 주문수 기준":
+            if calc_base == "주문수 기준 (건수)":
                 s_real = p_val * orders
             else:
                 s_real = p_val * conv_qty
@@ -4413,13 +4398,13 @@ class AdOptimizerApp(ctk.CTk):
         ax = fig.add_subplot(111)
         ax.set_facecolor('#0B0B1A')
         
-        ax.set_title(f"실판매가 반영 보정 추이: {metric_name}", color='white', pad=25, loc='left',
+        ax.set_title(f"실판매가 반영 보정 추이 (광고 전환매출)", color='white', pad=25, loc='left',
                      fontdict={'size': 14, 'weight': 'bold', 'family': 'Malgun Gothic'})
         
-        ax.plot(dates, coupang_vals, color='#3B82F6', marker='o', markersize=6, linewidth=2.5, label='쿠팡 표시 기준')
+        ax.plot(dates, coupang_vals, color='#3B82F6', marker='o', markersize=6, linewidth=2.5, label='쿠팡시스템 기준')
         
         if not is_fixed:
-            ax.plot(dates, real_vals, color='#10B981', marker='s', markersize=6, linewidth=2.5, label='실제판매가 보정 기준')
+            ax.plot(dates, real_vals, color='#10B981', marker='s', markersize=6, linewidth=2.5, label='실판매가 기준')
             
         ax.set_ylabel(f"{metric_name} ({metric_unit})", color='white', fontsize=10, weight='bold')
         ax.tick_params(axis='y', labelcolor='white', labelsize=9)

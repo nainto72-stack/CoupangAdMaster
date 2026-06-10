@@ -4325,66 +4325,28 @@ class AdOptimizerApp(ctk.CTk):
             p_val = 0.0
         calc_base = self.real_calc_base_var.get()
         
-        # 콤보박스 대신 고정 지표 설정 (매출액 보정)
-        metric_name = "광고 전환매출"
-        metric_key = "sales"
+        # 집행광고비와 광고 전환매출 비교로 지표 명칭 고정
+        metric_name = "금액"
         metric_unit = "원"
-        is_fixed = False
         
         df = df.sort_values('p_date')
         dates = df['date_s'].tolist()
         
         coupang_vals = []
         real_vals = []
+        spend_vals = []
         
         for _, r in df.iterrows():
             spend = r.get('spend', 0)
             sales = r.get('sales', 0)
             orders = r.get('orders', 0)
-            click = r.get('click', 0)
-            imp = r.get('imp', 0)
-            conv_qty = r.get('conv_qty', 0)
-            total_qty = r.get('total_qty', 0)
             
             # 연산은 항상 '주문수 (건수)' 기준으로 고정
             s_real = p_val * orders
             
-            roas_real = (s_real / spend * 100) if spend > 0 else 0
-            ts_real = p_val * total_qty
-            
-            if metric_key == "ROAS":
-                coupang_vals.append(r.get('ROAS', 0))
-                real_vals.append(roas_real)
-            elif metric_key == "today_spend" or metric_key == "spend":
-                coupang_vals.append(spend)
-                real_vals.append(spend)
-            elif metric_key == "sales":
-                coupang_vals.append(sales)
-                real_vals.append(s_real)
-            elif metric_key == "CVR":
-                coupang_vals.append(r.get('CVR', 0))
-                real_vals.append(r.get('CVR', 0))
-            elif metric_key == "CTR":
-                coupang_vals.append(r.get('CTR', 0))
-                real_vals.append(r.get('CTR', 0))
-            elif metric_key == "imp":
-                coupang_vals.append(imp)
-                real_vals.append(imp)
-            elif metric_key == "click":
-                coupang_vals.append(click)
-                real_vals.append(click)
-            elif metric_key == "conv_qty":
-                coupang_vals.append(conv_qty)
-                real_vals.append(conv_qty)
-            elif metric_key == "orders":
-                coupang_vals.append(orders)
-                real_vals.append(orders)
-            elif metric_key == "total_sales":
-                coupang_vals.append(sales)
-                real_vals.append(ts_real)
-            elif metric_key == "total_qty":
-                coupang_vals.append(total_qty)
-                real_vals.append(total_qty)
+            coupang_vals.append(sales)
+            real_vals.append(s_real)
+            spend_vals.append(spend)
         
         plt.rcParams['font.family'] = 'Malgun Gothic'
         fig = Figure(figsize=(13, 4.2), dpi=95)
@@ -4392,26 +4354,28 @@ class AdOptimizerApp(ctk.CTk):
         ax = fig.add_subplot(111)
         ax.set_facecolor('#0B0B1A')
         
+        # 집행광고비는 공통적으로 그림 (주황색 점선)
+        ax.plot(dates, spend_vals, color='#F59E0B', marker='x', markersize=6, linewidth=2, linestyle='--', label='집행광고비')
+        
         if calc_base == "쿠팡시스템 기준":
-            ax.set_title(f"쿠팡시스템 기준 추이 ({metric_name})", color='white', pad=25, loc='left',
+            ax.set_title("쿠팡시스템 기준 추이 (집행광고비 vs 광고전환매출)", color='white', pad=25, loc='left',
                          fontdict={'size': 14, 'weight': 'bold', 'family': 'Malgun Gothic'})
-            ax.plot(dates, coupang_vals, color='#3B82F6', marker='o', markersize=6, linewidth=2.5, label='쿠팡시스템 기준')
+            ax.plot(dates, coupang_vals, color='#3B82F6', marker='o', markersize=6, linewidth=2.5, label='광고전환매출 (쿠팡시스템)')
         else:
-            ax.set_title(f"내 판매가 기준 추이 ({metric_name})", color='white', pad=25, loc='left',
+            ax.set_title("내 판매가 기준 추이 (집행광고비 vs 광고전환매출)", color='white', pad=25, loc='left',
                          fontdict={'size': 14, 'weight': 'bold', 'family': 'Malgun Gothic'})
-            ax.plot(dates, real_vals, color='#10B981', marker='s', markersize=6, linewidth=2.5, label='내 판매가 기준')
+            ax.plot(dates, real_vals, color='#10B981', marker='s', markersize=6, linewidth=2.5, label='광고전환매출 (내 판매가)')
             
         ax.set_ylabel(f"{metric_name} ({metric_unit})", color='white', fontsize=10, weight='bold')
         ax.tick_params(axis='y', labelcolor='white', labelsize=9)
         ax.tick_params(axis='x', labelcolor='#94A3B8', labelsize=9)
         ax.grid(True, axis='y', color='#1F2937', linestyle='--', alpha=0.4)
         
-        if metric_unit == "원":
-            def format_y_thousand(val, pos):
-                if val == 0: return '0'
-                if abs(val) >= 1000000: return f"{val/1000000:.1f}백만"
-                return f"{int(val/1000)}천"
-            ax.yaxis.set_major_formatter(plt.FuncFormatter(format_y_thousand))
+        def format_y_thousand(val, pos):
+            if val == 0: return '0'
+            if abs(val) >= 1000000: return f"{val/1000000:.1f}백만"
+            return f"{int(val/1000)}천"
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(format_y_thousand))
             
         for sp in ax.spines.values():
             sp.set_color('#1F2937')
@@ -4430,9 +4394,9 @@ class AdOptimizerApp(ctk.CTk):
         canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
         
-        self._add_hover_tooltip_real_price(fig, canvas, dates, coupang_vals, real_vals, is_fixed, metric_unit, metric_name)
+        self._add_hover_tooltip_real_price(fig, canvas, dates, coupang_vals, real_vals, spend_vals, calc_base)
 
-    def _add_hover_tooltip_real_price(self, fig, canvas, dates, coupang_vals, real_vals, is_fixed, metric_unit, metric_name):
+    def _add_hover_tooltip_real_price(self, fig, canvas, dates, coupang_vals, real_vals, spend_vals, calc_base):
         annots = {}
         for ax in fig.get_axes():
             annot = ax.annotate("", xy=(0, 0), xytext=(20, 20),
@@ -4471,33 +4435,23 @@ class AdOptimizerApp(ctk.CTk):
             tick_val = dates[idx]
             v_coupang = coupang_vals[idx]
             v_real = real_vals[idx]
+            v_spend = spend_vals[idx]
             
             lines_text = [f"📅 {tick_val}"]
             
             def fmt(val):
-                if metric_unit == "원":
-                    return f"{int(val):,}원"
-                elif metric_unit == "회" or metric_unit == "건" or metric_unit == "개":
-                    return f"{int(val):,}{metric_unit}"
-                else:
-                    return f"{val:.2f}{metric_unit}"
+                return f"{int(val):,}원"
             
-            lines_text.append(f"📊 {metric_name} (쿠팡시스템 기준): {fmt(v_coupang)}")
+            lines_text.append(f"📊 집행광고비: {fmt(v_spend)}")
             
-            if not is_fixed:
-                lines_text.append(f"📊 {metric_name} (내 판매가 기준): {fmt(v_real)}")
-                diff = v_real - v_coupang
-                sign = "+" if diff >= 0 else ""
-                
-                if metric_unit == "%":
-                    lines_text.append(f"💡 차액 (이익 변동): {sign}{diff:.2f}%p")
-                elif metric_unit == "원":
-                    pct = (diff / v_coupang * 100) if v_coupang > 0 else 0
-                    lines_text.append(f"💡 차액 (이익 변동): {sign}{int(diff):,}원 ({sign}{pct:.1f}%)")
-                else:
-                    lines_text.append(f"💡 차액 (이익 변동): {sign}{int(diff):,}{metric_unit}")
+            if calc_base == "쿠팡시스템 기준":
+                lines_text.append(f"📊 광고전환매출 (쿠팡시스템): {fmt(v_coupang)}")
+                roas = (v_coupang / v_spend * 100) if v_spend > 0 else 0
+                lines_text.append(f"💡 광고수익률 (ROAS): {roas:.2f}%")
             else:
-                lines_text.append("💡 보정 영향 없음 (동일값)")
+                lines_text.append(f"📊 광고전환매출 (내 판매가): {fmt(v_real)}")
+                roas = (v_real / v_spend * 100) if v_spend > 0 else 0
+                lines_text.append(f"💡 광고수익률 (ROAS): {roas:.2f}%")
                 
             try:
                 norm_date = tick_val.strip().split('(')[0].replace('/', '.')

@@ -73,22 +73,85 @@ class AdOptimizerApp(ctk.CTk):
         self.btn_status_plus.pack(side="left", expand=True, fill="x", padx=5)
 
         self.tabview = ctk.CTkTabview(self, corner_radius=0, fg_color="transparent")
-        self.tabview._segmented_button.configure(font=("Malgun Gothic", 11, "bold"), selected_color="#2563EB", unselected_color="#1A1A2E", height=38)
+        self.tabview._segmented_button.configure(font=("Malgun Gothic", 15, "bold"), selected_color="#2563EB", unselected_color="#1A1A2E", height=45)
         self.tabview.pack(fill="both", expand=True, padx=20, pady=5)
         
-        self.tab_dashboard = self.tabview.add("📊 광고요약")
-        self.tab_keywords = self.tabview.add("🔍 키워드 분석")
-        self.tab_target = self.tabview.add("🎯 타겟 관리")
-        self.tab_manual = self.tabview.add("⚙️ 수동 관리")
-        self.tab_exclude = self.tabview.add("🚫 제외 관리")
-        self.tab_metrics = self.tabview.add("📈 성과 추이")
-        self.tab_product_metrics = self.tabview.add("📦 상품 성과")
-        self.tab_memos = self.tabview.add("📝 일별 메모")
-        self.tab_diagnosis = self.tabview.add("🛡️ AI 나침반")
-        self.tab_calculator = self.tabview.add("🧮 순익 계산기")
-        self.tab_region_metrics = self.tabview.add("🌐 영역별 분석")
-        self.tab_ai_simulator = self.tabview.add("🔮 AI 시뮬레이터")
-        self.tab_real_price = self.tabview.add("📊 실판매 분석")
+        self.main_tab_perf = self.tabview.add("📊 종합 성과")
+        self.main_tab_mgmt = self.tabview.add("⚙️ 키워드/입찰")
+        self.main_tab_ai = self.tabview.add("🛡️ AI분석/도구")
+        self.main_tab_memo = self.tabview.add("📝 일별 메모")
+        
+        # 1. 종합 성과 서브 카테고리 구성
+        self.sub_perf_container = ctk.CTkFrame(self.main_tab_perf, fg_color="transparent")
+        self.sub_perf_container.pack(fill="both", expand=True)
+        
+        self.sub_perf_selector = ctk.CTkSegmentedButton(self.sub_perf_container, 
+                                                         values=["📊 광고요약", "📈 성과 추이", "🌐 영역별 분석", "📊 실판매 분석"],
+                                                         font=("Malgun Gothic", 13, "bold"),
+                                                         height=38,
+                                                         command=self._on_perf_sub_selected)
+        self.sub_perf_selector.pack(fill="x", padx=10, pady=5)
+        
+        self.tab_dashboard = ctk.CTkFrame(self.sub_perf_container, fg_color="transparent")
+        self.tab_metrics = ctk.CTkFrame(self.sub_perf_container, fg_color="transparent")
+        self.tab_region_metrics = ctk.CTkFrame(self.sub_perf_container, fg_color="transparent")
+        self.tab_real_price = ctk.CTkFrame(self.sub_perf_container, fg_color="transparent")
+        
+        self.perf_frames = {
+            "📊 광고요약": self.tab_dashboard,
+            "📈 성과 추이": self.tab_metrics,
+            "🌐 영역별 분석": self.tab_region_metrics,
+            "📊 실판매 분석": self.tab_real_price
+        }
+        
+        # 2. 키워드/입찰 서브 카테고리 구성
+        self.sub_mgmt_container = ctk.CTkFrame(self.main_tab_mgmt, fg_color="transparent")
+        self.sub_mgmt_container.pack(fill="both", expand=True)
+        
+        self.sub_mgmt_selector = ctk.CTkSegmentedButton(self.sub_mgmt_container, 
+                                                         values=["🔍 키워드 분석", "🎯 타겟 관리", "⚙️ 수동 관리", "🚫 제외 관리"],
+                                                         font=("Malgun Gothic", 13, "bold"),
+                                                         height=38,
+                                                         command=self._on_mgmt_sub_selected)
+        self.sub_mgmt_selector.pack(fill="x", padx=10, pady=5)
+        
+        self.tab_keywords = ctk.CTkFrame(self.sub_mgmt_container, fg_color="transparent")
+        self.tab_target = ctk.CTkFrame(self.sub_mgmt_container, fg_color="transparent")
+        self.tab_manual = ctk.CTkFrame(self.sub_mgmt_container, fg_color="transparent")
+        self.tab_exclude = ctk.CTkFrame(self.sub_mgmt_container, fg_color="transparent")
+        
+        self.mgmt_frames = {
+            "🔍 키워드 분석": self.tab_keywords,
+            "🎯 타겟 관리": self.tab_target,
+            "⚙️ 수동 관리": self.tab_manual,
+            "🚫 제외 관리": self.tab_exclude
+        }
+        
+        # 3. AI분석/도구 서브 카테고리 구성
+        self.sub_ai_container = ctk.CTkFrame(self.main_tab_ai, fg_color="transparent")
+        self.sub_ai_container.pack(fill="both", expand=True)
+        
+        self.sub_ai_selector = ctk.CTkSegmentedButton(self.sub_ai_container, 
+                                                       values=["🛡️ AI 나침반", "📦 상품 성과", "🧮 순익 계산기", "🔮 AI 시뮬레이터"],
+                                                       font=("Malgun Gothic", 13, "bold"),
+                                                       height=38,
+                                                       command=self._on_ai_sub_selected)
+        self.sub_ai_selector.pack(fill="x", padx=10, pady=5)
+        
+        self.tab_diagnosis = ctk.CTkFrame(self.sub_ai_container, fg_color="transparent")
+        self.tab_product_metrics = ctk.CTkFrame(self.sub_ai_container, fg_color="transparent")
+        self.tab_calculator = ctk.CTkFrame(self.sub_ai_container, fg_color="transparent")
+        self.tab_ai_simulator = ctk.CTkFrame(self.sub_ai_container, fg_color="transparent")
+        
+        self.ai_frames = {
+            "🛡️ AI 나침반": self.tab_diagnosis,
+            "📦 상품 성과": self.tab_product_metrics,
+            "🧮 순익 계산기": self.tab_calculator,
+            "🔮 AI 시뮬레이터": self.tab_ai_simulator
+        }
+        
+        # 4. 일별 메모 (서브메뉴 없음)
+        self.tab_memos = self.main_tab_memo
         
         self._setup_dashboard_tab()
         self._setup_keyword_tab()
@@ -105,10 +168,40 @@ class AdOptimizerApp(ctk.CTk):
         self._setup_real_price_tab()
         
         self._refresh_management_tabs()
-
+        
+        # 기본 활성화 서브 탭 설정
+        self.sub_perf_selector.set("📊 광고요약")
+        self._on_perf_sub_selected("📊 광고요약")
+        
+        self.sub_mgmt_selector.set("🔍 키워드 분석")
+        self._on_mgmt_sub_selected("🔍 키워드 분석")
+        
+        self.sub_ai_selector.set("🛡️ AI 나침반")
+        self._on_ai_sub_selected("🛡️ AI 나침반")
         
         self.status_label = ctk.CTkLabel(self, text="준비됨", anchor="w", padx=20, height=35, fg_color="#1A1A2E", font=("Malgun Gothic", 11))
         self.status_label.pack(fill="x", side="bottom")
+
+    def _on_perf_sub_selected(self, val):
+        for name, frame in self.perf_frames.items():
+            if name == val:
+                frame.pack(fill="both", expand=True)
+            else:
+                frame.pack_forget()
+
+    def _on_mgmt_sub_selected(self, val):
+        for name, frame in self.mgmt_frames.items():
+            if name == val:
+                frame.pack(fill="both", expand=True)
+            else:
+                frame.pack_forget()
+
+    def _on_ai_sub_selected(self, val):
+        for name, frame in self.ai_frames.items():
+            if name == val:
+                frame.pack(fill="both", expand=True)
+            else:
+                frame.pack_forget()
 
     def _setup_dashboard_tab(self):
         self.dashboard_scroll = ctk.CTkScrollableFrame(self.tab_dashboard, fg_color="#0B0B1A")
@@ -3836,7 +3929,9 @@ class AdOptimizerApp(ctk.CTk):
 
     def _filter_by_status(self, s):
         if self.current_data is None: return
-        self.tabview.set("🔍 키워드 분석")
+        self.tabview.set("⚙️ 키워드/입찰")
+        self.sub_mgmt_selector.set("🔍 키워드 분석")
+        self._on_mgmt_sub_selected("🔍 키워드 분석")
         f_d = self.current_data.copy()
         if s == "rev0": f_d = f_d[f_d['sales'] == 0]
         elif s == "low_roas": f_d = f_d[(f_d['sales'] > 0) & (f_d['ROAS'] < 330)]

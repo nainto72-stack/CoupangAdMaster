@@ -271,7 +271,11 @@ class CoupangAdAnalyzer:
         m = self._get_column_mapping(df)
         if not m['region']: return pd.DataFrame()
         for k in ['imp', 'click', 'spend', 'sales', 'orders', 'conv_qty', 'total_qty']:
-            if m[k]: df[m[k]] = pd.to_numeric(df[m[k]].astype(str).str.replace(',', '').str.replace('₩', '').str.replace('원', ''), errors='coerce').fillna(0)
+            if not m[k]:
+                m[k] = f'tmp_{k}'
+                df[m[k]] = 0
+            else:
+                df[m[k]] = pd.to_numeric(df[m[k]].astype(str).str.replace(',', '').str.replace('₩', '').str.replace('원', ''), errors='coerce').fillna(0)
         s = df.groupby(m['region']).agg({
             m['sales']: 'sum', m['spend']: 'sum', m['orders']: 'sum', 
             m['click']: 'sum', m['imp']: 'sum', m['conv_qty']: 'sum', 

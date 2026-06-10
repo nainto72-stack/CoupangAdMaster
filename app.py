@@ -2103,15 +2103,19 @@ class AdOptimizerApp(ctk.CTk):
         threading.Thread(target=run, daemon=True).start()
 
     def _refresh_ui(self, data):
-        self.current_data = data
-        self._populate_kw_tree(data)
-        self._populate_summary_table()
-        self._update_performance_cards()
-        self._draw_all_charts()
-        self._update_diagnosis()
-        self._update_product_selector()
-        self._update_real_price_tab()
-        self.status_label.configure(text=f"✅ 분석 완료! ({self.analyzer.last_analysis_info})")
+        try:
+            self.current_data = data
+            self._populate_kw_tree(data)
+            self._populate_summary_table()
+            self._update_performance_cards()
+            self._draw_all_charts()
+            self._update_diagnosis()
+            self._update_product_selector()
+            self._update_real_price_tab()
+            self.status_label.configure(text=f"✅ 분석 완료! ({self.analyzer.last_analysis_info})")
+        except Exception as e:
+            err_msg = traceback.format_exc()
+            messagebox.showerror("UI 갱신 오류", f"UI를 업데이트하는 중 에러가 발생했습니다.\n\n{err_msg}")
 
     def _populate_kw_tree(self, data):
         for item in self.kw_tree.get_children(): self.kw_tree.delete(item)

@@ -4322,7 +4322,6 @@ class AdOptimizerApp(ctk.CTk):
             p_val = float(re.sub(r'[^\d]', '', self.real_price_var.get()))
         except:
             p_val = 0.0
-        calc_base = self.real_calc_base_var.get()
         
         # 집행광고비와 광고 전환매출 비교로 지표 명칭 고정
         metric_name = "금액"
@@ -4353,17 +4352,13 @@ class AdOptimizerApp(ctk.CTk):
         ax = fig.add_subplot(111)
         ax.set_facecolor('#0B0B1A')
         
-        # 집행광고비는 공통적으로 그림 (주황색 점선)
+        ax.set_title("집행광고비 vs 광고전환매출 추이 비교", color='white', pad=25, loc='left',
+                     fontdict={'size': 14, 'weight': 'bold', 'family': 'Malgun Gothic'})
+                     
+        # 3선 플로팅 (집행광고비, 쿠팡시스템 기준 매출, 내 판매가 기준 매출)
         ax.plot(dates, spend_vals, color='#F59E0B', marker='x', markersize=6, linewidth=2, linestyle='--', label='집행광고비')
-        
-        if calc_base == "쿠팡시스템 기준":
-            ax.set_title("쿠팡시스템 기준 추이 (집행광고비 vs 광고전환매출)", color='white', pad=25, loc='left',
-                         fontdict={'size': 14, 'weight': 'bold', 'family': 'Malgun Gothic'})
-            ax.plot(dates, coupang_vals, color='#3B82F6', marker='o', markersize=6, linewidth=2.5, label='광고전환매출 (쿠팡시스템)')
-        else:
-            ax.set_title("내 판매가 기준 추이 (집행광고비 vs 광고전환매출)", color='white', pad=25, loc='left',
-                         fontdict={'size': 14, 'weight': 'bold', 'family': 'Malgun Gothic'})
-            ax.plot(dates, real_vals, color='#10B981', marker='s', markersize=6, linewidth=2.5, label='광고전환매출 (내 판매가)')
+        ax.plot(dates, coupang_vals, color='#3B82F6', marker='o', markersize=6, linewidth=2.5, label='광고전환매출 (쿠팡시스템)')
+        ax.plot(dates, real_vals, color='#10B981', marker='s', markersize=6, linewidth=2.5, label='광고전환매출 (내 판매가)')
             
         ax.set_ylabel(f"{metric_name} ({metric_unit})", color='white', fontsize=10, weight='bold')
         ax.tick_params(axis='y', labelcolor='white', labelsize=9)
@@ -4393,9 +4388,9 @@ class AdOptimizerApp(ctk.CTk):
         canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
         
-        self._add_hover_tooltip_real_price(fig, canvas, dates, coupang_vals, real_vals, spend_vals, calc_base)
+        self._add_hover_tooltip_real_price(fig, canvas, dates, coupang_vals, real_vals, spend_vals)
 
-    def _add_hover_tooltip_real_price(self, fig, canvas, dates, coupang_vals, real_vals, spend_vals, calc_base):
+    def _add_hover_tooltip_real_price(self, fig, canvas, dates, coupang_vals, real_vals, spend_vals):
         annots = {}
         for ax in fig.get_axes():
             annot = ax.annotate("", xy=(0, 0), xytext=(20, 20),
@@ -4442,15 +4437,13 @@ class AdOptimizerApp(ctk.CTk):
                 return f"{int(val):,}원"
             
             lines_text.append(f"📊 집행광고비: {fmt(v_spend)}")
+            lines_text.append(f"📊 광고전환매출 (쿠팡시스템): {fmt(v_coupang)}")
+            lines_text.append(f"📊 광고전환매출 (내 판매가): {fmt(v_real)}")
             
-            if calc_base == "쿠팡시스템 기준":
-                lines_text.append(f"📊 광고전환매출 (쿠팡시스템): {fmt(v_coupang)}")
-                roas = (v_coupang / v_spend * 100) if v_spend > 0 else 0
-                lines_text.append(f"💡 광고수익률 (ROAS): {roas:.2f}%")
-            else:
-                lines_text.append(f"📊 광고전환매출 (내 판매가): {fmt(v_real)}")
-                roas = (v_real / v_spend * 100) if v_spend > 0 else 0
-                lines_text.append(f"💡 광고수익률 (ROAS): {roas:.2f}%")
+            roas_c = (v_coupang / v_spend * 100) if v_spend > 0 else 0
+            roas_r = (v_real / v_spend * 100) if v_spend > 0 else 0
+            lines_text.append(f"💡 광고수익률 (쿠팡 ROAS): {roas_c:.2f}%")
+            lines_text.append(f"💡 광고수익률 (내 판매가 ROAS): {roas_r:.2f}%")
                 
             try:
                 norm_date = tick_val.strip().split('(')[0].replace('/', '.')

@@ -2054,6 +2054,10 @@ class AdOptimizerApp(ctk.CTk):
                             txt_parts.append("")
                         txt = "\n".join(txt_parts[:-1])
                         
+                        if idx >= len(dates) - 1:
+                            tooltip.set_xytext((-180, -30))
+                        else:
+                            tooltip.set_xytext((30, -30))
                         tooltip.xy = (idx, roas_val)
                         tooltip.set_text(txt)
                         tooltip.set_visible(True)
@@ -2726,6 +2730,10 @@ class AdOptimizerApp(ctk.CTk):
                         
                         # 텍스트나 좌표가 실제로 바뀌었다면 갱신
                         if tt.xy != (idx, roas_val) or tt.get_text() != txt or not tt.get_visible():
+                            if idx >= len(master_dates) - 1:
+                                tt.set_xytext((-180, -30))
+                            else:
+                                tt.set_xytext((30, -30))
                             tt.xy = (idx, roas_val)
                             tt.set_text(txt)
                             tt.set_visible(True)
@@ -3335,6 +3343,11 @@ class AdOptimizerApp(ctk.CTk):
                 
                 # 좌표나 텍스트가 바뀐 경우에만 갱신
                 if annot.xy != (idx, y_anchor) or annot.get_text() != text or not annot.get_visible():
+                    max_len = len(dates_list) if dates_list else (len(xticklabels) if 'xticklabels' in locals() else idx + 1)
+                    if idx >= max_len - 1:
+                        annot.set_xytext((-220, 20))
+                    else:
+                        annot.set_xytext((20, 20))
                     annot.xy = (idx, y_anchor)
                     annot.set_text(text)
                     annot.set_visible(True)
@@ -4657,6 +4670,10 @@ class AdOptimizerApp(ctk.CTk):
             
             # 좌표나 텍스트가 바뀐 경우에만 갱신
             if annot.xy != (idx, y_anchor) or annot.get_text() != text or not annot.get_visible():
+                if idx >= len(dates) - 1:
+                    annot.set_xytext((-220, 20))
+                else:
+                    annot.set_xytext((20, 20))
                 annot.xy = (idx, y_anchor)
                 annot.set_text(text)
                 annot.set_visible(True)

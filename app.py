@@ -3277,16 +3277,6 @@ class AdOptimizerApp(ctk.CTk):
             except Exception as memo_err:
                 pass
                 
-            # 메모가 존재하지 않는 날짜는 툴팁을 띄우지 않고 감춤
-            if not day_memos:
-                for annot in annots.values():
-                    if annot.get_visible():
-                        annot.set_visible(False)
-                        vis_changed = True
-                if vis_changed:
-                    canvas.draw_idle()
-                return
-            
             # X축 인덱스 idx에 해당하는 모든 데이터 값 수집
             lines_text = []
             seen_labels = set()
@@ -4624,16 +4614,6 @@ class AdOptimizerApp(ctk.CTk):
             except Exception:
                 pass
                 
-            # 메모가 없으면 툴팁을 띄우지 않고 숨김
-            if not day_memos:
-                for annot in annots.values():
-                    if annot.get_visible():
-                        annot.set_visible(False)
-                        vis_changed = True
-                if vis_changed:
-                    canvas.draw_idle()
-                return
-            
             v_coupang = coupang_vals[idx]
             v_real = real_vals[idx]
             v_spend = spend_vals[idx]

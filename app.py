@@ -3208,57 +3208,13 @@ class AdOptimizerApp(ctk.CTk):
         canvas._last_hover_state = (None, None)
 
         def on_hover(event):
-            vis_changed = False
-            in_ax = event.inaxes
-            x_val = event.xdata
-            idx = int(round(x_val)) if (in_ax is not None and x_val is not None) else None
-            
-            # 렌더링 지연 제거: 마우스 위치 및 인덱스가 이전과 같으면 즉시 리턴
-            if canvas._last_hover_state == (in_ax, idx):
-                return
-            canvas._last_hover_state = (in_ax, idx)
-            
-            if in_ax is None or idx is None:
-                for annot in annots.values():
-                    if annot.get_visible():
-                        annot.set_visible(False)
-                        vis_changed = True
-                if vis_changed:
-                    canvas.draw_idle()
-                return
-
-            ax = in_ax
-            
-            # twin axes 등을 포함하여 마우스가 위치한 축과 X축을 공유하는 모든 axes 수집
-            all_axes = [ax]
-            for other_ax in fig.get_axes():
-                if other_ax is not ax:
-                    try:
-                        if (abs(other_ax.bbox.x0 - ax.bbox.x0) < 5 and 
-                            abs(other_ax.bbox.y0 - ax.bbox.y0) < 5):
-                            all_axes.append(other_ax)
-                    except:
-                        pass
-            
-            # fig에 저장된 dates_list(마스터 날짜 리스트)가 있으면 최우선 적용
-            dates_list = getattr(fig, 'dates_list', None)
-            if dates_list and 0 <= idx < len(dates_list):
-                tick_val = dates_list[idx]
-            else:
-                # X축 틱 라벨 목록 가져오기
-                xticklabels = [t.get_text() for t in ax.get_xticklabels() if t.get_text()]
-                if not xticklabels:
-                    # 틱 라벨이 없는 경우, 선 데이터의 xdata 개수로 차선책 판단
-                    for chk_ax in all_axes:
-                        for line in chk_ax.get_lines():
-                            xdata = line.get_xdata()
-                            if len(xdata) > 0:
-                                xticklabels = [str(x) for x in xdata]
-                                break
-                        if xticklabels: break
+            try:
+                vis_changed = False
+                in_ax = event.inaxes
+                x_val = event.xdata
+                idx = int(round(x_val)) if (in_ax is not None and x_val is not None) else None
                 
-                # 인덱스가 범위를 벗어나면 툴팁 숨김
-                if not xticklabels or not (0 <= idx < len(xticklabels)):
+                if in_ax is None or idx is None:
                     for annot in annots.values():
                         if annot.get_visible():
                             annot.set_visible(False)
@@ -3266,96 +3222,130 @@ class AdOptimizerApp(ctk.CTk):
                     if vis_changed:
                         canvas.draw_idle()
                     return
-                    
-                tick_val = xticklabels[idx]
-            
-            # 해당 날짜의 메모 수집
-            day_memos = []
-            try:
-                norm_date = tick_val.strip().split('(')[0].replace('/', '.')
-                day_memos = [m for m in self.memos if self._memo_date_to_mmdd(m['date']) == norm_date]
-            except Exception as memo_err:
-                pass
+
+                ax = in_ax
                 
-            # X축 인덱스 idx에 해당하는 모든 데이터 값 수집
-            lines_text = []
-            seen_labels = set()
-            
-            for chk_ax in all_axes:
-                # 1) 막대 그래프에서 idx번째 값 추출
-                for container in chk_ax.containers:
-                    is_horiz = hasattr(container, 'orientation') and container.orientation == 'horizontal'
-                    raw_lbl = container.get_label() if hasattr(container, 'get_label') else ''
+                # twin axes 등을 포함하여 마우스가 위치한 축과 X축을 공유하는 모든 axes 수집
+                all_axes = [ax]
+                for other_ax in fig.get_axes():
+                    if other_ax is not ax:
+                        try:
+                            if (abs(other_ax.bbox.x0 - ax.bbox.x0) < 5 and 
+                                abs(other_ax.bbox.y0 - ax.bbox.y0) < 5):
+                                all_axes.append(other_ax)
+                        except:
+                            pass
+                
+                # fig에 저장된 dates_list(마스터 날짜 리스트)가 있으면 최우선 적용
+                dates_list = getattr(fig, 'dates_list', None)
+                tick_val = None
+                if dates_list and 0 <= idx < len(dates_list):
+                    tick_val = dates_list[idx]
+                else:
+                    # X축 틱 라벨 목록 가져오기
+                    xticklabels = [t.get_text() for t in ax.get_xticklabels() if t.get_text()]
+                    if not xticklabels:
+                        for chk_ax in all_axes:
+                            for line in chk_ax.get_lines():
+                                xdata = line.get_xdata()
+                                if len(xdata) > 0:
+                                    xticklabels = [str(x) for x in xdata]
+                                    break
+                            if xticklabels: break
                     
-                    if not is_horiz:
-                        if 0 <= idx < len(container):
-                            bar = container[idx]
-                            val = bar.custom_val if hasattr(bar, 'custom_val') else bar.get_height()
-                            lbl = _get_clean_label(chk_ax, bar, raw_lbl, is_horiz)
-                            if lbl and lbl not in seen_labels:
-                                seen_labels.add(lbl)
-                                lines_text.append(_format_val(lbl, val))
-                                
-                # 2) 선 그래프에서 idx번째 값 추출
-                for line in chk_ax.get_lines():
-                    xdata = line.get_xdata()
-                    ydata = line.get_ydata()
-                    if len(xdata) == 0 or len(ydata) == 0:
-                        continue
-                    lbl = line.get_label() if line.get_label() else ''
-                    lbl = lbl.replace('— ', '').strip()
-                    if lbl.startswith('_') or not lbl or lbl == '메모 기록':
-                        continue
+                    if xticklabels and 0 <= idx < len(xticklabels):
+                        tick_val = xticklabels[idx]
+                
+                # 해당 날짜의 메모 수집
+                day_memos = []
+                if tick_val:
+                    try:
+                        norm_date = tick_val.strip().split('(')[0].replace('/', '.')
+                        day_memos = [m for m in self.memos if self._memo_date_to_mmdd(m['date']) == norm_date]
+                    except Exception:
+                        pass
+                    
+                # X축 인덱스 idx에 해당하는 모든 데이터 값 수집
+                lines_text = []
+                seen_labels = set()
+                
+                for chk_ax in all_axes:
+                    # 1) 막대 그래프에서 idx번째 값 추출
+                    for container in chk_ax.containers:
+                        is_horiz = hasattr(container, 'orientation') and container.orientation == 'horizontal'
+                        raw_lbl = container.get_label() if hasattr(container, 'get_label') else ''
                         
-                    if 0 <= idx < len(ydata):
-                        val = ydata[idx]
-                        if lbl not in seen_labels:
-                            seen_labels.add(lbl)
-                            lines_text.append(_format_val(lbl, val))
-            
-            txt_parts = []
-            if lines_text:
-                txt_parts.extend(lines_text)
-                txt_parts.append("")  # 지표와 메모 구분선
+                        if not is_horiz:
+                            if 0 <= idx < len(container):
+                                bar = container[idx]
+                                val = bar.custom_val if hasattr(bar, 'custom_val') else bar.get_height()
+                                lbl = _get_clean_label(chk_ax, bar, raw_lbl, is_horiz)
+                                if lbl and lbl not in seen_labels:
+                                    seen_labels.add(lbl)
+                                    lines_text.append(_format_val(lbl, val))
+                                    
+                    # 2) 선 그래프에서 idx번째 값 추출
+                    for line in chk_ax.get_lines():
+                        xdata = line.get_xdata()
+                        ydata = line.get_ydata()
+                        if len(xdata) == 0 or len(ydata) == 0:
+                            continue
+                        lbl = line.get_label() if line.get_label() else ''
+                        lbl = lbl.replace('■ ', '').replace('— ', '').strip()
+                        if lbl.startswith('_') or not lbl or lbl == '메모 기록':
+                            continue
+                            
+                        if 0 <= idx < len(ydata):
+                            val = ydata[idx]
+                            if pd.notna(val):
+                                if lbl not in seen_labels:
+                                    seen_labels.add(lbl)
+                                    lines_text.append(_format_val(lbl, val))
                 
-            for m in day_memos:
-                d_key = self._parse_memo_date_to_key(m['date'])
-                txt_parts.append(d_key)
-                txt_parts.append(m['memo'])
-                txt_parts.append("")
+                # 날짜 헤더 추가
+                header = f"📅 {tick_val}" if tick_val else f"📅 [{idx}]"
                 
-            text = "\n".join(txt_parts[:-1])
-            
-            # 툴팁 텍스트 조립 및 표시
-            if text:
+                txt_parts = [header]
+                if lines_text:
+                    txt_parts.extend(lines_text)
+                    
+                if day_memos:
+                    txt_parts.append("────────────────")
+                    txt_parts.append(f"📝 메모")
+                    for i, m in enumerate(day_memos, 1):
+                        txt_parts.append(f"{i}. {m['memo']}")
+                    
+                text = "\n".join(txt_parts)
+                
+                # 툴팁 텍스트 조립 및 표시
+                if ax not in annots:
+                    return
+                    
                 annot = annots[ax]
                 y_anchor = event.ydata if event.ydata is not None else 0
                 
-                # 좌표나 텍스트가 바뀐 경우에만 갱신
-                if annot.xy != (idx, y_anchor) or annot.get_text() != text or not annot.get_visible():
-                    max_len = len(dates_list) if dates_list else (len(xticklabels) if 'xticklabels' in locals() else idx + 1)
-                    if idx >= max_len - 1:
-                        annot.set_xytext((-220, 20))
-                    else:
-                        annot.set_xytext((20, 20))
-                    annot.xy = (idx, y_anchor)
-                    annot.set_text(text)
-                    annot.set_visible(True)
-                    vis_changed = True
+                # 마지막 날짜면 왼쪽으로, 아니면 오른쪽으로 표시
+                data_len = len(dates_list) if dates_list else idx + 2
+                if idx >= data_len - 1:
+                    annot.set_xytext((-220, 20))
+                else:
+                    annot.set_xytext((20, 20))
+                annot.xy = (idx, y_anchor)
+                annot.set_text(text)
+                annot.set_visible(True)
+                vis_changed = True
                     
                 # 다른 축들의 툴팁은 숨김
                 for other_ax, other_annot in annots.items():
                     if other_ax is not ax and other_annot.get_visible():
                         other_annot.set_visible(False)
                         vis_changed = True
-            else:
-                for annot in annots.values():
-                    if annot.get_visible():
-                        annot.set_visible(False)
-                        vis_changed = True
                         
-            if vis_changed:
-                canvas.draw_idle()
+                if vis_changed:
+                    canvas.draw_idle()
+            except Exception as hover_err:
+                import traceback
+                traceback.print_exc()
 
         fig.canvas.mpl_connect("motion_notify_event", on_hover)
 

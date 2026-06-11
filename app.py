@@ -1983,26 +1983,6 @@ class AdOptimizerApp(ctk.CTk):
         
         h1, l1 = ax1.get_legend_handles_labels()
         h2, l2 = ax1_twin.get_legend_handles_labels()
-        
-        # ⭐️ 메모 연동 마커 ⭐️
-        star_dates = []
-        star_roas = []
-        star_memos = []
-        for d in dates:
-            day_memos = [m for m in self.memos if self._memo_date_to_mmdd(m['date']) == d]
-            if day_memos:
-                idx = dates.index(d)
-                roas_val = daily_roas[idx]
-                star_dates.append(d)
-                star_roas.append(roas_val)
-                combined_memo = "\n".join([f"({m['date']}) {m['memo']}" for m in day_memos])
-                star_memos.append(combined_memo)
-                
-        if star_dates:
-            scatter_marker = ax1_twin.scatter(star_dates, star_roas, color='#FBBF24', marker='*', s=180, edgecolor='black', 
-                                              linewidth=1, zorder=12, label='메모 기록')
-            h2.append(scatter_marker)
-            l2.append('메모 기록')
             
         ax1.legend(h1+h2, l1+l2, loc='upper left', fontsize=8.5, 
                    facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
@@ -2040,38 +2020,45 @@ class AdOptimizerApp(ctk.CTk):
                                     color="black", fontsize=11, weight="bold", zorder=20)
         tooltip.set_visible(False)
         
+        canvas._last_hover_state = (None, None)
+        
         def on_hover(event):
-            if event.inaxes is None:
+            in_ax = event.inaxes
+            x_val = event.xdata
+            idx = int(round(x_val)) if (in_ax is not None and x_val is not None) else None
+            
+            # 렌더링 지연(Lag) 방지: 이전과 마우스 위치가 같으면 즉시 리턴
+            if canvas._last_hover_state == (in_ax, idx):
+                return
+            canvas._last_hover_state = (in_ax, idx)
+            
+            if in_ax is None or idx is None:
                 if tooltip.get_visible():
                     tooltip.set_visible(False)
                     canvas.draw_idle()
                 return
                 
-            ax = event.inaxes
-            if ax == ax1 or ax == ax1_twin:
-                x_val = event.xdata
-                if x_val is not None:
-                    idx = int(round(x_val))
-                    if 0 <= idx < len(dates):
-                        d = dates[idx]
-                        day_memos = [m for m in self.memos if self._memo_date_to_mmdd(m['date']) == d]
-                        if day_memos:
-                            roas_val = daily_roas[idx]
-                            
-                            # 사용자 이미지와 100% 매칭되는 서식으로 주석 텍스트 가공
-                            txt_parts = [f"ROAS: {roas_val:.0f}", ""]
-                            for m in day_memos:
-                                d_key = self._parse_memo_date_to_key(m['date'])
-                                txt_parts.append(d_key)
-                                txt_parts.append(m['memo'])
-                                txt_parts.append("")
-                            txt = "\n".join(txt_parts[:-1])
-                            
-                            tooltip.xy = (idx, roas_val)
-                            tooltip.set_text(txt)
-                            tooltip.set_visible(True)
-                            canvas.draw_idle()
-                            return
+            if in_ax == ax1 or in_ax == ax1_twin:
+                if 0 <= idx < len(dates):
+                    d = dates[idx]
+                    day_memos = [m for m in self.memos if self._memo_date_to_mmdd(m['date']) == d]
+                    if day_memos:
+                        roas_val = daily_roas[idx]
+                        
+                        # 사용자 이미지와 100% 매칭되는 서식으로 주석 텍스트 가공
+                        txt_parts = [f"ROAS: {roas_val:.0f}", ""]
+                        for m in day_memos:
+                            d_key = self._parse_memo_date_to_key(m['date'])
+                            txt_parts.append(d_key)
+                            txt_parts.append(m['memo'])
+                            txt_parts.append("")
+                        txt = "\n".join(txt_parts[:-1])
+                        
+                        tooltip.xy = (idx, roas_val)
+                        tooltip.set_text(txt)
+                        tooltip.set_visible(True)
+                        canvas.draw_idle()
+                        return
                             
             if tooltip.get_visible():
                 tooltip.set_visible(False)
@@ -2525,6 +2512,9 @@ class AdOptimizerApp(ctk.CTk):
         plt.rcParams['font.family'] = 'Malgun Gothic'
         pe = [path_effects.withStroke(linewidth=2, foreground='black')]
         
+        # 오디언스 등 데이터 누락 영역의 dates 덮어쓰기 오염 방지용 마스터 날짜
+        master_dates = df['date_s'].tolist()
+        
         # 영역 표준화 헬퍼
         def normalize_region(name):
             s = str(name).replace(' ', '')
@@ -2618,21 +2608,6 @@ class AdOptimizerApp(ctk.CTk):
                 
                 ax.axhline(y=100, color='#FFFFFF', linestyle='--', linewidth=1.2, alpha=0.5, label='— 첫 날 기준선 (100%)')
                 
-                # ⭐️ 메모 연동 별마커 ⭐️
-                star_dates = []
-                star_roas_idx = []
-                for d in dates:
-                    day_memos = [m for m in self.memos if self._memo_date_to_mmdd(m['date']) == d]
-                    if day_memos:
-                        idx_d = dates.index(d)
-                        roas_idx_val = rdata['roas_idx'].iloc[idx_d]
-                        star_dates.append(d)
-                        star_roas_idx.append(roas_idx_val)
-                        
-                if star_dates:
-                    ax.scatter(star_dates, star_roas_idx, color='#FBBF24', marker='*', s=180, edgecolor='black', 
-                               linewidth=1, zorder=12, label='메모 기록')
-                
                 # 영역별 타이틀 (영역 대표 색상 적용)
                 ax.set_title(f"【{region_name}】 노출·클릭률·전환율·ROAS 상대 지수 추이", 
                             color=rc, pad=12, fontdict={'size': 13, 'weight': 'bold'})
@@ -2687,21 +2662,6 @@ class AdOptimizerApp(ctk.CTk):
                     label='🌸 광고효율(ROAS) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
             ax.axhline(y=100, color='#FFFFFF', linestyle='--', linewidth=1.2, alpha=0.5, label='— 첫 날 기준선 (100%)')
             
-            # ⭐️ 메모 연동 별마커 ⭐️
-            star_dates = []
-            star_roas_idx = []
-            for d in dates:
-                day_memos = [m for m in self.memos if self._memo_date_to_mmdd(m['date']) == d]
-                if day_memos:
-                    idx_d = dates.index(d)
-                    roas_idx_val = df_copy['roas_idx'].iloc[idx_d]
-                    star_dates.append(d)
-                    star_roas_idx.append(roas_idx_val)
-                    
-            if star_dates:
-                ax.scatter(star_dates, star_roas_idx, color='#FBBF24', marker='*', s=180, edgecolor='black', 
-                           linewidth=1, zorder=12, label='메모 기록')
-            
             ax.set_ylabel('상대 지수 (%)', color='white', size=10, weight='bold')
             ax.set_title("0. 광고효율 돋보기 상대 지수 분석 (첫 날 데이터 = 100% 기준)", color='white', pad=15, fontdict={'size': 14, 'weight': 'bold'})
             ax.legend(loc='upper left', fontsize=9, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
@@ -2724,9 +2684,20 @@ class AdOptimizerApp(ctk.CTk):
                 tooltip.set_visible(False)
                 tooltips[ax_obj] = tooltip
                 
+        canvas._last_hover_state = (None, None)
+        
         def on_hover(event):
             vis_changed = False
-            if event.inaxes is None or event.xdata is None:
+            in_ax = event.inaxes
+            x_val = event.xdata
+            idx = int(round(x_val)) if (in_ax is not None and x_val is not None) else None
+            
+            # 렌더링 지연 제거: 마우스 위치 및 인덱스가 이전과 같으면 즉시 리턴
+            if canvas._last_hover_state == (in_ax, idx):
+                return
+            canvas._last_hover_state = (in_ax, idx)
+            
+            if in_ax is None or idx is None:
                 for tt in tooltips.values():
                     if tt.get_visible():
                         tt.set_visible(False)
@@ -2735,11 +2706,10 @@ class AdOptimizerApp(ctk.CTk):
                     canvas.draw_idle()
                 return
                 
-            ax_current = event.inaxes
+            ax_current = in_ax
             if ax_current in tooltips:
-                idx = int(round(event.xdata))
-                if 0 <= idx < len(dates):
-                    d = dates[idx]
+                if 0 <= idx < len(master_dates):
+                    d = master_dates[idx]
                     day_memos = [m for m in self.memos if self._memo_date_to_mmdd(m['date']) == d]
                     if day_memos:
                         roas_val = ax_current.roas_vals[idx] if hasattr(ax_current, 'roas_vals') else 100
@@ -2753,9 +2723,11 @@ class AdOptimizerApp(ctk.CTk):
                         txt = "\n".join(txt_parts[:-1])
                         
                         tt = tooltips[ax_current]
-                        tt.xy = (idx, roas_val)
-                        tt.set_text(txt)
-                        if not tt.get_visible():
+                        
+                        # 텍스트나 좌표가 실제로 바뀌었다면 갱신
+                        if tt.xy != (idx, roas_val) or tt.get_text() != txt or not tt.get_visible():
+                            tt.xy = (idx, roas_val)
+                            tt.set_text(txt)
                             tt.set_visible(True)
                             vis_changed = True
                             
@@ -3163,16 +3135,17 @@ class AdOptimizerApp(ctk.CTk):
         fig.subplots_adjust(left=0.06, right=0.94, top=0.97, bottom=0.05, hspace=0.35, wspace=0.35)
         canvas = FigureCanvasTkAgg(fig, master=master); canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+        fig.dates_list = date_labels
         self._add_hover_tooltip(fig, canvas)
     def _add_hover_tooltip(self, fig, canvas):
-        """모든 서브플롯에 마우스 호버 툴팁을 추가"""
+        """모든 서브플롯에 마우스 호버 툴팁을 추가 (메모가 있는 날짜만 1번 그림 스타일로 표시)"""
         annots = {}
         for ax in fig.get_axes():
             annot = ax.annotate("", xy=(0, 0), xytext=(20, 20),
                                textcoords="offset points",
-                               bbox=dict(boxstyle="round,pad=0.5", fc="#1E293B", ec="#60A5FA", lw=1.5, alpha=0.95),
-                               fontsize=11, color="white", fontfamily="Malgun Gothic", fontweight="bold",
-                               arrowprops=dict(arrowstyle="->", color="#60A5FA", lw=1.5),
+                               bbox=dict(boxstyle="round,pad=0.6", fc="white", ec="#C2185B", lw=3, alpha=1.0),
+                               fontsize=11, color="black", fontfamily="Malgun Gothic", fontweight="bold",
+                               arrowprops=dict(arrowstyle="->", color="#C2185B", lw=2),
                                zorder=999)
             annot.set_visible(False)
             annots[ax] = annot
@@ -3224,10 +3197,20 @@ class AdOptimizerApp(ctk.CTk):
                 prefix = f"{label}: " if label else ""
                 return f"{prefix}{val:,.0f}원" if val > 100 else f"{prefix}{val:,.0f}"
 
+        canvas._last_hover_state = (None, None)
+
         def on_hover(event):
             vis_changed = False
+            in_ax = event.inaxes
+            x_val = event.xdata
+            idx = int(round(x_val)) if (in_ax is not None and x_val is not None) else None
             
-            if event.inaxes is None:
+            # 렌더링 지연 제거: 마우스 위치 및 인덱스가 이전과 같으면 즉시 리턴
+            if canvas._last_hover_state == (in_ax, idx):
+                return
+            canvas._last_hover_state = (in_ax, idx)
+            
+            if in_ax is None or idx is None:
                 for annot in annots.values():
                     if annot.get_visible():
                         annot.set_visible(False)
@@ -3236,7 +3219,7 @@ class AdOptimizerApp(ctk.CTk):
                     canvas.draw_idle()
                 return
 
-            ax = event.inaxes
+            ax = in_ax
             
             # twin axes 등을 포함하여 마우스가 위치한 축과 X축을 공유하는 모든 axes 수집
             all_axes = [ax]
@@ -3248,10 +3231,46 @@ class AdOptimizerApp(ctk.CTk):
                             all_axes.append(other_ax)
                     except:
                         pass
-
-            # 마우스의 X축 데이터 인덱스 계산
-            x_val = event.xdata
-            if x_val is None:
+            
+            # fig에 저장된 dates_list(마스터 날짜 리스트)가 있으면 최우선 적용
+            dates_list = getattr(fig, 'dates_list', None)
+            if dates_list and 0 <= idx < len(dates_list):
+                tick_val = dates_list[idx]
+            else:
+                # X축 틱 라벨 목록 가져오기
+                xticklabels = [t.get_text() for t in ax.get_xticklabels() if t.get_text()]
+                if not xticklabels:
+                    # 틱 라벨이 없는 경우, 선 데이터의 xdata 개수로 차선책 판단
+                    for chk_ax in all_axes:
+                        for line in chk_ax.get_lines():
+                            xdata = line.get_xdata()
+                            if len(xdata) > 0:
+                                xticklabels = [str(x) for x in xdata]
+                                break
+                        if xticklabels: break
+                
+                # 인덱스가 범위를 벗어나면 툴팁 숨김
+                if not xticklabels or not (0 <= idx < len(xticklabels)):
+                    for annot in annots.values():
+                        if annot.get_visible():
+                            annot.set_visible(False)
+                            vis_changed = True
+                    if vis_changed:
+                        canvas.draw_idle()
+                    return
+                    
+                tick_val = xticklabels[idx]
+            
+            # 해당 날짜의 메모 수집
+            day_memos = []
+            try:
+                norm_date = tick_val.strip().split('(')[0].replace('/', '.')
+                day_memos = [m for m in self.memos if self._memo_date_to_mmdd(m['date']) == norm_date]
+            except Exception as memo_err:
+                pass
+                
+            # 메모가 존재하지 않는 날짜는 툴팁을 띄우지 않고 감춤
+            if not day_memos:
                 for annot in annots.values():
                     if annot.get_visible():
                         annot.set_visible(False)
@@ -3259,32 +3278,6 @@ class AdOptimizerApp(ctk.CTk):
                 if vis_changed:
                     canvas.draw_idle()
                 return
-                
-            idx = int(round(x_val))
-            
-            # X축 틱 라벨 목록 가져오기
-            xticklabels = [t.get_text() for t in ax.get_xticklabels() if t.get_text()]
-            if not xticklabels:
-                # 틱 라벨이 없는 경우, 선 데이터의 xdata 개수로 차선책 판단
-                for chk_ax in all_axes:
-                    for line in chk_ax.get_lines():
-                        xdata = line.get_xdata()
-                        if len(xdata) > 0:
-                            xticklabels = [str(x) for x in xdata]
-                            break
-                    if xticklabels: break
-            
-            # 인덱스가 범위를 벗어나면 툴팁 숨김
-            if not xticklabels or not (0 <= idx < len(xticklabels)):
-                for annot in annots.values():
-                    if annot.get_visible():
-                        annot.set_visible(False)
-                        vis_changed = True
-                if vis_changed:
-                    canvas.draw_idle()
-                return
-                
-            tick_val = xticklabels[idx]
             
             # X축 인덱스 idx에 해당하는 모든 데이터 값 수집
             lines_text = []
@@ -3313,7 +3306,7 @@ class AdOptimizerApp(ctk.CTk):
                         continue
                     lbl = line.get_label() if line.get_label() else ''
                     lbl = lbl.replace('— ', '').strip()
-                    if lbl.startswith('_') or not lbl:
+                    if lbl.startswith('_') or not lbl or lbl == '메모 기록':
                         continue
                         
                     if 0 <= idx < len(ydata):
@@ -3322,28 +3315,28 @@ class AdOptimizerApp(ctk.CTk):
                             seen_labels.add(lbl)
                             lines_text.append(_format_val(lbl, val))
             
-            # 3) 해당 날짜의 메모 수집
-            try:
-                norm_date = tick_val.strip().split('(')[0].replace('/', '.')
-                day_memos = [m for m in self.memos if self._memo_date_to_mmdd(m['date']) == norm_date]
-                if day_memos:
-                    lines_text.append("────────────────")
-                    lines_text.append(f"📅 {tick_val} 메모")
-                    for i, m in enumerate(day_memos, 1):
-                        lines_text.append(f"{i}. {m['memo']}")
-            except Exception as memo_err:
-                pass
-                
-            # 툴팁 텍스트 조립 및 표시
+            txt_parts = []
             if lines_text:
-                text = "\n".join(lines_text)
+                txt_parts.extend(lines_text)
+                txt_parts.append("")  # 지표와 메모 구분선
+                
+            for m in day_memos:
+                d_key = self._parse_memo_date_to_key(m['date'])
+                txt_parts.append(d_key)
+                txt_parts.append(m['memo'])
+                txt_parts.append("")
+                
+            text = "\n".join(txt_parts[:-1])
+            
+            # 툴팁 텍스트 조립 및 표시
+            if text:
                 annot = annots[ax]
-                
                 y_anchor = event.ydata if event.ydata is not None else 0
-                annot.xy = (idx, y_anchor)
                 
-                annot.set_text(text)
-                if not annot.get_visible():
+                # 좌표나 텍스트가 바뀐 경우에만 갱신
+                if annot.xy != (idx, y_anchor) or annot.get_text() != text or not annot.get_visible():
+                    annot.xy = (idx, y_anchor)
+                    annot.set_text(text)
                     annot.set_visible(True)
                     vis_changed = True
                     
@@ -3382,7 +3375,7 @@ class AdOptimizerApp(ctk.CTk):
         return None
 
     def _draw_memo_vlines(self, axes, date_labels, pe, fontsize=8):
-        """여러 서브플롯에 메모 날짜 세로 점선과 요약 텍스트 표시"""
+        """여러 서브플롯에 메모 날짜 세로 점선과 요약 텍스트 및 노란색 별마커 표시"""
         if not self.memos:
             return
         
@@ -3432,6 +3425,78 @@ class AdOptimizerApp(ctk.CTk):
                 ax.text(mmdd, y_pos, summary, rotation=90, va='top', ha=ha_val,
                        color=color, fontsize=max(6, fontsize-1), weight='bold', alpha=0.85,
                        path_effects=pe)
+                
+                # --- 노란색 별마커(★) 그리기 추가 ---
+                target_axes = [ax]
+                fig_obj = ax.get_figure()
+                if fig_obj:
+                    for other_ax in fig_obj.get_axes():
+                        if other_ax is not ax:
+                            try:
+                                if (abs(other_ax.bbox.x0 - ax.bbox.x0) < 5 and 
+                                    abs(other_ax.bbox.y0 - ax.bbox.y0) < 5):
+                                    target_axes.append(other_ax)
+                            except:
+                                pass
+                
+                y_val = None
+                scatter_ax = ax
+                
+                # 1) ROAS, 매출, 광고비 비중 등 핵심 지표 선을 먼저 검색
+                for tax in target_axes:
+                    for line in tax.get_lines():
+                        lbl = line.get_label() if line.get_label() else ''
+                        if lbl == '메모 기록' or '안전선' in lbl or '경계선' in lbl or '기준선' in lbl or '점선' in lbl or lbl.startswith('_'):
+                            continue
+                        xdata = line.get_xdata()
+                        ydata = line.get_ydata()
+                        if len(xdata) > 0 and len(ydata) > 0:
+                            if 0 <= x_pos < len(ydata):
+                                val = ydata[x_pos]
+                                if pd.notna(val) and np.isfinite(val):
+                                    if any(k in lbl for k in ['ROAS', '매출', '순이익', '광고비 비중', 'CTR', 'CVR', 'CPC']):
+                                        y_val = val
+                                        scatter_ax = tax
+                                        break
+                    if y_val is not None:
+                        break
+                
+                # 2) 매칭되는 선을 못 찾은 경우 임의의 유효한 선 사용
+                if y_val is None:
+                    for tax in target_axes:
+                        for line in tax.get_lines():
+                            lbl = line.get_label() if line.get_label() else ''
+                            if lbl == '메모 기록' or '안전선' in lbl or '경계선' in lbl or '기준선' in lbl or '점선' in lbl or lbl.startswith('_'):
+                                continue
+                            xdata = line.get_xdata()
+                            ydata = line.get_ydata()
+                            if len(xdata) > 0 and len(ydata) > 0:
+                                if 0 <= x_pos < len(ydata):
+                                    val = ydata[x_pos]
+                                    if pd.notna(val) and np.isfinite(val):
+                                        y_val = val
+                                        scatter_ax = tax
+                                        break
+                        if y_val is not None:
+                            break
+                            
+                # 3) 선이 아예 없다면 막대 차트 확인
+                if y_val is None:
+                    for tax in target_axes:
+                        for container in tax.containers:
+                            if 0 <= x_pos < len(container):
+                                bar = container[x_pos]
+                                if hasattr(bar, 'get_height'):
+                                    y_val = bar.get_height()
+                                    scatter_ax = tax
+                                    break
+                        if y_val is not None:
+                            break
+                            
+                if y_val is not None:
+                    # zorder를 12로 높게 잡아 선 위에 확실하게 띄움
+                    scatter_ax.scatter(mmdd, y_val, color='#FBBF24', marker='*', s=180, edgecolor='black', 
+                                       linewidth=1, zorder=12, label='_nolegend_')
 
 
     def _fmt_val(self, v, kind):
@@ -3591,6 +3656,7 @@ class AdOptimizerApp(ctk.CTk):
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
         
         # 툴팁 활성화
+        fig.dates_list = dates
         self._add_hover_tooltip(fig, canvas)
 
     def _render_dash_top_keywords(self, kw_data, master):
@@ -4496,17 +4562,27 @@ class AdOptimizerApp(ctk.CTk):
         for ax in fig.get_axes():
             annot = ax.annotate("", xy=(0, 0), xytext=(20, 20),
                                textcoords="offset points",
-                               bbox=dict(boxstyle="round,pad=0.5", fc="#1E293B", ec="#60A5FA", lw=1.5, alpha=0.95),
-                               fontsize=11, color="white", fontfamily="Malgun Gothic", fontweight="bold",
-                               arrowprops=dict(arrowstyle="->", color="#60A5FA", lw=1.5),
+                               bbox=dict(boxstyle="round,pad=0.6", fc="white", ec="#C2185B", lw=3, alpha=1.0),
+                               fontsize=11, color="black", fontfamily="Malgun Gothic", fontweight="bold",
+                               arrowprops=dict(arrowstyle="->", color="#C2185B", lw=2),
                                zorder=999)
             annot.set_visible(False)
             annots[ax] = annot
 
+        canvas._last_hover_state = (None, None)
+
         def on_hover(event):
             vis_changed = False
+            in_ax = event.inaxes
+            x_val = event.xdata
+            idx = int(round(x_val)) if (in_ax is not None and x_val is not None) else None
             
-            if event.inaxes is None or event.xdata is None:
+            # 렌더링 지연 제거: 마우스 위치 및 인덱스가 이전과 같으면 즉시 리턴
+            if canvas._last_hover_state == (in_ax, idx):
+                return
+            canvas._last_hover_state = (in_ax, idx)
+            
+            if in_ax is None or idx is None:
                 for annot in annots.values():
                     if annot.get_visible():
                         annot.set_visible(False)
@@ -4515,9 +4591,7 @@ class AdOptimizerApp(ctk.CTk):
                     canvas.draw_idle()
                 return
 
-            ax = event.inaxes
-            idx = int(round(event.xdata))
-            
+            ax = in_ax
             if not (0 <= idx < len(dates)):
                 for annot in annots.values():
                     if annot.get_visible():
@@ -4528,11 +4602,30 @@ class AdOptimizerApp(ctk.CTk):
                 return
                 
             tick_val = dates[idx]
+            
+            # 해당 날짜의 메모 수집
+            day_memos = []
+            try:
+                norm_date = tick_val.strip().split('(')[0].replace('/', '.')
+                day_memos = [m for m in self.memos if self._memo_date_to_mmdd(m['date']) == norm_date]
+            except Exception:
+                pass
+                
+            # 메모가 없으면 툴팁을 띄우지 않고 숨김
+            if not day_memos:
+                for annot in annots.values():
+                    if annot.get_visible():
+                        annot.set_visible(False)
+                        vis_changed = True
+                if vis_changed:
+                    canvas.draw_idle()
+                return
+            
             v_coupang = coupang_vals[idx]
             v_real = real_vals[idx]
             v_spend = spend_vals[idx]
             
-            lines_text = [f"📅 {tick_val}"]
+            lines_text = []
             
             def fmt(val):
                 return f"{int(val):,}원"
@@ -4545,26 +4638,27 @@ class AdOptimizerApp(ctk.CTk):
             roas_r = (v_real / v_spend * 100) if v_spend > 0 else 0
             lines_text.append(f"💡 광고수익률 (쿠팡 ROAS): {roas_c:.2f}%")
             lines_text.append(f"💡 광고수익률 (내 판매가 ROAS): {roas_r:.2f}%")
+            
+            txt_parts = []
+            if lines_text:
+                txt_parts.extend(lines_text)
+                txt_parts.append("")  # 구분선
                 
-            try:
-                norm_date = tick_val.strip().split('(')[0].replace('/', '.')
-                day_memos = [m for m in self.memos if self._memo_date_to_mmdd(m['date']) == norm_date]
-                if day_memos:
-                    lines_text.append("────────────────")
-                    lines_text.append(f"📝 메모")
-                    for i, m in enumerate(day_memos, 1):
-                        lines_text.append(f"{i}. {m['memo']}")
-            except Exception:
-                pass
+            for m in day_memos:
+                d_key = self._parse_memo_date_to_key(m['date'])
+                txt_parts.append(d_key)
+                txt_parts.append(m['memo'])
+                txt_parts.append("")
                 
-            text = "\n".join(lines_text)
+            text = "\n".join(txt_parts[:-1])
             annot = annots[ax]
             
             y_anchor = event.ydata if event.ydata is not None else 0
-            annot.xy = (idx, y_anchor)
-            annot.set_text(text)
             
-            if not annot.get_visible():
+            # 좌표나 텍스트가 바뀐 경우에만 갱신
+            if annot.xy != (idx, y_anchor) or annot.get_text() != text or not annot.get_visible():
+                annot.xy = (idx, y_anchor)
+                annot.set_text(text)
                 annot.set_visible(True)
                 vis_changed = True
                 

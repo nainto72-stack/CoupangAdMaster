@@ -2604,6 +2604,9 @@ class AdOptimizerApp(ctk.CTk):
                 dates = rdata['date_s'].tolist()
                 rc = region_colors.get(region_name, '#FFFFFF')
                 
+                # 호버용 데이터 바인딩
+                ax.roas_vals = rdata['roas_idx'].tolist()
+                
                 ax.plot(dates, rdata['imp_idx'], color='#00E5FF', marker='o', markersize=5, linewidth=2.0, 
                         label='💎 노출수 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
                 ax.plot(dates, rdata['ctr_idx'], color='#FB923C', marker='s', markersize=5, linewidth=2.0, 
@@ -2614,6 +2617,21 @@ class AdOptimizerApp(ctk.CTk):
                         label='🌸 광고효율(ROAS) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
                 
                 ax.axhline(y=100, color='#FFFFFF', linestyle='--', linewidth=1.2, alpha=0.5, label='— 첫 날 기준선 (100%)')
+                
+                # ⭐️ 메모 연동 별마커 ⭐️
+                star_dates = []
+                star_roas_idx = []
+                for d in dates:
+                    day_memos = [m for m in self.memos if self._memo_date_to_mmdd(m['date']) == d]
+                    if day_memos:
+                        idx_d = dates.index(d)
+                        roas_idx_val = rdata['roas_idx'].iloc[idx_d]
+                        star_dates.append(d)
+                        star_roas_idx.append(roas_idx_val)
+                        
+                if star_dates:
+                    ax.scatter(star_dates, star_roas_idx, color='#FBBF24', marker='*', s=180, edgecolor='black', 
+                               linewidth=1, zorder=12, label='메모 기록')
                 
                 # 영역별 타이틀 (영역 대표 색상 적용)
                 ax.set_title(f"【{region_name}】 노출·클릭률·전환율·ROAS 상대 지수 추이", 
@@ -2656,6 +2674,9 @@ class AdOptimizerApp(ctk.CTk):
             
             dates = df_copy['date_s'].tolist()
             
+            # 호버용 데이터 바인딩
+            ax.roas_vals = df_copy['roas_idx'].tolist()
+            
             ax.plot(dates, df_copy['imp_idx'], color='#00E5FF', marker='o', markersize=5, linewidth=2.0, 
                     label='💎 노출수 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
             ax.plot(dates, df_copy['ctr_idx'], color='#FB923C', marker='s', markersize=5, linewidth=2.0, 
@@ -2665,6 +2686,21 @@ class AdOptimizerApp(ctk.CTk):
             ax.plot(dates, df_copy['roas_idx'], color='#FF00FF', marker='D', markersize=6, linewidth=3.0, 
                     label='🌸 광고효율(ROAS) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
             ax.axhline(y=100, color='#FFFFFF', linestyle='--', linewidth=1.2, alpha=0.5, label='— 첫 날 기준선 (100%)')
+            
+            # ⭐️ 메모 연동 별마커 ⭐️
+            star_dates = []
+            star_roas_idx = []
+            for d in dates:
+                day_memos = [m for m in self.memos if self._memo_date_to_mmdd(m['date']) == d]
+                if day_memos:
+                    idx_d = dates.index(d)
+                    roas_idx_val = df_copy['roas_idx'].iloc[idx_d]
+                    star_dates.append(d)
+                    star_roas_idx.append(roas_idx_val)
+                    
+            if star_dates:
+                ax.scatter(star_dates, star_roas_idx, color='#FBBF24', marker='*', s=180, edgecolor='black', 
+                           linewidth=1, zorder=12, label='메모 기록')
             
             ax.set_ylabel('상대 지수 (%)', color='white', size=10, weight='bold')
             ax.set_title("0. 광고효율 돋보기 상대 지수 분석 (첫 날 데이터 = 100% 기준)", color='white', pad=15, fontdict={'size': 14, 'weight': 'bold'})
@@ -2676,6 +2712,71 @@ class AdOptimizerApp(ctk.CTk):
         canvas = FigureCanvasTkAgg(fig, master=master)
         canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # ─── 툴팁 설정 및 호버 이벤트 추가 ───
+        tooltips = {}
+        for ax_obj in fig.get_axes():
+            if ax_obj.get_title():
+                tooltip = ax_obj.annotate("", xy=(0,0), xytext=(30,-30), textcoords="offset points",
+                                          bbox=dict(boxstyle="round,pad=0.6", fc="white", ec="#C2185B", lw=3, alpha=1.0),
+                                          arrowprops=dict(arrowstyle="->", color="#C2185B", lw=2),
+                                          color="black", fontsize=11, weight="bold", zorder=20)
+                tooltip.set_visible(False)
+                tooltips[ax_obj] = tooltip
+                
+        def on_hover(event):
+            vis_changed = False
+            if event.inaxes is None or event.xdata is None:
+                for tt in tooltips.values():
+                    if tt.get_visible():
+                        tt.set_visible(False)
+                        vis_changed = True
+                if vis_changed:
+                    canvas.draw_idle()
+                return
+                
+            ax_current = event.inaxes
+            if ax_current in tooltips:
+                idx = int(round(event.xdata))
+                if 0 <= idx < len(dates):
+                    d = dates[idx]
+                    day_memos = [m for m in self.memos if self._memo_date_to_mmdd(m['date']) == d]
+                    if day_memos:
+                        roas_val = ax_current.roas_vals[idx] if hasattr(ax_current, 'roas_vals') else 100
+                        
+                        txt_parts = [f"ROAS 지수: {roas_val:.0f}%", ""]
+                        for m in day_memos:
+                            d_key = self._parse_memo_date_to_key(m['date'])
+                            txt_parts.append(d_key)
+                            txt_parts.append(m['memo'])
+                            txt_parts.append("")
+                        txt = "\n".join(txt_parts[:-1])
+                        
+                        tt = tooltips[ax_current]
+                        tt.xy = (idx, roas_val)
+                        tt.set_text(txt)
+                        if not tt.get_visible():
+                            tt.set_visible(True)
+                            vis_changed = True
+                            
+                        # 다른 서브플롯의 툴팁 숨김
+                        for other_ax, other_tt in tooltips.items():
+                            if other_ax != ax_current and other_tt.get_visible():
+                                other_tt.set_visible(False)
+                                vis_changed = True
+                                
+                        if vis_changed:
+                            canvas.draw_idle()
+                        return
+                        
+            for tt in tooltips.values():
+                if tt.get_visible():
+                    tt.set_visible(False)
+                    vis_changed = True
+            if vis_changed:
+                canvas.draw_idle()
+                
+        fig.canvas.mpl_connect("motion_notify_event", on_hover)
 
     def _render_large_trend_chart(self, df, kw_data, master):
         plt.rcParams['font.family'] = 'Malgun Gothic'

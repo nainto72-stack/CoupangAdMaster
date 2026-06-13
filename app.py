@@ -15,6 +15,28 @@ import re
 import traceback
 import matplotlib.patheffects as path_effects
 
+class CustomSubTabSelector:
+    def __init__(self, update_style_fn, select_fn):
+        self.update_style_fn = update_style_fn
+        self.select_fn = select_fn
+        self.current_val = ""
+    def set(self, val):
+        self.current_val = val
+        self.select_fn(val)
+        self.update_style_fn(val)
+    def get(self):
+        return self.current_val
+
+class VirtualTabView:
+    def __init__(self, set_fn, master_app):
+        self.set_fn = set_fn
+        class DummySegmentedButton:
+            def grid_forget(self):
+                pass
+        self._segmented_button = DummySegmentedButton()
+    def set(self, val):
+        self.set_fn(val)
+
 class AdOptimizerApp(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -47,11 +69,11 @@ class AdOptimizerApp(ctk.CTk):
         self.btn_group.pack(side="right", padx=30, pady=20)
         
         self.file_btn = ctk.CTkButton(self.btn_group, text="📂 엑셀 파일 불러오기", command=self._choose_file, 
-                                       fg_color="#2563EB", hover_color="#1D4ED8", width=180, height=45, font=("Malgun Gothic", 14, "bold"))
+                                       fg_color="#00F0FF", hover_color="#33F3FF", text_color="#000000", width=200, height=55, font=("Malgun Gothic", 16, "bold"))
         self.file_btn.pack(side="right", padx=10)
         
         self.exec_btn = ctk.CTkButton(self.btn_group, text="▶ 분석 실행", command=self._execute_analysis, 
-                                       fg_color="#059669", hover_color="#047857", width=140, height=45, font=("Malgun Gothic", 14, "bold"))
+                                       fg_color="#EC4899", hover_color="#F472B6", text_color="#FFFFFF", width=150, height=55, font=("Malgun Gothic", 16, "bold"))
         self.exec_btn.pack(side="right", padx=10)
         
         self.filename_label = ctk.CTkLabel(self.btn_group, text="파일이 선택되지 않았습니다", font=("Malgun Gothic", 12), text_color="#AAAAAA")
@@ -72,25 +94,97 @@ class AdOptimizerApp(ctk.CTk):
         self.btn_status_plus = ctk.CTkButton(self.status_btn_container, text="● 전환매출 0 초과", fg_color="#3B82F6", corner_radius=8, height=55, font=("Malgun Gothic", 18, "bold"), command=lambda: self._filter_by_status("rev_plus"))
         self.btn_status_plus.pack(side="left", expand=True, fill="x", padx=5)
 
-        self.tabview = ctk.CTkTabview(self, corner_radius=0, fg_color="transparent")
-        self.tabview._segmented_button.configure(font=("Malgun Gothic", 15, "bold"), selected_color="#2563EB", unselected_color="#1A1A2E", height=45)
-        self.tabview.pack(fill="both", expand=True, padx=20, pady=5)
+        # ─── 커스텀 네온글라스 탭 바 구현 (grid+uniform으로 완벽 균등폭) ───
+        self.custom_tab_frame = ctk.CTkFrame(self, fg_color="transparent", border_width=0, corner_radius=0)
+        self.custom_tab_frame.pack(fill="x", padx=20, pady=(15, 0))
         
-        self.main_tab_perf = self.tabview.add("📊 종합 성과")
-        self.main_tab_mgmt = self.tabview.add("⚙️ 키워드/입찰")
-        self.main_tab_ai = self.tabview.add("🛡️ AI분석/도구")
-        self.main_tab_memo = self.tabview.add("📝 일별 메모")
+        self.tab_buttons = {}
+        tabs = [
+            ("📊 종합 성과", "📊 종합 성과"),
+            ("⚙️ 키워드/입찰", "⚙️ 키워드/입찰"),
+            ("🛡️ AI분석/도구", "🛡️ AI분석/도구"),
+            ("📝 일별 메모", "📝 일별 메모")
+        ]
+        
+        for col_idx in range(len(tabs)):
+            self.custom_tab_frame.columnconfigure(col_idx, weight=1, uniform="maintab")
+        
+        for col_idx, (display_name, tab_name) in enumerate(tabs):
+            btn = ctk.CTkButton(
+                self.custom_tab_frame,
+                text=display_name,
+                font=("Malgun Gothic", 18, "bold"),
+                height=65,
+                corner_radius=12,
+                border_width=1,
+                border_color="#2A2A44",
+                fg_color="#0A0A19",
+                hover_color="#18183A",
+                text_color="#7B8FA6",
+                command=lambda tn=tab_name: self._on_custom_tab_clicked(tn)
+            )
+            btn.grid(row=0, column=col_idx, sticky="ew", padx=8)
+            self.tab_buttons[tab_name] = btn
+            
+        # ─── 커스텀 메인 탭 프레임들 선언 (CTkTabview 제거하여 내부 상단 빈 여백 완전 소멸) ───
+        self.main_tab_perf = ctk.CTkFrame(self, fg_color="transparent", border_width=0, corner_radius=0)
+        self.main_tab_mgmt = ctk.CTkFrame(self, fg_color="transparent", border_width=0, corner_radius=0)
+        self.main_tab_ai = ctk.CTkFrame(self, fg_color="transparent", border_width=0, corner_radius=0)
+        self.main_tab_memo = ctk.CTkFrame(self, fg_color="transparent", border_width=0, corner_radius=0)
+        
+        self.main_frames = {
+            "📊 종합 성과": self.main_tab_perf,
+            "⚙️ 키워드/입찰": self.main_tab_mgmt,
+            "🛡️ AI분석/도구": self.main_tab_ai,
+            "📝 일별 메모": self.main_tab_memo
+        }
+        
+        def custom_tabview_set(val):
+            # 모든 탭 프레임을 숨기고 선택된 탭만 아주 좁은 간격으로 pack
+            for name, frame in self.main_frames.items():
+                if name == val:
+                    # 탭바와 서브 탭바 사이 간격을 최적화하기 위해, 
+                    # 패킹 시 pady=(0, 15)로 설정하여 위쪽 여백을 완전히 제거
+                    # 가로 여백(padx)은 서브 탭바와 서브 컨테이너에 각각 분산 적용하도록 0으로 세팅하여 가로 정렬선 일치
+                    frame.pack(fill="both", expand=True, padx=0, pady=(0, 15))
+                else:
+                    frame.pack_forget()
+            self._update_custom_tab_styles(val)
+            
+        self.tabview = VirtualTabView(custom_tabview_set, self)
+        
+        # ─── 커스텀 서브 탭 바 1 (종합 성과) — grid+uniform으로 메인 탭과 동일 폭 ───
+        self.sub_perf_frame = ctk.CTkFrame(self.main_tab_perf, fg_color="transparent", border_width=0, corner_radius=0)
+        self.sub_perf_frame.pack(fill="x", padx=20, pady=(2, 15))
         
         # 1. 종합 성과 서브 카테고리 구성
-        self.sub_perf_container = ctk.CTkFrame(self.main_tab_perf, fg_color="transparent")
-        self.sub_perf_container.pack(fill="both", expand=True)
+        self.sub_perf_container = ctk.CTkFrame(self.main_tab_perf, fg_color="transparent", border_width=0, corner_radius=0)
+        self.sub_perf_container.pack(fill="both", expand=True, padx=20)
         
-        self.sub_perf_selector = ctk.CTkSegmentedButton(self.sub_perf_container, 
-                                                         values=["📊 광고요약", "📈 성과 추이", "🌐 영역별 분석", "📊 실판매 분석"],
-                                                         font=("Malgun Gothic", 13, "bold"),
-                                                         height=38,
-                                                         command=self._on_perf_sub_selected)
-        self.sub_perf_selector.pack(fill="x", padx=10, pady=5)
+        self.sub_perf_buttons = {}
+        sub_perf_tabs = ["📊 광고요약", "📈 성과 추이", "🌐 영역별 분석", "📊 실판매 분석"]
+        
+        for col_idx in range(len(sub_perf_tabs)):
+            self.sub_perf_frame.columnconfigure(col_idx, weight=1, uniform="subtab")
+        
+        self.sub_perf_selector = CustomSubTabSelector(self._update_sub_perf_styles, self._on_perf_sub_selected)
+        
+        for col_idx, name in enumerate(sub_perf_tabs):
+            btn = ctk.CTkButton(
+                self.sub_perf_frame,
+                text=name,
+                font=("Malgun Gothic", 15, "bold"),
+                height=50,
+                corner_radius=10,
+                border_width=1,
+                border_color="#2A2A44",
+                fg_color="#0A0A19",
+                hover_color="#18183A",
+                text_color="#7B8FA6",
+                command=lambda val=name: self.sub_perf_selector.set(val)
+            )
+            btn.grid(row=0, column=col_idx, sticky="ew", padx=8)
+            self.sub_perf_buttons[name] = btn
         
         self.tab_dashboard = ctk.CTkFrame(self.sub_perf_container, fg_color="transparent")
         self.tab_metrics = ctk.CTkFrame(self.sub_perf_container, fg_color="transparent")
@@ -104,16 +198,38 @@ class AdOptimizerApp(ctk.CTk):
             "📊 실판매 분석": self.tab_real_price
         }
         
-        # 2. 키워드/입찰 서브 카테고리 구성
-        self.sub_mgmt_container = ctk.CTkFrame(self.main_tab_mgmt, fg_color="transparent")
-        self.sub_mgmt_container.pack(fill="both", expand=True)
+        # ─── 커스텀 서브 탭 바 2 (키워드/입찰) — grid+uniform ───
+        self.sub_mgmt_frame = ctk.CTkFrame(self.main_tab_mgmt, fg_color="transparent", border_width=0, corner_radius=0)
+        self.sub_mgmt_frame.pack(fill="x", padx=20, pady=(2, 15))
         
-        self.sub_mgmt_selector = ctk.CTkSegmentedButton(self.sub_mgmt_container, 
-                                                         values=["🔍 키워드 분석", "🎯 타겟 관리", "⚙️ 수동 관리", "🚫 제외 관리"],
-                                                         font=("Malgun Gothic", 13, "bold"),
-                                                         height=38,
-                                                         command=self._on_mgmt_sub_selected)
-        self.sub_mgmt_selector.pack(fill="x", padx=10, pady=5)
+        # 2. 키워드/입찰 서브 카테고리 구성
+        self.sub_mgmt_container = ctk.CTkFrame(self.main_tab_mgmt, fg_color="transparent", border_width=0, corner_radius=0)
+        self.sub_mgmt_container.pack(fill="both", expand=True, padx=20)
+        
+        self.sub_mgmt_buttons = {}
+        sub_mgmt_tabs = ["🔍 키워드 분석", "🎯 타겟 관리", "⚙️ 수동 관리", "🚫 제외 관리"]
+        
+        for col_idx in range(len(sub_mgmt_tabs)):
+            self.sub_mgmt_frame.columnconfigure(col_idx, weight=1, uniform="subtab")
+        
+        self.sub_mgmt_selector = CustomSubTabSelector(self._update_sub_mgmt_styles, self._on_mgmt_sub_selected)
+        
+        for col_idx, name in enumerate(sub_mgmt_tabs):
+            btn = ctk.CTkButton(
+                self.sub_mgmt_frame,
+                text=name,
+                font=("Malgun Gothic", 15, "bold"),
+                height=50,
+                corner_radius=10,
+                border_width=1,
+                border_color="#2A2A44",
+                fg_color="#0A0A19",
+                hover_color="#18183A",
+                text_color="#7B8FA6",
+                command=lambda val=name: self.sub_mgmt_selector.set(val)
+            )
+            btn.grid(row=0, column=col_idx, sticky="ew", padx=8)
+            self.sub_mgmt_buttons[name] = btn
         
         self.tab_keywords = ctk.CTkFrame(self.sub_mgmt_container, fg_color="transparent")
         self.tab_target = ctk.CTkFrame(self.sub_mgmt_container, fg_color="transparent")
@@ -127,16 +243,38 @@ class AdOptimizerApp(ctk.CTk):
             "🚫 제외 관리": self.tab_exclude
         }
         
-        # 3. AI분석/도구 서브 카테고리 구성
-        self.sub_ai_container = ctk.CTkFrame(self.main_tab_ai, fg_color="transparent")
-        self.sub_ai_container.pack(fill="both", expand=True)
+        # ─── 커스텀 서브 탭 바 3 (AI분석/도구) — grid+uniform ───
+        self.sub_ai_frame = ctk.CTkFrame(self.main_tab_ai, fg_color="transparent", border_width=0, corner_radius=0)
+        self.sub_ai_frame.pack(fill="x", padx=20, pady=(2, 15))
         
-        self.sub_ai_selector = ctk.CTkSegmentedButton(self.sub_ai_container, 
-                                                       values=["🛡️ AI 나침반", "📦 상품 성과", "🧮 순익 계산기", "🔮 AI 시뮬레이터"],
-                                                       font=("Malgun Gothic", 13, "bold"),
-                                                       height=38,
-                                                       command=self._on_ai_sub_selected)
-        self.sub_ai_selector.pack(fill="x", padx=10, pady=5)
+        # 3. AI분석/도구 서브 카테고리 구성
+        self.sub_ai_container = ctk.CTkFrame(self.main_tab_ai, fg_color="transparent", border_width=0, corner_radius=0)
+        self.sub_ai_container.pack(fill="both", expand=True, padx=20)
+        
+        self.sub_ai_buttons = {}
+        sub_ai_tabs = ["🛡️ AI 나침반", "📦 상품 성과", "🧮 순익 계산기", "🔮 AI 시뮬레이터"]
+        
+        for col_idx in range(len(sub_ai_tabs)):
+            self.sub_ai_frame.columnconfigure(col_idx, weight=1, uniform="subtab")
+        
+        self.sub_ai_selector = CustomSubTabSelector(self._update_sub_ai_styles, self._on_ai_sub_selected)
+        
+        for col_idx, name in enumerate(sub_ai_tabs):
+            btn = ctk.CTkButton(
+                self.sub_ai_frame,
+                text=name,
+                font=("Malgun Gothic", 15, "bold"),
+                height=50,
+                corner_radius=10,
+                border_width=1,
+                border_color="#2A2A44",
+                fg_color="#0A0A19",
+                hover_color="#18183A",
+                text_color="#7B8FA6",
+                command=lambda val=name: self.sub_ai_selector.set(val)
+            )
+            btn.grid(row=0, column=col_idx, sticky="ew", padx=8)
+            self.sub_ai_buttons[name] = btn
         
         self.tab_diagnosis = ctk.CTkFrame(self.sub_ai_container, fg_color="transparent")
         self.tab_product_metrics = ctk.CTkFrame(self.sub_ai_container, fg_color="transparent")
@@ -171,16 +309,86 @@ class AdOptimizerApp(ctk.CTk):
         
         # 기본 활성화 서브 탭 설정
         self.sub_perf_selector.set("📊 광고요약")
-        self._on_perf_sub_selected("📊 광고요약")
-        
         self.sub_mgmt_selector.set("🔍 키워드 분석")
-        self._on_mgmt_sub_selected("🔍 키워드 분석")
-        
         self.sub_ai_selector.set("🛡️ AI 나침반")
-        self._on_ai_sub_selected("🛡️ AI 나침반")
+        
+        # 메인 탭바 초기 활성화 실행 (VirtualTabView.set을 호출하여 첫 프레임 pack)
+        self.tabview.set("📊 종합 성과")
         
         self.status_label = ctk.CTkLabel(self, text="준비됨", anchor="w", padx=20, height=35, fg_color="#1A1A2E", font=("Malgun Gothic", 11))
         self.status_label.pack(fill="x", side="bottom")
+
+    def _on_custom_tab_clicked(self, tab_name):
+        self.tabview.set(tab_name)
+        self._update_custom_tab_styles(tab_name)
+
+    def _update_custom_tab_styles(self, selected_tab):
+        for name, btn in getattr(self, 'tab_buttons', {}).items():
+            if name == selected_tab:
+                btn.configure(
+                    fg_color="#1C1B3D",          # 반투명 깊은 네온 퍼플
+                    border_color="#00F0FF",      # 강렬한 네온 사이언 테두리
+                    border_width=3,              # 굵은 테두리
+                    text_color="#00F0FF"         # 네온 사이언 텍스트
+                )
+            else:
+                btn.configure(
+                    fg_color="#0A0A19",          # 어두운 반투명 네이비
+                    border_color="#2A2A44",      # 흐린 글래스 테두리
+                    border_width=1,
+                    text_color="#7B8FA6"         # 차분한 비활성 색상
+                )
+
+    def _update_sub_perf_styles(self, selected_tab):
+        for name, btn in getattr(self, 'sub_perf_buttons', {}).items():
+            if name == selected_tab:
+                btn.configure(
+                    fg_color="#1C1B3D",
+                    border_color="#00F0FF",
+                    border_width=2.5,
+                    text_color="#00F0FF"
+                )
+            else:
+                btn.configure(
+                    fg_color="#0A0A19",
+                    border_color="#2A2A44",
+                    border_width=1,
+                    text_color="#7B8FA6"
+                )
+
+    def _update_sub_mgmt_styles(self, selected_tab):
+        for name, btn in getattr(self, 'sub_mgmt_buttons', {}).items():
+            if name == selected_tab:
+                btn.configure(
+                    fg_color="#1C1B3D",
+                    border_color="#00F0FF",
+                    border_width=2.5,
+                    text_color="#00F0FF"
+                )
+            else:
+                btn.configure(
+                    fg_color="#0A0A19",
+                    border_color="#2A2A44",
+                    border_width=1,
+                    text_color="#7B8FA6"
+                )
+
+    def _update_sub_ai_styles(self, selected_tab):
+        for name, btn in getattr(self, 'sub_ai_buttons', {}).items():
+            if name == selected_tab:
+                btn.configure(
+                    fg_color="#1C1B3D",
+                    border_color="#00F0FF",
+                    border_width=2.5,
+                    text_color="#00F0FF"
+                )
+            else:
+                btn.configure(
+                    fg_color="#0A0A19",
+                    border_color="#2A2A44",
+                    border_width=1,
+                    text_color="#7B8FA6"
+                )
 
     def _on_perf_sub_selected(self, val):
         for name, frame in self.perf_frames.items():
@@ -252,7 +460,7 @@ class AdOptimizerApp(ctk.CTk):
         self.perf_card_frame.pack(fill="x", padx=15, pady=8)
         
         metrics = [
-            ("전체 광고비", "spend", "원"), ("집행 광고비", "spend", "원"),
+            ("전체 광고비", "spend", "원"), ("실현 광고비", "spend", "원"),
             ("전환 매출", "sales", "원"), ("전체 매출", "sales", "원"),
             ("전체 판매수", "orders", "회"), ("노출수", "imp", "회"),
             ("클릭수", "click", "회"), ("클릭률", "CTR", "%"),
@@ -299,8 +507,17 @@ class AdOptimizerApp(ctk.CTk):
                 font=("Malgun Gothic", 26, "bold"), 
                 text_color=color
             )
-            v_lbl.pack(pady=(6, 12))
-            self.perf_labels[i] = {"label": v_lbl, "unit": u, "key": k}
+            v_lbl.pack(pady=(6, 0))
+            
+            # 영역별 세부 분류 서브라벨 (검색/비검색/오디언스)
+            sub_lbl = ctk.CTkLabel(
+                card,
+                text="",
+                font=("Malgun Gothic", 9),
+                text_color="#94A3B8"
+            )
+            sub_lbl.pack(pady=(2, 8))
+            self.perf_labels[i] = {"label": v_lbl, "sub_label": sub_lbl, "unit": u, "key": k}
 
     def _setup_keyword_tab(self):
         self.action_frame = ctk.CTkFrame(self.tab_keywords, fg_color="transparent")
@@ -344,7 +561,7 @@ class AdOptimizerApp(ctk.CTk):
         self.kw_frame = ctk.CTkFrame(self.tab_keywords)
         self.kw_frame.pack(fill="both", expand=True, padx=20, pady=10)
         
-        self.k_cols = ("구분", "키워드", "최신노출", "전일대비", "누적노출", "클릭수", "CTR%", "전환율%", "주문건수", 
+        self.k_cols = ("구분", "키워드", "최신노출", "전일대비", "누적노출", "클릭수", "클릭증감", "CTR%", "전환율%", "주문건수", 
                        "최신광고비", "지출변동", "누적광고비", "전환매출", "CPC", "ROAS", "광고순위", "상품명")
         
         # 트리뷰 + 스크롤바 프레임
@@ -368,7 +585,7 @@ class AdOptimizerApp(ctk.CTk):
         # 컬럼 너비 설정 (모든 컬럼이 보이도록)
         col_widths = {
             "구분": 80, "키워드": 160, "최신노출": 85, "전일대비": 130, "누적노출": 85,
-            "클릭수": 65, "CTR%": 65, "전환율%": 65, "주문건수": 65,
+            "클릭수": 65, "클릭증감": 110, "CTR%": 65, "전환율%": 65, "주문건수": 65,
             "최신광고비": 90, "지출변동": 100, "누적광고비": 90, "전환매출": 90,
             "CPC": 70, "ROAS": 80, "광고순위": 70, "상품명": 350
         }
@@ -1981,6 +2198,13 @@ class AdOptimizerApp(ctk.CTk):
         ax1_twin.tick_params(axis='y', labelcolor='#42A5F5', labelsize=8)
         ax1_twin.spines['right'].set_color('#42A5F5')
         
+        # Y축 0점 일치 및 범위 설정
+        max_ax1 = max(np.max(daily_sales) if len(daily_sales) > 0 else 0, np.max(daily_spend) if len(daily_spend) > 0 else 0)
+        ax1.set_ylim(bottom=0, top=max_ax1 * 1.15 if max_ax1 > 0 else 1.0)
+        
+        max_roas = np.max(daily_roas) if len(daily_roas) > 0 else 0
+        ax1_twin.set_ylim(bottom=0, top=max_roas * 1.15 if max_roas > 0 else 1.0)
+        
         h1, l1 = ax1.get_legend_handles_labels()
         h2, l2 = ax1_twin.get_legend_handles_labels()
             
@@ -2014,61 +2238,9 @@ class AdOptimizerApp(ctk.CTk):
         canvas.draw()
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=5, pady=5)
         
-        tooltip = ax1_twin.annotate("", xy=(0,0), xytext=(30,-30), textcoords="offset points",
-                                    bbox=dict(boxstyle="round,pad=0.6", fc="white", ec="#C2185B", lw=3, alpha=1.0),
-                                    arrowprops=dict(arrowstyle="->", color="#C2185B", lw=2),
-                                    color="black", fontsize=11, weight="bold", zorder=20)
-        tooltip.set_visible(False)
-        
-        canvas._last_hover_state = (None, None)
-        
-        def on_hover(event):
-            in_ax = event.inaxes
-            x_val = event.xdata
-            idx = int(round(x_val)) if (in_ax is not None and x_val is not None) else None
-            
-            # 렌더링 지연(Lag) 방지: 이전과 마우스 위치가 같으면 즉시 리턴
-            if canvas._last_hover_state == (in_ax, idx):
-                return
-            canvas._last_hover_state = (in_ax, idx)
-            
-            if in_ax is None or idx is None:
-                if tooltip.get_visible():
-                    tooltip.set_visible(False)
-                    canvas.draw_idle()
-                return
-                
-            if in_ax == ax1 or in_ax == ax1_twin:
-                if 0 <= idx < len(dates):
-                    d = dates[idx]
-                    day_memos = [m for m in self.memos if self._memo_date_to_mmdd(m['date']) == d]
-                    if day_memos:
-                        roas_val = daily_roas[idx]
-                        
-                        # 사용자 이미지와 100% 매칭되는 서식으로 주석 텍스트 가공
-                        txt_parts = [f"ROAS: {roas_val:.0f}", ""]
-                        for m in day_memos:
-                            d_key = self._parse_memo_date_to_key(m['date'])
-                            txt_parts.append(d_key)
-                            txt_parts.append(m['memo'])
-                            txt_parts.append("")
-                        txt = "\n".join(txt_parts[:-1])
-                        
-                        if idx >= len(dates) - 1:
-                            tooltip.set_xytext((-180, -30))
-                        else:
-                            tooltip.set_xytext((30, -30))
-                        tooltip.xy = (idx, roas_val)
-                        tooltip.set_text(txt)
-                        tooltip.set_visible(True)
-                        canvas.draw_idle()
-                        return
-                            
-            if tooltip.get_visible():
-                tooltip.set_visible(False)
-                canvas.draw_idle()
-                
-        fig.canvas.mpl_connect("motion_notify_event", on_hover)
+        # ─── 툴팁 설정 및 호버 이벤트 추가 ───
+        fig.dates_list = dates
+        self._add_hover_tooltip(fig, canvas)
 
     def _execute_analysis(self):
         if not self.analyzer.file_path:
@@ -2127,6 +2299,21 @@ class AdOptimizerApp(ctk.CTk):
             sp_diff = int(r.get('spend_diff', 0))
             sp_diff_text = f"▲{sp_diff:,}" if sp_diff > 0 else (f"▼{abs(sp_diff):,}" if sp_diff < 0 else "-")
             
+            # 클릭수 전일대비 증감 표시
+            ck_diff = int(r.get('click_diff', 0))
+            p_click = int(r.get('p_click', 0))
+            if st == "신규": ck_diff_text = f"✨[신규]"
+            elif st == "중단": ck_diff_text = f"🛑[중단]"
+            else:
+                if ck_diff > 0:
+                    pct_ck = (ck_diff / p_click * 100) if p_click > 0 else 0
+                    ck_diff_text = f"▲{ck_diff:,} (+{pct_ck:.0f}%)"
+                elif ck_diff < 0:
+                    pct_ck = (ck_diff / p_click * 100) if p_click > 0 else 0
+                    ck_diff_text = f"▼{abs(ck_diff):,} ({pct_ck:.0f}%)"
+                else:
+                    ck_diff_text = "-"
+            
             vals = (
                 r.get('region', '-'),
                 r['kw'],
@@ -2134,6 +2321,7 @@ class AdOptimizerApp(ctk.CTk):
                 diff_text,
                 f"{int(r['imp']):,}",
                 f"{int(r['click']):,}",
+                ck_diff_text,
                 f"{r['CTR']:.2f}%",
                 f"{r['CVR']:.1f}%",
                 f"{int(r['orders']):,}",
@@ -2601,14 +2789,25 @@ class AdOptimizerApp(ctk.CTk):
                 # 호버용 데이터 바인딩
                 ax.roas_vals = rdata['roas_idx'].tolist()
                 
-                ax.plot(dates, rdata['imp_idx'], color='#00E5FF', marker='o', markersize=5, linewidth=2.0, 
+                l_imp, = ax.plot(dates, rdata['imp_idx'], color='#00E5FF', marker='o', markersize=5, linewidth=2.0, 
                         label='💎 노출수 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
-                ax.plot(dates, rdata['ctr_idx'], color='#FB923C', marker='s', markersize=5, linewidth=2.0, 
+                l_imp.custom_raw_vals = rdata['imp'].tolist()
+                l_imp.custom_raw_unit = '회'
+
+                l_ctr, = ax.plot(dates, rdata['ctr_idx'], color='#FB923C', marker='s', markersize=5, linewidth=2.0, 
                         label='🍊 클릭률(CTR) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
-                ax.plot(dates, rdata['cvr_idx'], color='#10B981', marker='^', markersize=5, linewidth=2.0, 
+                l_ctr.custom_raw_vals = rdata['click'].tolist()
+                l_ctr.custom_raw_unit = '건'
+
+                l_cvr, = ax.plot(dates, rdata['cvr_idx'], color='#10B981', marker='^', markersize=5, linewidth=2.0, 
                         label='🍋 전환율(CVR) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
-                ax.plot(dates, rdata['roas_idx'], color='#FF00FF', marker='D', markersize=6, linewidth=3.0, 
+                l_cvr.custom_raw_vals = rdata['orders'].tolist()
+                l_cvr.custom_raw_unit = '건'
+
+                l_roas, = ax.plot(dates, rdata['roas_idx'], color='#FF00FF', marker='D', markersize=6, linewidth=3.0, 
                         label='🌸 광고효율(ROAS) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+                l_roas.custom_raw_vals = rdata['ROAS'].tolist()
+                l_roas.custom_raw_unit = '%'
                 
                 ax.axhline(y=100, color='#FFFFFF', linestyle='--', linewidth=1.2, alpha=0.5, label='— 첫 날 기준선 (100%)')
                 
@@ -2656,14 +2855,25 @@ class AdOptimizerApp(ctk.CTk):
             # 호버용 데이터 바인딩
             ax.roas_vals = df_copy['roas_idx'].tolist()
             
-            ax.plot(dates, df_copy['imp_idx'], color='#00E5FF', marker='o', markersize=5, linewidth=2.0, 
+            l_imp, = ax.plot(dates, df_copy['imp_idx'], color='#00E5FF', marker='o', markersize=5, linewidth=2.0, 
                     label='💎 노출수 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
-            ax.plot(dates, df_copy['ctr_idx'], color='#FB923C', marker='s', markersize=5, linewidth=2.0, 
+            l_imp.custom_raw_vals = df_copy['imp'].tolist()
+            l_imp.custom_raw_unit = '회'
+
+            l_ctr, = ax.plot(dates, df_copy['ctr_idx'], color='#FB923C', marker='s', markersize=5, linewidth=2.0, 
                     label='🍊 클릭률(CTR) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
-            ax.plot(dates, df_copy['cvr_idx'], color='#10B981', marker='^', markersize=5, linewidth=2.0, 
+            l_ctr.custom_raw_vals = df_copy['click'].tolist()
+            l_ctr.custom_raw_unit = '건'
+
+            l_cvr, = ax.plot(dates, df_copy['cvr_idx'], color='#10B981', marker='^', markersize=5, linewidth=2.0, 
                     label='🍋 전환율(CVR) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
-            ax.plot(dates, df_copy['roas_idx'], color='#FF00FF', marker='D', markersize=6, linewidth=3.0, 
+            l_cvr.custom_raw_vals = df_copy['orders'].tolist()
+            l_cvr.custom_raw_unit = '건'
+
+            l_roas, = ax.plot(dates, df_copy['roas_idx'], color='#FF00FF', marker='D', markersize=6, linewidth=3.0, 
                     label='🌸 광고효율(ROAS) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+            l_roas.custom_raw_vals = df_copy['ROAS'].tolist()
+            l_roas.custom_raw_unit = '%'
             ax.axhline(y=100, color='#FFFFFF', linestyle='--', linewidth=1.2, alpha=0.5, label='— 첫 날 기준선 (100%)')
             
             ax.set_ylabel('상대 지수 (%)', color='white', size=10, weight='bold')
@@ -2678,85 +2888,8 @@ class AdOptimizerApp(ctk.CTk):
         canvas.get_tk_widget().pack(fill="both", expand=True, padx=5, pady=5)
         
         # ─── 툴팁 설정 및 호버 이벤트 추가 ───
-        tooltips = {}
-        for ax_obj in fig.get_axes():
-            if ax_obj.get_title():
-                tooltip = ax_obj.annotate("", xy=(0,0), xytext=(30,-30), textcoords="offset points",
-                                          bbox=dict(boxstyle="round,pad=0.6", fc="white", ec="#C2185B", lw=3, alpha=1.0),
-                                          arrowprops=dict(arrowstyle="->", color="#C2185B", lw=2),
-                                          color="black", fontsize=11, weight="bold", zorder=20)
-                tooltip.set_visible(False)
-                tooltips[ax_obj] = tooltip
-                
-        canvas._last_hover_state = (None, None)
-        
-        def on_hover(event):
-            vis_changed = False
-            in_ax = event.inaxes
-            x_val = event.xdata
-            idx = int(round(x_val)) if (in_ax is not None and x_val is not None) else None
-            
-            # 렌더링 지연 제거: 마우스 위치 및 인덱스가 이전과 같으면 즉시 리턴
-            if canvas._last_hover_state == (in_ax, idx):
-                return
-            canvas._last_hover_state = (in_ax, idx)
-            
-            if in_ax is None or idx is None:
-                for tt in tooltips.values():
-                    if tt.get_visible():
-                        tt.set_visible(False)
-                        vis_changed = True
-                if vis_changed:
-                    canvas.draw_idle()
-                return
-                
-            ax_current = in_ax
-            if ax_current in tooltips:
-                if 0 <= idx < len(master_dates):
-                    d = master_dates[idx]
-                    day_memos = [m for m in self.memos if self._memo_date_to_mmdd(m['date']) == d]
-                    if day_memos:
-                        roas_val = ax_current.roas_vals[idx] if hasattr(ax_current, 'roas_vals') else 100
-                        
-                        txt_parts = [f"ROAS 지수: {roas_val:.0f}%", ""]
-                        for m in day_memos:
-                            d_key = self._parse_memo_date_to_key(m['date'])
-                            txt_parts.append(d_key)
-                            txt_parts.append(m['memo'])
-                            txt_parts.append("")
-                        txt = "\n".join(txt_parts[:-1])
-                        
-                        tt = tooltips[ax_current]
-                        
-                        # 텍스트나 좌표가 실제로 바뀌었다면 갱신
-                        if tt.xy != (idx, roas_val) or tt.get_text() != txt or not tt.get_visible():
-                            if idx >= len(master_dates) - 1:
-                                tt.set_xytext((-180, -30))
-                            else:
-                                tt.set_xytext((30, -30))
-                            tt.xy = (idx, roas_val)
-                            tt.set_text(txt)
-                            tt.set_visible(True)
-                            vis_changed = True
-                            
-                        # 다른 서브플롯의 툴팁 숨김
-                        for other_ax, other_tt in tooltips.items():
-                            if other_ax != ax_current and other_tt.get_visible():
-                                other_tt.set_visible(False)
-                                vis_changed = True
-                                
-                        if vis_changed:
-                            canvas.draw_idle()
-                        return
-                        
-            for tt in tooltips.values():
-                if tt.get_visible():
-                    tt.set_visible(False)
-                    vis_changed = True
-            if vis_changed:
-                canvas.draw_idle()
-                
-        fig.canvas.mpl_connect("motion_notify_event", on_hover)
+        fig.dates_list = master_dates
+        self._add_hover_tooltip(fig, canvas)
 
     def _render_large_trend_chart(self, df, kw_data, master):
         plt.rcParams['font.family'] = 'Malgun Gothic'
@@ -2807,6 +2940,8 @@ class AdOptimizerApp(ctk.CTk):
             ax1_2.annotate(self._fmt_val(v, 'won'), (df['date_s'].iloc[i], v), 
                            xytext=(0, offset_y), textcoords="offset points", ha='center', color='#00E5FF', 
                            weight='bold', fontsize=fs_ann, path_effects=pe)
+        ax1.set_ylim(bottom=0, top=max(df['spend'].max() if len(df['spend']) > 0 else 0, 1) * 1.15)
+        ax1_2.set_ylim(bottom=0, top=max(df['sales'].max() if len(df['sales']) > 0 else 0, 1) * 1.15)
         add_legend(ax1, ax1_2)
 
         # ─── 2. 클릭수 vs 광고매출 [우상 1] ───
@@ -2835,6 +2970,8 @@ class AdOptimizerApp(ctk.CTk):
             ax2_2.annotate(self._fmt_val(v, 'won'), (df['date_s'].iloc[i], v), 
                            xytext=(0, offset_y), textcoords="offset points", ha='center', color='#00E5FF', 
                            weight='bold', fontsize=fs_ann, path_effects=pe)
+        ax2.set_ylim(bottom=0, top=max(df['click'].max() if len(df['click']) > 0 else 0, 1) * 1.15)
+        ax2_2.set_ylim(bottom=0, top=max(df['sales'].max() if len(df['sales']) > 0 else 0, 1) * 1.15)
         add_legend(ax2, ax2_2)
 
         # ─── 3. 광고비 vs ROAS [좌상 2] ───
@@ -2864,6 +3001,8 @@ class AdOptimizerApp(ctk.CTk):
             ax3_2.annotate(f"{v:.0f}%", (df['date_s'].iloc[i], v), 
                            xytext=(0, offset_y), textcoords="offset points", ha='center', color='#10B981', 
                            weight='bold', fontsize=fs_ann, path_effects=pe)
+        ax3.set_ylim(bottom=0, top=max(df['spend'].max() if len(df['spend']) > 0 else 0, 1) * 1.15)
+        ax3_2.set_ylim(bottom=0, top=max(df['ROAS'].max() if len(df['ROAS']) > 0 else 0, 1) * 1.15)
         add_legend(ax3, ax3_2)
 
         # ─── 4. 노출수 vs 클릭수 [우상 2] ───
@@ -2892,6 +3031,8 @@ class AdOptimizerApp(ctk.CTk):
             ax4_2.annotate(f"{int(v):,}", (df['date_s'].iloc[i], v), 
                            xytext=(0, offset_y), textcoords="offset points", ha='center', color='#3B82F6', 
                            weight='bold', fontsize=fs_ann, path_effects=pe)
+        ax4.set_ylim(bottom=0, top=max(df['imp'].max() if len(df['imp']) > 0 else 0, 1) * 1.15)
+        ax4_2.set_ylim(bottom=0, top=max(df['click'].max() if len(df['click']) > 0 else 0, 1) * 1.15)
         add_legend(ax4, ax4_2)
 
         # ─── 5. 클릭수 vs CTR [좌상 3] ───
@@ -2921,6 +3062,8 @@ class AdOptimizerApp(ctk.CTk):
             ax5_2.annotate(f"{v:.2f}%", (df['date_s'].iloc[i], v), 
                            xytext=(0, offset_y), textcoords="offset points", ha='center', color='#FB923C', 
                            weight='bold', fontsize=fs_ann, path_effects=pe)
+        ax5.set_ylim(bottom=0, top=max(df['click'].max() if len(df['click']) > 0 else 0, 1) * 1.15)
+        ax5_2.set_ylim(bottom=0, top=max(df['CTR'].max() if len(df['CTR']) > 0 else 0, 1) * 1.15)
         add_legend(ax5, ax5_2)
 
         # ─── 6. 클릭수 vs CVR [우상 3] ───
@@ -2950,6 +3093,8 @@ class AdOptimizerApp(ctk.CTk):
             ax6_2.annotate(f"{v:.1f}%", (df['date_s'].iloc[i], v), 
                            xytext=(0, offset_y), textcoords="offset points", ha='center', color='#EC4899', 
                            weight='bold', fontsize=fs_ann, path_effects=pe)
+        ax6.set_ylim(bottom=0, top=max(df['click'].max() if len(df['click']) > 0 else 0, 1) * 1.15)
+        ax6_2.set_ylim(bottom=0, top=max(df['CVR'].max() if len(df['CVR']) > 0 else 0, 1) * 1.15)
         add_legend(ax6, ax6_2)
 
         # ─── 7. 클릭수 vs 평균 클릭비용(CPC) [좌상 4] ───
@@ -2978,6 +3123,8 @@ class AdOptimizerApp(ctk.CTk):
             ax7_2.annotate(f"{int(v)}원", (df['date_s'].iloc[i], v), 
                            xytext=(0, offset_y), textcoords="offset points", ha='center', color='#8B5CF6', 
                            weight='bold', fontsize=fs_ann, path_effects=pe)
+        ax7.set_ylim(bottom=0, top=max(df['click'].max() if len(df['click']) > 0 else 0, 1) * 1.15)
+        ax7_2.set_ylim(bottom=0, top=max(df['CPC'].max() if len(df['CPC']) > 0 else 0, 1) * 1.15)
         add_legend(ax7, ax7_2)
 
         # ─── 8. 날짜별 광고비·광고매출 추이 [우상 4] ───
@@ -3069,6 +3216,8 @@ class AdOptimizerApp(ctk.CTk):
             for i, v in enumerate(top_kws['orders']):
                 if v == 0: continue
                 ax10_2.annotate(f"{int(v)}건", (x_indices[i], v), xytext=(0, 10), textcoords="offset points", ha='center', color='#10B981', weight='bold', fontsize=fs_ann, path_effects=pe)
+            ax10.set_ylim(bottom=0, top=max(top_kws['spend'].max() if len(top_kws['spend']) > 0 else 0, 1) * 1.15)
+            ax10_2.set_ylim(bottom=0, top=max(top_kws['orders'].max() if len(top_kws['orders']) > 0 else 0, 1) * 1.15)
             add_legend(ax10, ax10_2)
         else:
             ax10.text(0.5, 0.5, "표시할 키워드 데이터가 없습니다.", transform=ax10.transAxes, ha='center', va='center', color='#94A3B8', fontsize=12)
@@ -3193,14 +3342,29 @@ class AdOptimizerApp(ctk.CTk):
                 return lbl
             return ''
 
-        def _format_val(label, val):
+        def _format_val(label, val, raw_val=None, raw_unit=None):
             ll = label.lower() if label else ''
+            is_index = '지수' in label
+            
+            if is_index:
+                base_str = f"{label}: {val:.1f}%" if val != int(val) else f"{label}: {int(val)}%"
+                if raw_val is not None:
+                    if raw_unit == '회':
+                        base_str += f" (실제: {int(raw_val):,}회)"
+                    elif raw_unit == '%':
+                        base_str += f" (실제: {raw_val:.2f}%)"
+                    else:
+                        base_str += f" (실제: {raw_val})"
+                return base_str
+
             if 'roas' in ll or 'ctr' in ll or 'cvr' in ll or '%' in label:
                 return f"{label}: {val:.2f}%"
             elif '건' in label or '주문' in label or '전환' in label:
                 return f"{label}: {int(val):,}건"
             elif '광고비' in label or '매출' in label or '수익' in label or '지출' in label or label in ['총 광고비', '총 매출', '순수익', '적자']:
                 return f"{label}: {int(val):,}원"
+            elif '노출' in label or '클릭' in label:
+                return f"{label}: {int(val):,}회"
             else:
                 prefix = f"{label}: " if label else ""
                 return f"{prefix}{val:,.0f}원" if val > 100 else f"{prefix}{val:,.0f}"
@@ -3300,7 +3464,13 @@ class AdOptimizerApp(ctk.CTk):
                             if pd.notna(val):
                                 if lbl not in seen_labels:
                                     seen_labels.add(lbl)
-                                    lines_text.append(_format_val(lbl, val))
+                                    raw_val = None
+                                    raw_unit = None
+                                    if hasattr(line, 'custom_raw_vals') and line.custom_raw_vals is not None and 0 <= idx < len(line.custom_raw_vals):
+                                        raw_val = line.custom_raw_vals[idx]
+                                    if hasattr(line, 'custom_raw_unit'):
+                                        raw_unit = line.custom_raw_unit
+                                    lines_text.append(_format_val(lbl, val, raw_val, raw_unit))
                 
                 # 날짜 헤더 추가
                 header = f"📅 {tick_val}" if tick_val else f"📅 [{idx}]"
@@ -3327,9 +3497,9 @@ class AdOptimizerApp(ctk.CTk):
                 # 마지막 날짜면 왼쪽으로, 아니면 오른쪽으로 표시
                 data_len = len(dates_list) if dates_list else idx + 2
                 if idx >= data_len - 1:
-                    annot.set_xytext((-220, 20))
+                    annot.xyann = (-220, 20)
                 else:
-                    annot.set_xytext((20, 20))
+                    annot.xyann = (20, 20)
                 annot.xy = (idx, y_anchor)
                 annot.set_text(text)
                 annot.set_visible(True)
@@ -3620,6 +3790,12 @@ class AdOptimizerApp(ctk.CTk):
         ax2.set_ylabel('광고 전환 매출 (원)', color='white', fontsize=10, weight='bold')
         ax2.tick_params(axis='y', labelcolor=color_sales, labelsize=9)
         ax2.yaxis.set_major_formatter(plt.FuncFormatter(format_y_thousand))
+        
+        # 좌우 Y축 0을 동일한 높이로 맞추기: 둘 다 0에서 시작
+        max_spend = max(spend) if spend and max(spend) > 0 else 1000
+        max_sales = max(sales) if sales and max(sales) > 0 else 1000
+        ax1.set_ylim(bottom=0, top=max_spend * 1.15)
+        ax2.set_ylim(bottom=0, top=max_sales * 1.15)
         
         # X축 눈금 설정
         ax1.tick_params(axis='x', labelcolor='#94A3B8', labelsize=9)
@@ -3945,6 +4121,10 @@ class AdOptimizerApp(ctk.CTk):
                          xytext=(0, offset_y), textcoords="offset points", ha='center',
                          color=c2, weight='bold', fontsize=8, path_effects=pe)
         
+        # Y축 0점 일치 및 범위 설정
+        ax.set_ylim(bottom=0, top=max(y1_vals.max() if hasattr(y1_vals, 'max') else max(y1_vals) if len(y1_vals) > 0 else 0, 1) * 1.15)
+        ax2.set_ylim(bottom=0, top=max(y2_vals.max() if hasattr(y2_vals, 'max') else max(y2_vals) if len(y2_vals) > 0 else 0, 1) * 1.15)
+
         # 범례
         h1, l1 = ax.get_legend_handles_labels()
         h2, l2 = ax2.get_legend_handles_labels()
@@ -4132,7 +4312,7 @@ class AdOptimizerApp(ctk.CTk):
     def _on_kw_double_click(self, e):
         sel = self.kw_tree.selection()
         if not sel: return
-        pname = self.kw_tree.item(sel[0])['values'][16]
+        pname = self.kw_tree.item(sel[0])['values'][17]
         if pname and pname != "-":
             f_d = self.current_data[self.current_data['pname'] == pname]
             self._populate_kw_tree(f_d)
@@ -4160,11 +4340,64 @@ class AdOptimizerApp(ctk.CTk):
     def _update_performance_cards(self):
         o = self.analyzer.get_overall_summary()
         if not o: return
+        
+        # 영역별 데이터 집계 (검색/비검색/오디언스)
+        region_data = {'검색': {}, '비검색': {}, '오디언스': {}}
+        region_emojis = {'검색': '🔵', '비검색': '🟡', '오디언스': '🟢'}
+        try:
+            region_summary = self.analyzer.get_region_summary()
+            if region_summary is not None and not region_summary.empty:
+                def _norm_region(name):
+                    s = str(name).replace(' ', '')
+                    if '비검색' in s:
+                        return '비검색'
+                    elif '검색' in s:
+                        return '검색'
+                    elif '오디언스' in s or '외부' in s or '오피니언' in s or '오프사이트' in s:
+                        return '오디언스'
+                    return None
+                rs = region_summary.copy()
+                rs['norm_region'] = rs['region'].apply(_norm_region)
+                for rn in ['검색', '비검색', '오디언스']:
+                    rr = rs[rs['norm_region'] == rn]
+                    if not rr.empty:
+                        rd = {
+                            'spend': rr['spend'].sum(), 'sales': rr['sales'].sum(),
+                            'orders': rr['orders'].sum(), 'imp': rr['imp'].sum(),
+                            'click': rr['click'].sum(),
+                        }
+                        rd['ROAS'] = (rd['sales'] / rd['spend'] * 100) if rd['spend'] > 0 else 0
+                        rd['CTR'] = (rd['click'] / rd['imp'] * 100) if rd['imp'] > 0 else 0
+                        rd['CVR'] = (rd['orders'] / rd['click'] * 100) if rd['click'] > 0 else 0
+                        rd['CPC'] = (rd['spend'] / rd['click']) if rd['click'] > 0 else 0
+                        region_data[rn] = rd
+                    else:
+                        region_data[rn] = {'spend': 0, 'sales': 0, 'orders': 0, 'imp': 0, 'click': 0, 'ROAS': 0, 'CTR': 0, 'CVR': 0, 'CPC': 0}
+        except Exception as e:
+            print(f"Error in region parsing: {e}")
+            import traceback; traceback.print_exc()
+        
+        has_region = any(bool(region_data.get(rn)) for rn in ['검색', '비검색', '오디언스'])
+        
         for i, info in self.perf_labels.items():
             key = info['key']; val = o.get(key, 0); unit = info['unit']
             if unit == "원" or unit == "회": text = f"{int(val):,} {unit}"
             else: text = f"{val:.2f} {unit}"
             info['label'].configure(text=text)
+            
+            # 영역별 세부 서브라벨 업데이트
+            sub_lbl = info.get('sub_label')
+            if sub_lbl and has_region:
+                parts = []
+                for rn in ['검색', '비검색', '오디언스']:
+                    rd = region_data.get(rn, {})
+                    rv = rd.get(key, 0.0)
+                    emoji = region_emojis.get(rn, '⚪')
+                    if unit == "원" or unit == "회":
+                        parts.append(f"{emoji}{rn} {int(rv):,}")
+                    else:
+                        parts.append(f"{emoji}{rn} {rv:.2f}%")
+                sub_lbl.configure(text=" / ".join(parts))
 
     def _populate_summary_table(self):
         for item in self.summary_tree.get_children(): self.summary_tree.delete(item)
@@ -4641,9 +4874,9 @@ class AdOptimizerApp(ctk.CTk):
             # 좌표나 텍스트가 바뀐 경우에만 갱신
             if annot.xy != (idx, y_anchor) or annot.get_text() != text or not annot.get_visible():
                 if idx >= len(dates) - 1:
-                    annot.set_xytext((-220, 20))
+                    annot.xyann = (-220, 20)
                 else:
-                    annot.set_xytext((20, 20))
+                    annot.xyann = (20, 20)
                 annot.xy = (idx, y_anchor)
                 annot.set_text(text)
                 annot.set_visible(True)

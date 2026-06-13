@@ -163,15 +163,15 @@ class CoupangAdAnalyzer:
                 if m['region']: rename_map[m['region']] = 'region'
                 sum_df.rename(columns=rename_map, inplace=True)
                 
-                l_sum = l_df.groupby(m['kw']).agg({m['imp']: 'sum', m['spend']: 'sum'}).reset_index()
-                l_sum.columns = ['kw', 'l_imp', 'l_spend']
+                l_sum = l_df.groupby(m['kw']).agg({m['imp']: 'sum', m['spend']: 'sum', m['click']: 'sum'}).reset_index()
+                l_sum.columns = ['kw', 'l_imp', 'l_spend', 'l_click']
                 sum_df = pd.merge(sum_df, l_sum, on='kw', how='left').fillna(0)
                 
                 if len(active_dates) > 1:
                     p_date = active_dates[1]
                     p_df = df_c[df_c['p_date'] == p_date]
-                    p_sum = p_df.groupby(m['kw']).agg({m['imp']: 'sum', m['spend']: 'sum'}).reset_index()
-                    p_sum.columns = ['kw', 'p_imp', 'p_spend']
+                    p_sum = p_df.groupby(m['kw']).agg({m['imp']: 'sum', m['spend']: 'sum', m['click']: 'sum'}).reset_index()
+                    p_sum.columns = ['kw', 'p_imp', 'p_spend', 'p_click']
                     sum_df = pd.merge(sum_df, p_sum, on='kw', how='left').fillna(0)
                     
                     def get_status_info(row):
@@ -182,10 +182,12 @@ class CoupangAdAnalyzer:
                     sum_df['status'] = sum_df.apply(get_status_info, axis=1)
                     sum_df['imp_diff'] = sum_df['l_imp'] - sum_df['p_imp']
                     sum_df['spend_diff'] = sum_df['l_spend'] - sum_df['p_spend']
+                    sum_df['click_diff'] = sum_df['l_click'] - sum_df['p_click']
                     self.last_analysis_info = f"{p_date.strftime('%m/%d')} ➔ {l_date.strftime('%m/%d')} 데이터 비교"
                 else:
-                    sum_df['status'], sum_df['imp_diff'], sum_df['spend_diff'] = "유지", 0, 0
-                    sum_df['p_imp'], sum_df['p_spend'] = 0, 0
+                    sum_df['status'], sum_df['imp_diff'], sum_df['spend_diff'], sum_df['click_diff'] = "유지", 0, 0, 0
+                    sum_df['p_imp'], sum_df['p_spend'], sum_df['p_click'] = 0, 0, 0
+                    sum_df['l_click'] = 0
                     self.last_analysis_info = f"{l_date.strftime('%m/%d')} 기준 분석"
                 
                 sum_df['ROAS'] = np.where(sum_df['spend'] > 0, (sum_df['sales'] / sum_df['spend']) * 100, 0)

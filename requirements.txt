@@ -3,3 +3,4 @@ numpy
 customtkinter
 matplotlib
 openpyxl
+streamlit

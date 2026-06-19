@@ -2204,13 +2204,18 @@ with tab_perf:
     with sub_perf_tab4:
         st.subheader("📊 실제판매가 반영 광고 성과 보정")
         
-        col_in1, col_in2, col_in3 = st.columns([2, 2, 1])
+        col_in1, col_in2, col_in3, col_in4, col_in5, col_in6 = st.columns([1.5, 1.2, 0.3, 1.2, 2.0, 1.2])
         with col_in1:
-            real_price_input = st.text_input("🏷️ 실제판매가 입력 (원)", value="37,500", key="real_price_input_unique")
+            st.markdown("<div style='margin-top: 6px; font-size: 0.95rem; font-weight: bold; color: #E2E8F0; text-align: right;'>🏷️ 실제판매가 입력:</div>", unsafe_allow_html=True)
         with col_in2:
-            real_calc_base = st.selectbox("⚙️ 보정 기준", ["내 판매가 기준", "쿠팡시스템 기준"], key="real_calc_base_unique")
+            real_price_input = st.text_input("실제판매가", value="37,500", label_visibility="collapsed", key="real_price_input_unique")
         with col_in3:
-            st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
+            st.markdown("<div style='margin-top: 6px; font-size: 0.95rem; color: #E2E8F0;'>원</div>", unsafe_allow_html=True)
+        with col_in4:
+            st.markdown("<div style='margin-top: 6px; font-size: 0.95rem; font-weight: bold; color: #E2E8F0; text-align: right;'>⚙️ 보정 기준:</div>", unsafe_allow_html=True)
+        with col_in5:
+            real_calc_base = st.selectbox("보정기준", ["내 판매가 기준", "쿠팡시스템 기준"], label_visibility="collapsed", key="real_calc_base_unique")
+        with col_in6:
             apply_real_price = st.button("⚡ 계산 반영", use_container_width=True, key="apply_real_price_btn")
             
         try:
@@ -2301,7 +2306,7 @@ with tab_perf:
                     if is_fixed:
                         real_val_disp = "동일값"
                         diff_disp = "보정 영향 없음"
-                        diff_color = "#AAAAAA"
+                        diff_color = "#94A3B8"
                     else:
                         real_val_disp = txt_real
                         diff = v_real - v_coupang
@@ -2317,14 +2322,24 @@ with tab_perf:
                            
                     with cols_card[c_idx]:
                         st.markdown(f"""
-                        <div class="premium-card" style="padding: 10px; margin-bottom: 5px; height: 160px; border-color: #3B82F6;">
-                            <div style="font-size: 0.85rem; font-weight: bold; color: #E2E8F0; text-align: center;">{t}</div>
-                            <div style="font-size: 0.8rem; color: #AAAAAA; margin-top: 5px;">쿠팡: {txt_coupang}</div>
-                            <div style="font-size: 0.95rem; font-weight: bold; color: #60A5FA; margin-top: 3px;">실제: {real_val_disp}</div>
-                            <div style="font-size: 0.75rem; color: {diff_color}; margin-top: 3px; font-weight: bold;">{diff_disp}</div>
+                        <div class="premium-card" style="padding: 12px 10px; margin-bottom: 5px; height: 145px; border-color: #3B82F6; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                            <div style="font-size: 0.95rem; font-weight: bold; color: #E2E8F0; margin-bottom: 8px;">{t}</div>
+                            <div style="font-size: 0.8rem; color: #94A3B8; margin-bottom: 4px;">쿠팡시스템 기준: {txt_coupang}</div>
+                            <div style="font-size: 0.95rem; font-weight: bold; color: #FFA726; margin-bottom: 4px;">내 판매가 기준: {real_val_disp}</div>
+                            <div style="font-size: 0.8rem; color: {diff_color}; font-weight: bold;">{diff_disp}</div>
                         </div>
                         """, unsafe_allow_html=True)
                         
+            st.markdown("---")
+            
+            st.markdown("### 📊 집행광고비 vs 광고전환매출 추이 비교 (3선 차트)")
+            pd_data = analyzer.get_daily_performance()
+            memos = load_json(MEMOS_FILE, [])
+            if pd_data and not pd_data['total'].empty:
+                render_real_price_chart_streamlit(pd_data['total'], p_val, memos)
+            else:
+                st.info("성과 차트를 표시할 추이 데이터가 없습니다.")
+                
             st.markdown("---")
             st.subheader("📋 쿠팡시스템 기준 vs 내 판매가 기준 상세 대조표 (가로형)")
             
@@ -2384,14 +2399,6 @@ with tab_perf:
             
             df_horizontal = pd.DataFrame([row_coupang, row_real, row_diff], columns=horizontal_cols)
             st.dataframe(df_horizontal, use_container_width=True, hide_index=True)
-            
-            st.markdown("### 📊 집행광고비 vs 광고전환매출 추이 비교 (3선 차트)")
-            pd_data = analyzer.get_daily_performance()
-            memos = load_json(MEMOS_FILE, [])
-            if pd_data and not pd_data['total'].empty:
-                render_real_price_chart_streamlit(pd_data['total'], p_val, memos)
-            else:
-                st.info("성과 차트를 표시할 추이 데이터가 없습니다.")
 
 # -----------------------------------------------------------------------------
 # 5-2. Tab 2: ⚙️ 키워드/입찰

@@ -1849,10 +1849,10 @@ with tab_perf:
             ("전환율(CVR)", overall['CVR'], "%", "#FB923C", 'CVR')
         ]
         
-        for r in range(3):
-            cols = st.columns(4)
-            for c in range(4):
-                idx = r * 4 + c
+        for r in range(2):
+            cols = st.columns(6)
+            for c in range(6):
+                idx = r * 6 + c
                 title, val, unit, color, sub_key = metrics[idx]
                 with cols[c]:
                     if unit == "원":
@@ -1863,10 +1863,10 @@ with tab_perf:
                         val_str = f"{int(val):,} {unit}"
                     sub_text = _sub_label(sub_key, unit)
                     st.markdown(f"""
-                    <div class="premium-card">
-                        <div class="card-header">{title}</div>
-                        <div class="metric-value" style="color: {color};">{val_str}</div>
-                        <div style="font-size: 0.7rem; color: #94A3B8; margin-top: 4px;">{sub_text}</div>
+                    <div class="premium-card" style="padding: 10px; margin-bottom: 10px; border-width: 1.5px; border-color: #3B82F6;">
+                        <div style="font-size: 0.75rem; font-weight: bold; color: #E2E8F0; text-align: center;">{title}</div>
+                        <div class="metric-value" style="color: {color}; font-size: 1.35rem; text-align: center; margin-bottom: 2px;">{val_str}</div>
+                        <div style="font-size: 0.65rem; color: #94A3B8; text-align: center; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{sub_text}</div>
                     </div>
                     """, unsafe_allow_html=True)
 

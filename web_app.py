@@ -34,6 +34,11 @@ st.markdown("""
         color: #E2E8F0;
     }
     
+    /* 글로벌 다크 테마 일반 텍스트 가독성 유지 (테마 textColor 가 블랙이므로 CSS로 흰색 복구) */
+    .stApp p, .stApp span, .stApp label, .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6 {
+        color: #E2E8F0 !important;
+    }
+    
     /* 타이틀 그라디언트 */
     .title-gradient {
         font-family: 'Malgun Gothic', sans-serif;
@@ -2406,8 +2411,56 @@ with tab_perf:
 with tab_keyword:
     st.markdown("""
         <style>
+            /* 1. st.tabs 구분탭의 배경을 연회색으로 채워 가독성을 극대화 */
+            .stApp div[role="tablist"] {
+                background-color: #F1F5F9 !important;
+                border-radius: 8px !important;
+                padding: 4px !important;
+            }
+            
             /* st.tabs 비활성 탭 글자색 검정으로 지정하여 가독성 개선 */
-            div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="false"] p {
+            .stApp button[role="tab"][aria-selected="false"] p,
+            .stApp button[role="tab"][aria-selected="false"] span,
+            .stApp button[role="tab"][aria-selected="false"] * {
+                color: #000000 !important;
+                font-weight: bold !important;
+            }
+            
+            /* st.tabs 활성 탭 글자색 빨간색으로 고정 */
+            .stApp button[role="tab"][aria-selected="true"] p,
+            .stApp button[role="tab"][aria-selected="true"] span,
+            .stApp button[role="tab"][aria-selected="true"] * {
+                color: #FF4B4B !important;
+                font-weight: bold !important;
+            }
+            
+            /* 2. 테이블 헤더 글자색 검정으로 지정하여 가독성 개선 (1번 그림) */
+            th, .stDataFrame th, div[data-testid="stDataFrame"] th {
+                color: #000000 !important;
+                font-weight: bold !important;
+            }
+            div[data-testid="stDataFrame"] {
+                --textColor: #000000 !important;
+                --secondaryBackgroundColor: #FFFFFF !important;
+                color: #000000 !important;
+            }
+            
+            /* 3. 검색 입력창 글자색 및 placeholder 색상 검정으로 지정 (2번 그림) */
+            div[data-testid="stTextInput"] input {
+                color: #000000 !important;
+            }
+            div[data-testid="stTextInput"] input::placeholder {
+                color: #000000 !important;
+                opacity: 0.65 !important;
+            }
+            
+            /* 4. st.button (검색, 초기화, 필터 해제 버튼 등) 글자색 검정으로 지정 (2, 3번 그림) */
+            .stApp button[class*="e12tamyi"] p,
+            .stApp button[class*="e12tamyi"] span,
+            .stApp button[class*="e12tamyi"] *,
+            .stApp .stButton button p,
+            .stApp .stButton button span,
+            .stApp .stButton button * {
                 color: #000000 !important;
                 font-weight: bold !important;
             }
@@ -2438,7 +2491,7 @@ with tab_keyword:
                     st.rerun()
 
             # 키워드 검색 한 줄 배치
-            col_search1, col_search2, col_search3, col_search4, col_search5 = st.columns([1.5, 3.5, 0.8, 0.8, 4.0])
+            col_search1, col_search2, col_search3, col_search4, col_search5 = st.columns([1.5, 3.5, 1.2, 1.2, 3.2])
             with col_search1:
                 st.markdown("<div style='margin-top: 6px; font-size: 0.95rem; font-weight: bold; color: #E2E8F0; text-align: right;'>🔍 키워드 검색:</div>", unsafe_allow_html=True)
             with col_search2:
@@ -2529,25 +2582,6 @@ with tab_keyword:
             
             styled_df = formatted_df.style.map(style_orange_theme)
             st.dataframe(styled_df, use_container_width=True, hide_index=True)
-            
-            st.markdown("---")
-            st.markdown("##### 🎯 키워드 등급 지정 / 이동")
-            col_form1, col_form2, col_form3 = st.columns([2, 1, 1])
-            with col_form1:
-                target_kws = st.multiselect("구분 지정할 키워드 선택 (복수 선택 가능)", df_display['kw'].tolist(), key="select_kws_for_class_unique")
-            with col_form2:
-                new_status = st.selectbox("변경할 등급 선택", ["타겟", "수동", "제외"], key="select_new_status_unique")
-            with col_form3:
-                st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
-                if st.button("💾 등급 지정 및 적용", use_container_width=True, key="save_kw_class_btn_unique"):
-                    if target_kws:
-                        for kw in target_kws:
-                            keyword_classes[kw] = new_status
-                        save_json(CLASSES_FILE, keyword_classes)
-                        st.success(f"선택한 {len(target_kws)}개 키워드가 **{new_status}** 등급으로 지정되었습니다.")
-                        st.rerun()
-                    else:
-                        st.warning("키워드를 먼저 선택해 주세요.")
         else:
             st.warning("분석 결과 테이블을 로드할 수 없습니다.")
             

@@ -2404,7 +2404,15 @@ with tab_perf:
 # 5-2. Tab 2: ⚙️ 키워드/입찰
 # -----------------------------------------------------------------------------
 with tab_keyword:
-    st.subheader("⚙️ 키워드 등급 및 입찰 관리")
+    st.markdown("""
+        <style>
+            /* st.tabs 비활성 탭 글자색 검정으로 지정하여 가독성 개선 */
+            div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="false"] p {
+                color: #000000 !important;
+                font-weight: bold !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
     
     keyword_classes = load_json(CLASSES_FILE, {})
     
@@ -2418,7 +2426,6 @@ with tab_keyword:
         st.session_state["kw_search_input"] = ""
         
     with sub_kw_tab1:
-        st.markdown("#### 🔍 키워드 분석 및 등급 지정")
         if summary_df is not None and not summary_df.empty:
             df_display = summary_df.copy()
             
@@ -2516,9 +2523,9 @@ with tab_keyword:
             
             formatted_df = pd.DataFrame(formatted_rows)
             
-            # 2번 그림 테이블의 오렌지색 배경 디자인 일치화
+            # 2번 그림 테이블의 오렌지색 배경 디자인 일치화 (글자 크기 축소)
             def style_orange_theme(val):
-                return "background-color: #E65100; color: #FFFFFF; font-weight: bold; border: 0.5px solid #BF360C;"
+                return "background-color: #E65100; color: #FFFFFF; font-weight: bold; font-size: 11px; border: 0.5px solid #BF360C;"
             
             styled_df = formatted_df.style.map(style_orange_theme)
             st.dataframe(styled_df, use_container_width=True, hide_index=True)

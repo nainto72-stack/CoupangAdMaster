@@ -253,6 +253,7 @@ def _annotate_smart(ax, xs, ys, color, kind, pe, fontsize=8, step=2):
 def show_pyplot_with_tooltip(fig):
     import io
     import json
+    import re
     import streamlit as st
     import matplotlib.pyplot as plt
     
@@ -412,6 +413,10 @@ def show_pyplot_with_tooltip(fig):
     }})();
 </script>
 """
+    # SVG 반응형 스타일 적용 (가로폭 100% 꽉 채우기)
+    svg_str = re.sub(r'\bwidth="[^"]+"', '', svg_str, count=1)
+    svg_str = re.sub(r'\bheight="[^"]+"', '', svg_str, count=1)
+    svg_str = re.sub(r'<svg\b', '<svg style="width: 100%; height: auto;"', svg_str, count=1)
     st.markdown(svg_str + tooltip_html, unsafe_allow_html=True)
 
 

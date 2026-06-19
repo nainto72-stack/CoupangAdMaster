@@ -881,17 +881,17 @@ def render_magnifier_diagnosis_streamlit(df, by_region_df=None):
             v_color = "#34D399"
             
         diag_html += f"""
-        <div class="diag-subcard" style="border: 1px solid {border_color};">
-            <div class="diag-target-name" style="color: {border_color};">{target_name}</div>
-            <div class="diag-grid">
-                <div class="diag-badge" style="color: #00E5FF;">🔹 노출수 [{lamp_imp}] ({chg_imp:+.1f}%)</div>
-                <div class="diag-badge" style="color: #FB923C;">🔸 클릭률 [{lamp_ctr}] ({chg_ctr:+.1f}%)</div>
-                <div class="diag-badge" style="color: #10B981;">🔹 전환율 [{lamp_cvr}] ({chg_cvr:+.1f}%)</div>
-                <div class="diag-badge" style="color: #FF00FF;">🔸 ROAS [{'양호' if chg_roas>=0 else '위험'}] ({chg_roas:+.1f}%)</div>
-            </div>
-            <div class="diag-verdict" style="color: {v_color};">{verdict}</div>
-        </div>
-        """
+<div class="diag-subcard" style="border: 1px solid {border_color};">
+    <div class="diag-target-name" style="color: {border_color};">{target_name}</div>
+    <div class="diag-grid">
+        <div class="diag-badge" style="color: #00E5FF;">🔹 노출수 [{lamp_imp}] ({chg_imp:+.1f}%)</div>
+        <div class="diag-badge" style="color: #FB923C;">🔸 클릭률 [{lamp_ctr}] ({chg_ctr:+.1f}%)</div>
+        <div class="diag-badge" style="color: #10B981;">🔹 전환율 [{lamp_cvr}] ({chg_cvr:+.1f}%)</div>
+        <div class="diag-badge" style="color: #FF00FF;">🔸 ROAS [{'양호' if chg_roas>=0 else '위험'}] ({chg_roas:+.1f}%)</div>
+    </div>
+    <div class="diag-verdict" style="color: {v_color};">{verdict}</div>
+</div>
+"""
         
     diag_html += '</div>'
     if has_target:
@@ -2061,30 +2061,22 @@ with tab_perf:
 
     # 5-1-2. 성과 추이 차트
     with sub_perf_tab2:
-        st.subheader("📈 광고 지표 성과 추이")
         pd_data = analyzer.get_daily_performance()
         if not pd_data['total'].empty:
             memos = load_json(MEMOS_FILE, [])
             
             # 1. KPI 요약 카드 (6x2)
-            st.markdown("#### 📊 영역별 KPI 요약 카드")
             region_summary = analyzer.get_region_summary()
             render_kpi_summary_cards_streamlit(overall, region_summary)
-            st.markdown("---")
             
             # 2. 돋보기 1초 진단 처방전
-            st.markdown("#### 🔑 AI 광고효율 돋보기 1초 진단 처방전")
             by_region = pd_data.get('by_region', pd.DataFrame())
             render_magnifier_diagnosis_streamlit(pd_data['total'], by_region_df=by_region)
-            st.markdown("---")
             
             # 3. 돋보기 상대 지수 차트
-            st.markdown("#### 🔎 영역별 광고효율 돋보기 상대 지수 차트")
             render_magnifier_chart_streamlit(pd_data['total'], by_region, memos)
-            st.markdown("---")
             
             # 4. 기존 12대 차트
-            st.markdown("#### 📈 광고 12대 성과 추이 그래프")
             render_large_trend_chart_streamlit(pd_data['total'], analyzer.summary_df, memos)
         else:
             st.info("성과 차트를 표시할 추이 데이터가 없습니다.")

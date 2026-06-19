@@ -2414,71 +2414,113 @@ with tab_keyword:
     
     summary_df = analyzer.summary_df
     
+    if "kw_search_input" not in st.session_state:
+        st.session_state["kw_search_input"] = ""
+        
     with sub_kw_tab1:
         st.markdown("#### 🔍 키워드 분석 및 등급 지정")
         if summary_df is not None and not summary_df.empty:
             df_display = summary_df.copy()
-            df_display['구분'] = df_display['kw'].apply(lambda x: keyword_classes.get(x, "미분류"))
             
-            m_map = analyzer._get_column_mapping(analyzer.raw_df)
-            pname_col = m_map.get('pname')
-            pname_list = ["전체 상품 보기"]
-            if pname_col and pname_col in analyzer.raw_df.columns:
-                prods = analyzer.raw_df[pname_col].dropna().unique().tolist()
-                prods = [str(p).strip() for p in prods if str(p).strip() and str(p).strip() != '-']
-                prods.sort()
-                pname_list.extend(prods)
+            # 우측 상단 필터 해제 버튼 배치
+            col_reset_top = st.columns([10, 1.5])
+            with col_reset_top[1]:
+                reset_all = st.button("필터 해제", use_container_width=True, key="reset_all_kw_filters_btn")
+                if reset_all:
+                    st.session_state["kw_search_input"] = ""
+                    st.rerun()
+
+            # 키워드 검색 한 줄 배치
+            col_search1, col_search2, col_search3, col_search4, col_search5 = st.columns([1.5, 3.5, 0.8, 0.8, 4.0])
+            with col_search1:
+                st.markdown("<div style='margin-top: 6px; font-size: 0.95rem; font-weight: bold; color: #E2E8F0; text-align: right;'>🔍 키워드 검색:</div>", unsafe_allow_html=True)
+            with col_search2:
+                kw_search_input = st.text_input("kw_search", value=st.session_state.get("kw_search_input", ""), label_visibility="collapsed", placeholder="검색어 입력 (예: 두릅)", key="kw_search_unique_key_unique")
+            with col_search3:
+                btn_search = st.button("검색", use_container_width=True, key="kw_search_btn")
+                if btn_search:
+                    st.session_state["kw_search_input"] = kw_search_input
+                    st.rerun()
+            with col_search4:
+                btn_init = st.button("초기화", use_container_width=True, key="kw_init_btn")
+                if btn_init:
+                    st.session_state["kw_search_input"] = ""
+                    st.rerun()
+                    
+            # 필터링 적용
+            if st.session_state["kw_search_input"].strip():
+                search_q = st.session_state["kw_search_input"].strip()
+                df_display = df_display[
+                    df_display['kw'].str.contains(search_q, case=False, na=False) |
+                    df_display['pname'].str.contains(search_q, case=False, na=False)
+                ]
             
-            col_filter1, col_filter2 = st.columns([2, 1])
-            with col_filter1:
-                selected_pname = st.selectbox("📦 상품별 키워드 필터링", pname_list, key="kw_pname_filter_unique")
-            with col_filter2:
-                kw_search = st.text_input("🔍 키워드 검색", placeholder="검색어 입력 (예: 두릅)", key="kw_search_unique_key_unique")
+            # 데스크톱 Populate Treeview 포맷팅 완벽 이식
+            formatted_rows = []
+            for _, r in df_display.iterrows():
+                st_val = r.get('status', '유지')
+                diff_v = int(r.get('imp_diff', 0))
+                if st_val == "신규":
+                    diff_text = f"✨[신규] ▲{diff_v:,}"
+                elif st_val == "중단":
+                    diff_text = f"🛑[중단] (전일:{int(r.get('p_imp',0)):,})"
+                else:
+                    p_imp = int(r.get('p_imp', 0))
+                    pct = (diff_v / p_imp * 100) if p_imp > 0 else 0
+                    if diff_v > 0:
+                        diff_text = f"▲{diff_v:,} (+{pct:.1f}%)"
+                    elif diff_v < 0:
+                        diff_text = f"▼{abs(diff_v):,} ({pct:.1f}%)"
+                    else:
+                        diff_text = "-"
+                        
+                sp_diff = int(r.get('spend_diff', 0))
+                sp_diff_text = f"▲{sp_diff:,}" if sp_diff > 0 else (f"▼{abs(sp_diff):,}" if sp_diff < 0 else "-")
+                
+                ck_diff = int(r.get('click_diff', 0))
+                p_click = int(r.get('p_click', 0))
+                if st_val == "신규":
+                    ck_diff_text = f"✨[신규]"
+                elif st_val == "중단":
+                    ck_diff_text = f"🛑[중단]"
+                else:
+                    if ck_diff > 0:
+                        pct_ck = (ck_diff / p_click * 100) if p_click > 0 else 0
+                        ck_diff_text = f"▲{ck_diff:,} (+{pct_ck:.0f}%)"
+                    elif ck_diff < 0:
+                        pct_ck = (ck_diff / p_click * 100) if p_click > 0 else 0
+                        ck_diff_text = f"▼{abs(ck_diff):,} ({pct_ck:.0f}%)"
+                    else:
+                        ck_diff_text = "-"
+                        
+                formatted_rows.append({
+                    "구분": r.get('region', '-'),
+                    "키워드": r['kw'],
+                    "최신노출": f"{int(r.get('l_imp',0)):,}",
+                    "전일대비": diff_text,
+                    "누적노출": f"{int(r['imp']):,}",
+                    "클릭수": f"{int(r['click']):,}",
+                    "클릭증감": ck_diff_text,
+                    "CTR%": f"{r['CTR']:.2f}%",
+                    "전환율%": f"{r['CVR']:.1f}%",
+                    "주문건수": f"{int(r['orders']):,}",
+                    "최신광고비": f"{int(r.get('l_spend',0)):,}",
+                    "지출변동": sp_diff_text,
+                    "누적광고비": f"{int(r['spend']):,}",
+                    "전환매출": f"{int(r['sales']):,}",
+                    "CPC": f"{int(r['CPC']):,}",
+                    "ROAS": f"{r['ROAS']:.1f}%",
+                    "광고순위": f"{r.get('rank',0):.1f}위",
+                    "상품명": r.get('pname', '-')
+                })
             
-            if selected_pname != "전체 상품 보기":
-                df_display = df_display[df_display['pname'] == selected_pname]
-            if kw_search.strip():
-                df_display = df_display[df_display['kw'].str.contains(kw_search, case=False, na=False)]
+            formatted_df = pd.DataFrame(formatted_rows)
             
-            cols_order = ["구분", "kw", "l_imp", "imp_diff", "imp", "click", "click_diff", "CTR", "CVR", "orders", 
-                          "l_spend", "spend_diff", "spend", "sales", "CPC", "ROAS", "rank", "pname"]
-            cols_order = [c for c in cols_order if c in df_display.columns]
+            # 2번 그림 테이블의 오렌지색 배경 디자인 일치화
+            def style_orange_theme(val):
+                return "background-color: #E65100; color: #FFFFFF; font-weight: bold; border: 0.5px solid #BF360C;"
             
-            df_display_selected = df_display[cols_order].copy()
-            rename_map = {
-                "kw": "키워드", "l_imp": "최신노출", "imp_diff": "전일대비", "imp": "누적노출",
-                "click": "클릭수", "click_diff": "클릭증감", "orders": "주문건수",
-                "l_spend": "최신광고비", "spend_diff": "지출변동",
-                "spend": "누적광고비", "sales": "전환매출", "rank": "광고순위", "pname": "상품명"
-            }
-            df_display_selected.rename(columns={k: v for k, v in rename_map.items() if k in df_display_selected.columns}, inplace=True)
-            
-            formatted_df = df_display_selected.copy()
-            if 'CTR' in formatted_df.columns:
-                formatted_df['CTR'] = formatted_df['CTR'].apply(lambda x: f"{x:.2f}%")
-            if 'CVR' in formatted_df.columns:
-                formatted_df['CVR'] = formatted_df['CVR'].apply(lambda x: f"{x:.2f}%")
-            if 'ROAS' in formatted_df.columns:
-                formatted_df['ROAS'] = formatted_df['ROAS'].apply(lambda x: f"{x:.0f}%")
-            if 'CPC' in formatted_df.columns:
-                formatted_df['CPC'] = formatted_df['CPC'].apply(lambda x: f"{int(x):,}원")
-            for col in ['누적광고비', '전환매출', '최신광고비']:
-                if col in formatted_df.columns:
-                    formatted_df[col] = formatted_df[col].apply(lambda x: f"{int(x):,}원")
-            for col in ['지출변동', '최신노출', '누적노출', '클릭수', '주문건수', '클릭증감', '전일대비']:
-                if col in formatted_df.columns:
-                    formatted_df[col] = formatted_df[col].apply(lambda x: f"{int(x):,}")
-            
-            def style_row_class(val):
-                if val == "타겟":
-                    return "background-color: rgba(59, 130, 246, 0.25); color: #60A5FA; font-weight: bold; text-align: center;"
-                elif val == "수동":
-                    return "background-color: rgba(16, 185, 129, 0.25); color: #34D399; font-weight: bold; text-align: center;"
-                elif val == "제외":
-                    return "background-color: rgba(239, 68, 68, 0.25); color: #F87171; font-weight: bold; text-align: center;"
-                return "background-color: rgba(107, 114, 128, 0.2); color: #94A3B8; text-align: center;"
-            
-            styled_df = formatted_df.style.map(style_row_class, subset=['구분'])
+            styled_df = formatted_df.style.map(style_orange_theme)
             st.dataframe(styled_df, use_container_width=True, hide_index=True)
             
             st.markdown("---")

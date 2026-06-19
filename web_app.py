@@ -2088,17 +2088,6 @@ with tab_perf:
 
     # 5-1-3. 영역별 분석
     with sub_perf_tab3:
-        st.subheader("🌐 노출 영역별 성과 분석")
-        pd_data = analyzer.get_daily_performance()
-        if not pd_data['total'].empty:
-            memos = load_json(MEMOS_FILE, [])
-            by_region = pd_data.get('by_region', pd.DataFrame())
-            if not by_region.empty:
-                render_region_trend_charts_streamlit(pd_data['total'], by_region, memos)
-            else:
-                st.info("영역별 추이 데이터가 없습니다.")
-        
-        st.markdown("---")
         st.subheader("📋 노출 영역별 상세 성과 (매출/광고비 점유율 포함)")
         
         if analyzer.raw_df is not None:
@@ -2199,6 +2188,17 @@ with tab_perf:
                     "객단가": f"{int(t_aov):,}원"
                })
                 st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        
+        st.markdown("---")
+        st.subheader("🌐 노출 영역별 성과 분석")
+        pd_data = analyzer.get_daily_performance()
+        if not pd_data['total'].empty:
+            memos = load_json(MEMOS_FILE, [])
+            by_region = pd_data.get('by_region', pd.DataFrame())
+            if not by_region.empty:
+                render_region_trend_charts_streamlit(pd_data['total'], by_region, memos)
+            else:
+                st.info("영역별 추이 데이터가 없습니다.")
 
     # 5-1-4. 실판매 분석
     with sub_perf_tab4:

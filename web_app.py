@@ -39,7 +39,7 @@ st.markdown("""
         color: #E2E8F0 !important;
     }
     
-    /* 타이틀 그라디언트 */
+    /* 타이틀 그라디언트 복구 */
     .title-gradient {
         font-family: 'Malgun Gothic', sans-serif;
         background: linear-gradient(45deg, #00F0FF, #EC4899);
@@ -49,6 +49,101 @@ st.markdown("""
         font-size: 2.8rem;
         margin-bottom: 20px;
         text-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+    }
+    
+    /* =========================================================================
+       ⚙️ 키워드/입찰 탭 및 서브 탭(구분 탭) 가독성 향상 스타일 (글로벌 강제 적용)
+       ========================================================================= */
+    /* 1. st.tabs 구분탭의 배경을 연회색으로 채워 가독성을 극대화 */
+    .stApp div[role="tablist"] {
+        background-color: #F1F5F9 !important;
+        border-radius: 8px !important;
+        padding: 4px !important;
+    }
+    
+    /* st.tabs 비활성 탭 글자색 검정으로 지정하여 가독성 개선 */
+    .stApp button[role="tab"][aria-selected="false"] p,
+    .stApp button[role="tab"][aria-selected="false"] span,
+    .stApp button[role="tab"][aria-selected="false"] * {
+        color: #000000 !important;
+        font-weight: bold !important;
+    }
+    
+    /* st.tabs 활성 탭 글자색 빨간색으로 고정 */
+    .stApp button[role="tab"][aria-selected="true"] p,
+    .stApp button[role="tab"][aria-selected="true"] span,
+    .stApp button[role="tab"][aria-selected="true"] * {
+        color: #FF4B4B !important;
+        font-weight: bold !important;
+    }
+    
+    /* 2. 테이블 헤더 글자색 검정으로 지정하여 가독성 개선 (3번 그림) */
+    .stApp th, 
+    .stApp th *, 
+    .stApp .stDataFrame th, 
+    .stApp div[data-testid="stDataFrame"] th, 
+    .stApp div[data-testid="stDataFrame"] [role="columnheader"] p, 
+    .stApp div[data-testid="stDataFrame"] [role="columnheader"] span {
+        color: #000000 !important;
+        font-weight: bold !important;
+    }
+    .stApp div[data-testid="stDataFrame"] {
+        --textColor: #000000 !important;
+        --secondaryBackgroundColor: #FFFFFF !important;
+        color: #000000 !important;
+    }
+    
+    /* 2-2. 커스텀 HTML 테이블 내부 텍스트 색상 및 상속 스타일 제어 (3번 그림 극대화) */
+    .stApp table,
+    .stApp table th,
+    .stApp table th *,
+    .stApp table th p,
+    .stApp table th span,
+    .stApp table tr th,
+    .stApp table tr th * {
+        color: #000000 !important;
+        font-weight: bold !important;
+    }
+    .stApp table td,
+    .stApp table td *,
+    .stApp table td p,
+    .stApp table td span,
+    .stApp table tr td,
+    .stApp table tr td * {
+        color: #FFFFFF !important;
+        font-weight: bold !important;
+    }
+    
+    /* 3. 검색 입력창 글자색 및 placeholder 색상 검정으로 지정 (4번 그림) */
+    .stApp div[data-testid="stTextInput"] input,
+    .stApp input[type="text"],
+    .stApp input {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+    }
+    .stApp input::placeholder,
+    .stApp input::-webkit-input-placeholder,
+    .stApp input::-moz-placeholder,
+    .stApp input:-ms-input-placeholder,
+    .stApp div[data-testid="stTextInput"] input::placeholder,
+    .stApp div[data-testid="stTextInput"] input::-webkit-input-placeholder {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+        opacity: 0.85 !important;
+    }
+    
+    /* 4. st.button (검색, 초기화, 필터 해제 버튼 등) 글자색 검정으로 지정 (4번 그림) */
+    .stApp button:not([role="tab"]),
+    .stApp button:not([role="tab"]) p,
+    .stApp button:not([role="tab"]) span,
+    .stApp button:not([role="tab"]) div,
+    .stApp button:not([role="tab"]) *,
+    .stApp div[data-testid="stButton"] button,
+    .stApp div[data-testid="stButton"] button *,
+    .stApp div[data-testid="stButton"] button p {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+        font-weight: bold !important;
     }
     
     /* 프리미엄 카드 스타일 */
@@ -2409,63 +2504,7 @@ with tab_perf:
 # 5-2. Tab 2: ⚙️ 키워드/입찰
 # -----------------------------------------------------------------------------
 with tab_keyword:
-    st.markdown("""
-        <style>
-            /* 1. st.tabs 구분탭의 배경을 연회색으로 채워 가독성을 극대화 */
-            .stApp div[role="tablist"] {
-                background-color: #F1F5F9 !important;
-                border-radius: 8px !important;
-                padding: 4px !important;
-            }
-            
-            /* st.tabs 비활성 탭 글자색 검정으로 지정하여 가독성 개선 */
-            .stApp button[role="tab"][aria-selected="false"] p,
-            .stApp button[role="tab"][aria-selected="false"] span,
-            .stApp button[role="tab"][aria-selected="false"] * {
-                color: #000000 !important;
-                font-weight: bold !important;
-            }
-            
-            /* st.tabs 활성 탭 글자색 빨간색으로 고정 */
-            .stApp button[role="tab"][aria-selected="true"] p,
-            .stApp button[role="tab"][aria-selected="true"] span,
-            .stApp button[role="tab"][aria-selected="true"] * {
-                color: #FF4B4B !important;
-                font-weight: bold !important;
-            }
-            
-            /* 2. 테이블 헤더 글자색 검정으로 지정하여 가독성 개선 (1번 그림) */
-            th, .stDataFrame th, div[data-testid="stDataFrame"] th {
-                color: #000000 !important;
-                font-weight: bold !important;
-            }
-            div[data-testid="stDataFrame"] {
-                --textColor: #000000 !important;
-                --secondaryBackgroundColor: #FFFFFF !important;
-                color: #000000 !important;
-            }
-            
-            /* 3. 검색 입력창 글자색 및 placeholder 색상 검정으로 지정 (2번 그림) */
-            div[data-testid="stTextInput"] input {
-                color: #000000 !important;
-            }
-            div[data-testid="stTextInput"] input::placeholder {
-                color: #000000 !important;
-                opacity: 0.65 !important;
-            }
-            
-            /* 4. st.button (검색, 초기화, 필터 해제 버튼 등) 글자색 검정으로 지정 (2, 3번 그림) */
-            .stApp button[class*="e12tamyi"] p,
-            .stApp button[class*="e12tamyi"] span,
-            .stApp button[class*="e12tamyi"] *,
-            .stApp .stButton button p,
-            .stApp .stButton button span,
-            .stApp .stButton button * {
-                color: #000000 !important;
-                font-weight: bold !important;
-            }
-        </style>
-    """, unsafe_allow_html=True)
+    # 스타일은 상단 글로벌 CSS 블록으로 통합 이관 완료
     
     keyword_classes = load_json(CLASSES_FILE, {})
     
@@ -2576,12 +2615,27 @@ with tab_keyword:
             
             formatted_df = pd.DataFrame(formatted_rows)
             
-            # 2번 그림 테이블의 오렌지색 배경 디자인 일치화 (글자 크기 축소)
-            def style_orange_theme(val):
-                return "background-color: #E65100; color: #FFFFFF; font-weight: bold; font-size: 11px; border: 0.5px solid #BF360C;"
+            # 1번 그림처럼 주황색 표 내 글자 크기를 8.5px로 축소하고, 세로 길이를 대폭 늘려서(max-height: 1200px) 많은 데이터가 한눈에 보이도록 커스텀 HTML 테이블로 렌더링
+            html_table = """
+            <div style="max-height: 1200px; overflow-y: auto; border: 1.5px solid #BF360C; border-radius: 6px; font-family: 'Malgun Gothic', sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                <table style="width: 100%; border-collapse: collapse; font-size: 8.5px; font-weight: bold; color: #FFFFFF; text-align: left;">
+                    <thead>
+                        <tr style="background-color: #F1F5F9; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid #BF360C; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+            """
+            for col in formatted_df.columns:
+                # 3번 그림의 헤더 글자색 검정(#000000) 강제 적용 및 패딩 축소
+                html_table += f'<th style="padding: 4px 6px; color: #000000 !important; border: 0.5px solid #BF360C; font-weight: bold; text-align: left; white-space: nowrap; background-color: #F1F5F9;"><span style="color: #000000 !important;">{col}</span></th>'
+            html_table += "</tr></thead><tbody>"
             
-            styled_df = formatted_df.style.map(style_orange_theme)
-            st.dataframe(styled_df, use_container_width=True, hide_index=True)
+            for _, row in formatted_df.iterrows():
+                # 주황색 배경 테마 구현 및 가독성 개선, 패딩 축소
+                html_table += '<tr style="background-color: #E65100; border-bottom: 0.5px solid #BF360C;">'
+                for val in row:
+                    html_table += f'<td style="padding: 3px 6px; color: #FFFFFF !important; border: 0.5px solid #BF360C; white-space: nowrap;"><span style="color: #FFFFFF !important;">{val}</span></td>'
+                html_table += "</tr>"
+            html_table += "</tbody></table></div>"
+            
+            st.markdown(html_table, unsafe_allow_html=True)
         else:
             st.warning("분석 결과 테이블을 로드할 수 없습니다.")
             

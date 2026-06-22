@@ -520,21 +520,9 @@ class AdOptimizerApp(ctk.CTk):
             self.perf_labels[i] = {"label": v_lbl, "sub_label": sub_lbl, "unit": u, "key": k}
 
     def _setup_keyword_tab(self):
-        self.action_frame = ctk.CTkFrame(self.tab_keywords, fg_color="transparent")
-        self.action_frame.pack(fill="x", padx=20, pady=15)
-        
-        # 좌측: 필터 상태 라벨
-        self.filter_label = ctk.CTkLabel(self.action_frame, text="", font=("Malgun Gothic", 15, "bold"), text_color="#60A5FA")
-        self.filter_label.pack(side="left", padx=10)
-        
-        # 우측: 필터 해제 버튼
-        self.btn_reset_filter = ctk.CTkButton(self.action_frame, text="🔄 필터 해제", command=self._reset_keyword_filter, 
-                                              fg_color="#4B5563", width=120, height=35)
-        self.btn_reset_filter.pack(side="right", padx=5)
-        
-        # 검색 프레임
+        # 검색 프레임 (필터 해제 및 필터 상태 라벨도 여기에 통합 배치하여 세로 공간 절약)
         search_frame = ctk.CTkFrame(self.tab_keywords, fg_color="transparent")
-        search_frame.pack(fill="x", padx=20, pady=(0, 8))
+        search_frame.pack(fill="x", padx=20, pady=(15, 8))
         
         ctk.CTkLabel(search_frame, text="🔍 키워드 검색:", font=("Malgun Gothic", 13, "bold"), 
                     text_color="#94A3B8").pack(side="left", padx=(0, 8))
@@ -554,6 +542,15 @@ class AdOptimizerApp(ctk.CTk):
                      fg_color="#6B7280", hover_color="#4B5563", width=80, height=35,
                      font=("Malgun Gothic", 13)).pack(side="left", padx=(0, 5))
         
+        # 필터 해제 버튼 (초기화 버튼 오른쪽으로 이동)
+        self.btn_reset_filter = ctk.CTkButton(search_frame, text="🔄 필터 해제", command=self._reset_keyword_filter, 
+                                              fg_color="#4B5563", width=120, height=35, font=("Malgun Gothic", 13))
+        self.btn_reset_filter.pack(side="left", padx=(0, 5))
+
+        # 필터 상태 라벨
+        self.filter_label = ctk.CTkLabel(search_frame, text="", font=("Malgun Gothic", 13, "bold"), text_color="#60A5FA")
+        self.filter_label.pack(side="left", padx=15)
+        
         # 검색 결과 라벨
         self.search_result_label = ctk.CTkLabel(search_frame, text="", font=("Malgun Gothic", 12), text_color="#F59E0B")
         self.search_result_label.pack(side="left", padx=15)
@@ -567,6 +564,10 @@ class AdOptimizerApp(ctk.CTk):
         # 트리뷰 + 스크롤바 프레임
         tree_container = ctk.CTkFrame(self.kw_frame, fg_color="transparent")
         tree_container.pack(fill="both", expand=True)
+        
+        # Treeview 구분선 및 테두리 가시성 설정을 위한 ttk.Style 적용
+        style = ttk.Style()
+        style.configure("Treeview.Heading", relief="raised", borderwidth=1)
         
         self.kw_tree = ttk.Treeview(tree_container, columns=self.k_cols, show="headings", selectmode="extended")
         
@@ -582,7 +583,7 @@ class AdOptimizerApp(ctk.CTk):
         tree_container.grid_rowconfigure(0, weight=1)
         tree_container.grid_columnconfigure(0, weight=1)
         
-        # 컬럼 너비 설정 (모든 컬럼이 보이도록)
+        # 컬럼 너비 및 조절 가능(resizable) 설정
         col_widths = {
             "구분": 80, "키워드": 160, "최신노출": 85, "전일대비": 130, "누적노출": 85,
             "클릭수": 65, "클릭증감": 110, "CTR%": 65, "전환율%": 65, "주문건수": 65,
@@ -4147,26 +4148,34 @@ class AdOptimizerApp(ctk.CTk):
         self.context_menu.add_command(label="📋 키워드 복사", command=self._menu_copy_keywords)
 
     def _on_kw_right_click(self, e):
-        row_id = self.kw_tree.identify_row(e.y)
-        if row_id:
-            # 이미 복수 선택된 항목 위에서 우클릭하면 기존 선택 유지
-            if row_id not in self.kw_tree.selection():
-                self.kw_tree.selection_set(row_id)
-            self.context_menu.post(e.x_root, e.y_root)
+        try:
+            row_id = self.kw_tree.identify_row(e.y)
+            if row_id:
+                # 이미 복수 선택된 항목 위에서 우클릭하면 기존 선택 유지
+                if row_id not in self.kw_tree.selection():
+                    self.kw_tree.selection_set(row_id)
+                self.context_menu.tk_popup(e.x_root, e.y_root)
+        except Exception as ex:
+            print(f">>> [오류] 키워드 표 우클릭 메뉴 팝업 실패: {ex}")
+            traceback.print_exc()
 
     def _on_management_right_click(self, e, tree, current_tab):
-        row_id = tree.identify_row(e.y)
-        if row_id:
-            # 이미 선택된 항목 위에서 우클릭하면 기존 복수 선택 유지
-            if row_id not in tree.selection():
-                tree.selection_set(row_id)
-            sel_count = len(tree.selection())
-            m = tk.Menu(self, tearoff=0, font=("Malgun Gothic", 10))
-            m.add_command(label=f"📋 키워드 복사 ({sel_count}개)", command=lambda: self._copy_keyword_from_tree(tree))
-            m.add_command(label="📋 전체 키워드 복사", command=lambda: self._copy_all_keywords_from_tree(tree))
-            m.add_separator()
-            m.add_command(label="🗑️ 목록에서 삭제", command=lambda: self._delete_from_management(tree, current_tab))
-            m.post(e.x_root, e.y_root)
+        try:
+            row_id = tree.identify_row(e.y)
+            if row_id:
+                # 이미 선택된 항목 위에서 우클릭하면 기존 복수 선택 유지
+                if row_id not in tree.selection():
+                    tree.selection_set(row_id)
+                sel_count = len(tree.selection())
+                m = tk.Menu(self, tearoff=0, font=("Malgun Gothic", 10))
+                m.add_command(label=f"📋 키워드 복사 ({sel_count}개)", command=lambda: self._copy_keyword_from_tree(tree))
+                m.add_command(label="📋 전체 키워드 복사", command=lambda: self._copy_all_keywords_from_tree(tree))
+                m.add_separator()
+                m.add_command(label="🗑️ 목록에서 삭제", command=lambda: self._delete_from_management(tree, current_tab))
+                m.tk_popup(e.x_root, e.y_root)
+        except Exception as ex:
+            print(f">>> [오류] 관리 표 우클릭 메뉴 팝업 실패: {ex}")
+            traceback.print_exc()
 
     def _copy_keyword_from_tree(self, tree):
         """선택된 키워드를 클립보드에 복사"""

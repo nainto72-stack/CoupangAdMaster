@@ -5,3 +5,8 @@ backup_*/
 .gemini/
 *.xlsx
 *.xls
+build/
+dist/
+*.spec
+*.log
+*.png

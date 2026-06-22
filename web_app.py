@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,6 +13,114 @@ from io import BytesIO
 from analyzer import CoupangAdAnalyzer
 
 # -----------------------------------------------------------------------------
+# 성능 최적화를 위한 렌더링 캐시 함수 정의
+# -----------------------------------------------------------------------------
+@st.cache_data(show_spinner=False)
+def get_cached_keyword_html(df_display_dict, search_q=""):
+    """
+    Pandas iterrows 병목을 해결하기 위한 HTML 렌더링 캐시 함수.
+    DataFrame 전체를 딕셔너리로 받아 Streamlit 해싱 오류 방지.
+    """
+    import pandas as pd
+    df_display = pd.DataFrame.from_dict(df_display_dict)
+    
+    formatted_rows = []
+    for _, r in df_display.iterrows():
+        st_val = r.get('status', '유지')
+        diff_v = int(r.get('imp_diff', 0))
+        if st_val == "신규":
+            diff_text = f"✨[신규] ▲{diff_v:,}"
+        elif st_val == "중단":
+            diff_text = f"🛑[중단] (전일:{int(r.get('p_imp',0)):,})"
+        else:
+            p_imp = int(r.get('p_imp', 0))
+            pct = (diff_v / p_imp * 100) if p_imp > 0 else 0
+            if diff_v > 0:
+                diff_text = f"▲{diff_v:,} (+{pct:.1f}%)"
+            elif diff_v < 0:
+                diff_text = f"▼{abs(diff_v):,} ({pct:.1f}%)"
+            else:
+                diff_text = "-"
+                
+        sp_diff = int(r.get('spend_diff', 0))
+        sp_diff_text = f"▲{sp_diff:,}" if sp_diff > 0 else (f"▼{abs(sp_diff):,}" if sp_diff < 0 else "-")
+        
+        ck_diff = int(r.get('click_diff', 0))
+        p_click = int(r.get('p_click', 0))
+        if st_val == "신규":
+            ck_diff_text = f"✨[신규]"
+        elif st_val == "중단":
+            ck_diff_text = f"🛑[중단]"
+        else:
+            if ck_diff > 0:
+                pct_ck = (ck_diff / p_click * 100) if p_click > 0 else 0
+                ck_diff_text = f"▲{ck_diff:,} (+{pct_ck:.0f}%)"
+            elif ck_diff < 0:
+                pct_ck = (ck_diff / p_click * 100) if p_click > 0 else 0
+                ck_diff_text = f"▼{abs(ck_diff):,} ({pct_ck:.0f}%)"
+            else:
+                ck_diff_text = "-"
+                
+        formatted_rows.append({
+            "구분": r.get('region', '-'),
+            "키워드": r.get('kw', ''),
+            "최신노출": f"{int(r.get('l_imp',0)):,}",
+            "전일대비": diff_text,
+            "누적노출": f"{int(r.get('imp',0)):,}",
+            "클릭수": f"{int(r.get('click',0)):,}",
+            "클릭증감": ck_diff_text,
+            "CTR%": f"{r.get('CTR',0):.2f}%",
+            "전환율%": f"{r.get('CVR',0):.1f}%",
+            "주문건수": f"{int(r.get('orders',0)):,}",
+            "최신광고비": f"{int(r.get('l_spend',0)):,}",
+            "지출변동": sp_diff_text,
+            "누적광고비": f"{int(r.get('spend',0)):,}",
+            "전환매출": f"{int(r.get('sales',0)):,}",
+            "CPC": f"{int(r.get('CPC',0)):,}",
+            "ROAS": f"{r.get('ROAS',0):.1f}%",
+            "광고순위": f"{r.get('rank',0):.1f}위",
+            "상품명": r.get('pname', '-')
+        })
+    
+    formatted_df = pd.DataFrame(formatted_rows)
+    
+    html_table = """
+    <div style="max-height: 1200px; overflow-y: auto; border: 1.5px solid #BF360C; border-radius: 6px; font-family: 'Malgun Gothic', sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+        <table id="orange-keyword-table" style="width: 100%; border-collapse: collapse; font-size: 8.5px; font-weight: bold; color: #FFFFFF; text-align: left; table-layout: fixed;">
+            <thead>
+                <tr style="background-color: #F1F5F9; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid #BF360C; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+    """
+    
+    col_widths = {
+        "구분": 80, "키워드": 160, "최신노출": 85, "전일대비": 130, "누적노출": 85,
+        "클릭수": 65, "클릭증감": 110, "CTR%": 65, "전환율%": 65, "주문건수": 65,
+        "최신광고비": 90, "지출변동": 100, "누적광고비": 90, "전환매출": 90,
+        "CPC": 70, "ROAS": 80, "광고순위": 70, "상품명": 350
+    }
+    total_w = sum(col_widths.values())
+    
+    for col in formatted_df.columns:
+        w_px = col_widths.get(col, 80)
+        w_pct = (w_px / total_w) * 100
+        html_table += f'<th style="width: {w_pct:.3f}%; min-width: 25px; padding: 4px 6px; color: #000000 !important; border: 0.5px solid #BF360C; font-weight: bold; text-align: left; white-space: nowrap; background-color: #F1F5F9; position: relative;">'
+        html_table += f'<span style="color: #000000 !important;">{col}</span>'
+        html_table += f'<div class="col-resizer" style="width: 6px; height: 100%; position: absolute; right: 0; top: 0; cursor: col-resize; user-select: none; z-index: 5;"></div>'
+        html_table += f'</th>'
+    html_table += "</tr></thead><tbody>"
+    
+    for _, row in formatted_df.iterrows():
+        kw_val = str(row["키워드"]).replace("'", "&apos;").replace('"', '&quot;')
+        html_table += f'<tr class="keyword-row" data-keyword="{kw_val}" style="background-color:#E65100;border-bottom:0.5px solid #BF360C;cursor:pointer;">'
+        for val in row:
+            html_table += f'<td style="padding:3px 6px;color:#FFFFFF;border:0.5px solid #BF360C;white-space:nowrap;">{val}</td>'
+        html_table += "</tr>"
+    html_table += "</tbody></table></div>"
+    # 우클릭 팝업 메뉴 HTML 구조 복구
+    html_table += '<div id="ctx-menu" style="display:none;position:fixed;z-index:99999;width:210px;background:#1a1f35;border:1px solid rgba(255,255,255,0.12);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,0.7);font-family:Malgun Gothic,sans-serif;padding:6px 0;"><div id="ctx-kw-title" style="padding:9px 14px 8px;font-size:12px;color:#a78bfa;border-bottom:1px solid rgba(255,255,255,0.09);font-weight:bold;background:#111627;border-radius:10px 10px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🔑 키워드</div><div class="ctx-item" onclick="doAction(\'타겟\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="width:22px;height:22px;background:#f97316;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;">🎯</span>타겟 키워드로 이동</div><div class="ctx-item" onclick="doAction(\'수동\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="width:22px;height:22px;background:#f97316;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;">⚙️</span>수동 관리로 이동</div><div class="ctx-item" onclick="doAction(\'제외\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="width:22px;height:22px;background:#ef4444;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;">🚫</span>제외 키워드로 이동</div><div style="height:1px;background:rgba(255,255,255,0.08);margin:4px 0;"></div><div class="ctx-item" onclick="doAction(\'복사\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="font-size:16px;">📋</span>키워드 복사</div></div><style>.ctx-item:hover{background:rgba(99,102,241,0.3)!important;}</style>'
+    
+    return html_table, len(formatted_rows)
+
+# -----------------------------------------------------------------------------
 # 1. 폰트 및 페이지 설정 (Premium Dark Theme)
 # -----------------------------------------------------------------------------
 st.set_page_config(
@@ -20,6 +129,63 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# ── 우클릭 메뉴 통신용 완벽 숨김 입력창 핸들러 ──
+st.markdown("<style>div[data-testid='stTextInput']:has(input[aria-label='kw_mover_secret_trigger']) { display: none !important; }</style>", unsafe_allow_html=True)
+trigger_val = st.text_input("kw_mover_secret_trigger", key="kw_mover_trigger", label_visibility="collapsed")
+
+if trigger_val:
+    parts = trigger_val.split("|||")
+    if len(parts) >= 2:
+        q_action = parts[0]
+        q_target = parts[1]
+        q_t = parts[2] if len(parts) > 2 else ""
+        
+        if "processed_trigger_t" not in st.session_state:
+            st.session_state["processed_trigger_t"] = ""
+            
+        if q_t and q_t != st.session_state["processed_trigger_t"]:
+            st.session_state["processed_trigger_t"] = q_t
+            if q_target and q_action in ("타겟", "수동", "제외"):
+                import json, os
+                classes_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "keyword_classes.json")
+                _kw_classes_early = {}
+                if os.path.exists(classes_file):
+                    try:
+                        with open(classes_file, "r", encoding="utf-8") as f:
+                            content = f.read().strip()
+                            if content:
+                                _kw_classes_early = json.loads(content)
+                    except Exception as e:
+                        # 파일이 손상되었거나 동시 접근 잠금 시 빈 딕셔너리로 초기화
+                        pass
+                
+                # 방어 로직: 딕셔너리가 아닌 경우 대비
+                if not isinstance(_kw_classes_early, dict):
+                    _kw_classes_early = {}
+                    
+                _kw_classes_early[q_target] = q_action
+                
+                # 원자적 쓰기(Atomic Write) 모방 및 에러 방어
+                try:
+                    with open(classes_file, "w", encoding="utf-8") as f:
+                        json.dump(_kw_classes_early, f, ensure_ascii=False, indent=4)
+                except Exception:
+                    pass
+                
+                # toast 메시지 대기 등록 및 탭 포커스 예약
+                st.session_state["pending_toast"] = f"✅ '{q_target}' → [{q_action} 관리] 이동 완료"
+                
+                tab_labels = {
+                    "타겟": "🎯 타겟 관리",
+                    "수동": "⚙️ 수동 관리",
+                    "제외": "🚫 제외 관리"
+                }
+                st.session_state["pending_tab_focus"] = tab_labels.get(q_action, "")
+                
+                # 초기화 후 재시작 (상태 초기화 트리거)
+                st.session_state["kw_trigger_input"] = "" 
+                st.rerun()
 
 # matplotlib 한글 폰트 설정 (Windows 기준 맑은 고딕 우선)
 plt.rcParams['font.family'] = 'Malgun Gothic'
@@ -41,159 +207,376 @@ st.markdown("""
     
     /* 타이틀 그라디언트 복구 */
     .title-gradient {
-        font-family: 'Malgun Gothic', sans-serif;
-        background: linear-gradient(45deg, #00F0FF, #EC4899);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-weight: bold;
-        font-size: 2.8rem;
+        font-family: 'Malgun Gothic', sans        font-size: 2.8rem;
         margin-bottom: 20px;
         text-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
     }
     
     /* =========================================================================
-       ⚙️ 키워드/입찰 탭 및 서브 탭(구분 탭) 가독성 향상 스타일 (글로벌 강제 적용)
+       ⚙️ 전체 테마 리디자인: 미니멀 테크 프리미엄 다크 (Stripe/Vercel Style)
        ========================================================================= */
-    /* 1. st.tabs 구분탭의 배경을 연회색으로 채워 가독성을 극대화 */
+    
+    /* 1. st.tabs 탭 리스트 바를 고급스러운 다크 캡슐형으로 전환 (50대 노안 배려) */
     .stApp div[role="tablist"] {
-        background-color: #F1F5F9 !important;
-        border-radius: 8px !important;
-        padding: 4px !important;
+        background: rgba(20, 24, 38, 0.8) !important;
+        backdrop-filter: blur(16px) !important;
+        -webkit-backdrop-filter: blur(16px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        border-radius: 14px !important;
+        padding: 6px 8px !important;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5) !important;
+        gap: 8px !important;
+        margin-bottom: 20px !important;
     }
     
-    /* st.tabs 비활성 탭 글자색 검정으로 지정하여 가독성 개선 */
+    /* 2. 개별 탭 버튼 기본 스타일 (입체적인 카드 형태로 독립) */
+    .stApp button[role="tab"] {
+        background: rgba(255, 255, 255, 0.02) !important;
+        border: 1px solid rgba(255, 255, 255, 0.04) !important;
+        border-radius: 10px !important;
+        padding: 10px 24px !important;
+        margin: 2px 0 !important;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    /* 3. st.tabs 비활성 탭 글자 스타일 (선명한 그레이로 가독성 강화) */
     .stApp button[role="tab"][aria-selected="false"] p,
     .stApp button[role="tab"][aria-selected="false"] span,
     .stApp button[role="tab"][aria-selected="false"] * {
-        color: #000000 !important;
-        font-weight: bold !important;
+        color: #94A3B8 !important;
+        font-weight: 700 !important;
+        font-size: 1.12rem !important; /* 대표님을 위한 큼직한 크기 */
+        letter-spacing: 0.5px !important;
+        text-shadow: none !important;
     }
     
-    /* st.tabs 활성 탭 글자색 빨간색으로 고정 */
+    /* 비활성 탭 호버 시 피드백 */
+    .stApp button[role="tab"][aria-selected="false"]:hover {
+        background: rgba(255, 255, 255, 0.06) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    .stApp button[role="tab"][aria-selected="false"]:hover * {
+        color: #FFFFFF !important;
+    }
+    
+    /* 4. st.tabs 활성 탭 (단정하고 고급스러운 인디고 블루 적용) */
+    .stApp button[role="tab"][aria-selected="true"] {
+        background: #6366F1 !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.35) !important;
+        transform: translateY(-1px) !important;
+    }
+    
     .stApp button[role="tab"][aria-selected="true"] p,
     .stApp button[role="tab"][aria-selected="true"] span,
     .stApp button[role="tab"][aria-selected="true"] * {
-        color: #FF4B4B !important;
-        font-weight: bold !important;
+        color: #FFFFFF !important;
+        font-weight: 850 !important;
+        font-size: 1.25rem !important; /* 대표님을 위한 대폭 확대 */
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
     }
     
-    /* 2. 테이블 헤더 글자색 검정으로 지정하여 가독성 개선 (3번 그림) */
+    /* 5. 테이블 헤더 글자색 검정으로 지정하여 가독성 개선 */
     .stApp th, 
     .stApp th *, 
     .stApp .stDataFrame th, 
     .stApp div[data-testid="stDataFrame"] th, 
     .stApp div[data-testid="stDataFrame"] [role="columnheader"] p, 
     .stApp div[data-testid="stDataFrame"] [role="columnheader"] span {
-        color: #000000 !important;
+        color: #FFFFFF !important;
+        background-color: #1F2937 !important;
         font-weight: bold !important;
     }
     .stApp div[data-testid="stDataFrame"] {
-        --textColor: #000000 !important;
-        --secondaryBackgroundColor: #FFFFFF !important;
-        color: #000000 !important;
+        --textColor: #FFFFFF !important;
+        --secondaryBackgroundColor: #111827 !important;
     }
     
-    /* 2-2. 커스텀 HTML 테이블 내부 텍스트 색상 및 상속 스타일 제어 (3번 그림 극대화) */
-    .stApp table,
-    .stApp table th,
-    .stApp table th *,
-    .stApp table th p,
-    .stApp table th span,
-    .stApp table tr th,
-    .stApp table tr th * {
-        color: #000000 !important;
-        font-weight: bold !important;
-    }
+    /* 6. 테이블 내부 텍스트 색상 및 상속 스타일 제어 */
     .stApp table td,
     .stApp table td *,
     .stApp table td p,
     .stApp table td span,
     .stApp table tr td,
     .stApp table tr td * {
-        color: #FFFFFF !important;
+        color: #E2E8F0 !important;
         font-weight: bold !important;
     }
     
-    /* 3. 검색 입력창 글자색 및 placeholder 색상 검정으로 지정 (4번 그림) */
+    /* 7. 검색 입력창 글자색 지정 */
     .stApp div[data-testid="stTextInput"] input,
     .stApp input[type="text"],
     .stApp input {
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
+        color: #FFFFFF !important;
+        background-color: #111827 !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 8px !important;
     }
-    .stApp input::placeholder,
-    .stApp input::-webkit-input-placeholder,
-    .stApp input::-moz-placeholder,
-    .stApp input:-ms-input-placeholder,
-    .stApp div[data-testid="stTextInput"] input::placeholder,
-    .stApp div[data-testid="stTextInput"] input::-webkit-input-placeholder {
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
-        opacity: 0.85 !important;
+    .stApp input::placeholder {
+        color: #94A3B8 !important;
+        opacity: 0.8 !important;
     }
     
-    /* 4. st.button (검색, 초기화, 필터 해제 버튼 등) 글자색 검정으로 지정 (4번 그림) */
+    /* 8. 본문 st.button (검색, 초기화, 필터 해제 버튼 등)을 미니멀 플랫 스타일로 리디자인 */
     .stApp button:not([role="tab"]),
     .stApp button:not([role="tab"]) p,
     .stApp button:not([role="tab"]) span,
-    .stApp button:not([role="tab"]) div,
-    .stApp button:not([role="tab"]) *,
-    .stApp div[data-testid="stButton"] button,
-    .stApp div[data-testid="stButton"] button *,
-    .stApp div[data-testid="stButton"] button p {
-        color: #000000 !important;
-        -webkit-text-fill-color: #000000 !important;
-        font-weight: bold !important;
+    .stApp button:not([role="tab"]) * {
+        color: #FFFFFF !important;
+        font-weight: 700 !important;
+        font-size: 1.02rem !important;
+    }
+    .stApp div[data-testid="stButton"] button {
+        background-color: #1F2937 !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 8px !important;
+        transition: all 0.2s !important;
+    }
+    .stApp div[data-testid="stButton"] button:hover {
+        background-color: #6366F1 !important; /* 인디고 포인트 */
+        border-color: rgba(255, 255, 255, 0.2) !important;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2) !important;
     }
     
-    /* 프리미엄 카드 스타일 */
+    /* 9. 프리미엄 카드 스타일 (지표 카드 리디자인) */
     .premium-card {
-        background: rgba(30, 41, 59, 0.7);
-        border: 2px solid #3B82F6;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 15px;
-        box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
-        transition: transform 0.2s;
+        background: rgba(22, 28, 45, 0.75) !important;
+        border: 1.5px solid rgba(99, 102, 241, 0.15) !important;
+        border-radius: 14px !important;
+        padding: 16px !important;
+        margin-bottom: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+        transition: all 0.25s ease !important;
     }
     .premium-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 25px rgba(59, 130, 246, 0.25);
+        border-color: rgba(99, 102, 241, 0.4) !important;
+        box-shadow: 0 8px 25px rgba(99, 102, 241, 0.15) !important;
     }
     
-    /* 네온 카드 헤더 */
+    /* 카드 헤더 및 지표 텍스트 */
     .card-header {
-        font-size: 1.1rem;
-        font-weight: bold;
+        font-size: 1.15rem;
+        font-weight: 700;
         color: #94A3B8;
         margin-bottom: 8px;
     }
-    
-    /* 지표 강조 */
     .metric-value {
-        font-size: 1.8rem;
-        font-weight: bold;
+        font-size: 1.85rem;
+        font-weight: 850;
         margin-bottom: 4px;
+        letter-spacing: -0.5px;
     }
     
-    /* 처방전 카드 */
+    /* 처방전 및 행동 예측 카드 */
     .tune-card {
-        background: rgba(30, 27, 75, 0.8);
-        border: 1.5px solid #A855F7;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 15px;
-        color: #E9D5FF;
+        background: rgba(27, 20, 50, 0.75) !important;
+        border: 1px solid rgba(139, 92, 246, 0.2) !important;
+        border-radius: 14px !important;
+        padding: 22px !important;
+        color: #E9D5FF !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2) !important;
+    }
+    .predict-card {
+        background: rgba(17, 28, 55, 0.75) !important;
+        border: 1px solid rgba(59, 130, 246, 0.2) !important;
+        border-radius: 14px !important;
+        padding: 22px !important;
+        color: #93C5FD !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2) !important;
     }
     
-    /* 행동 예측 카드 */
-    .predict-card {
-        background: rgba(23, 37, 84, 0.8);
-        border: 1.5px solid #3B82F6;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 15px;
-        color: #93C5FD;
+    /* 10. 최상단 stHeader 투명화 및 레이아웃 밀착 */
+    header[data-testid="stHeader"], [data-testid="stHeader"] {
+        background-color: transparent !important;
+        background: transparent !important;
+        height: 0px !important;
+        min-height: 0px !important;
+        border: none !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+        pointer-events: none !important;
+    }
+    header[data-testid="stHeader"] [data-testid="stHeaderActionElements"] {
+        display: none !important;
+    }
+    [data-testid="stAppViewContainer"] {
+        padding-top: 0rem !important;
+        margin-top: 0rem !important;
+        display: flex !important;
+        flex-direction: row !important;
+    }
+    [data-testid="stMain"] {
+        padding-top: 0rem !important;
+        margin-top: 0rem !important;
+        width: 100% !important;
+    }
+    [data-testid="stAppViewBlockContainer"], .block-container {
+        padding-top: 0rem !important;
+        margin-top: 0px !important;
+        padding-bottom: 1.2rem !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+    }
+    h1 {
+        margin-top: 0px !important;
+        padding-top: 0px !important;
+    }
+    
+    /* 11. 사이드바 다크테마 적용 */
+    [data-testid="stSidebar"] {
+        background-color: #060913 !important; /* 무광 매트 딥 그레이 */
+        border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+    }
+    
+    /* 사이드바 기본 텍스트 선명화 */
+    [data-testid="stSidebar"] p, 
+    [data-testid="stSidebar"] span, 
+    [data-testid="stSidebar"] label, 
+    [data-testid="stSidebar"] h1, 
+    [data-testid="stSidebar"] h2, 
+    [data-testid="stSidebar"] h3, 
+    [data-testid="stSidebar"] h4 {
+        color: #E2E8F0 !important;
+    }
+    [data-testid="stSidebar"] strong {
+        color: #FFFFFF !important;
+    }
+    
+    /* 사이드바 로그아웃 버튼 */
+    [data-testid="stSidebar"] button:not([role="tab"]) {
+        background-color: #1F2030 !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 8px !important;
+        transition: all 0.2s !important;
+    }
+    .stApp [data-testid="stSidebar"] button:not([role="tab"]) *,
+    .stApp [data-testid="stSidebar"] button:not([role="tab"]) p,
+    .stApp [data-testid="stSidebar"] button:not([role="tab"]) span,
+    .stApp [data-testid="stSidebar"] button:not([role="tab"]) div {
+        color: #EF4444 !important; /* 차분한 경고 레드 색상으로 잘 보이게 지정 */
+        font-weight: bold !important;
+    }
+    .stApp [data-testid="stSidebar"] button:not([role="tab"]):hover {
+        background-color: #EF4444 !important;
+        border-color: #EF4444 !important;
+    }
+    .stApp [data-testid="stSidebar"] button:not([role="tab"]):hover *,
+    .stApp [data-testid="stSidebar"] button:not([role="tab"]):hover p,
+    .stApp [data-testid="stSidebar"] button:not([role="tab"]):hover span {
+        color: #FFFFFF !important;
+    }
+    
+    /* 12. 파일 업로더 외부 글래스모피즘 박스 패키징 */
+    .stApp [data-testid="stSidebar"] [data-testid="stFileUploader"] {
+        background: rgba(22, 28, 45, 0.6) !important;
+        border: 1.5px solid rgba(99, 102, 241, 0.15) !important;
+        border-radius: 14px !important;
+        padding: 14px !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    /* 내부 드롭존 영역 리디자인 */
+    .stApp [data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] {
+        background: rgba(13, 17, 28, 0.7) !important;
+        border: 1.5px dashed rgba(99, 102, 241, 0.25) !important;
+        border-radius: 10px !important;
+        padding: 24px 14px !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    /* 드롭존 호버 시 피드백 */
+    .stApp [data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"]:hover {
+        border-color: #6366F1 !important;
+        background: rgba(13, 17, 28, 0.9) !important;
+    }
+    
+    /* 파일 업로더 내부 버튼 (Upload 버튼) - 가로폭 100% 꽉 채우고 대표님을 위해 큼직하게 튜닝 */
+    .stApp [data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] button {
+        width: 100% !important; /* 가로폭 전체 차지하도록 설정 */
+        margin-top: 12px !important;
+        background: linear-gradient(135deg, #6366F1, #4F46E5) !important; /* 정돈된 인디고 그라디언트 */
+        color: #FFFFFF !important;
+        font-weight: 850 !important;
+        font-size: 1.15rem !important; /* 대표님을 위한 크고 선명한 폰트 */
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 12px 20px !important;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3) !important;
+        transition: all 0.25s ease !important;
+        cursor: pointer !important;
+    }
+    
+    .stApp [data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] button:hover {
+        background: linear-gradient(135deg, #4F46E5, #6366F1) !important;
+        box-shadow: 0 6px 18px rgba(99, 102, 241, 0.5) !important;
+        transform: translateY(-1px) !important;
+    }
+    
+    /* 업로더 내부 텍스트 가독성 */
+    .stApp [data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] p,
+    .stApp [data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] span {
+        color: #E2E8F0 !important;
+        font-weight: bold !important;
+        font-size: 1.05rem !important;
+    }
+    .stApp [data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] [data-testid="stMarkdownContainer"] p,
+    .stApp [data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] small {
+        color: #94A3B8 !important;
+        font-size: 0.9rem !important; /* 큼직한 가이드 텍스트 */
+        font-weight: 600 !important;
+    }
+    
+    /* 계정 관리 expander 가독성 강화 */
+    [data-testid="stSidebar"] details {
+        background-color: #111422 !important;
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        border-radius: 10px !important;
+        margin-bottom: 8px !important;
+        padding: 6px !important;
+    }
+    [data-testid="stSidebar"] details summary {
+        color: #818CF8 !important;
+        font-weight: bold !important;
+    }
+    
+    /* 13. 사이드바가 접혔을 때 좌측 상단에 나타나는 '사이드바 복원/열기' 버튼 리디자인 */
+    header[data-testid="stHeader"] [data-testid="collapsedControl"],
+    [data-testid="collapsedControl"],
+    [data-testid="collapsedControl"] * {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+    }
+    header[data-testid="stHeader"] [data-testid="collapsedControl"],
+    [data-testid="collapsedControl"] {
+        position: fixed !important;
+        top: 15px !important;
+        left: 15px !important;
+        background-color: #6366F1 !important;
+        border: 1.5px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 50% !important;
+        width: 42px !important;
+        height: 42px !important;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4) !important;
+        z-index: 99999999 !important;
+        cursor: pointer !important;
+        pointer-events: auto !important;
+        transition: all 0.25s ease !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    [data-testid="collapsedControl"] svg {
+        fill: #FFFFFF !important;
+        width: 22px !important;
+        height: 22px !important;
+    }
+    [data-testid="collapsedControl"]:hover {
+        background-color: #4F46E5 !important;
+        transform: scale(1.08) !important;
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -213,8 +596,8 @@ def load_users():
                 return json.load(f)
         except Exception:
             pass
-    # 기본 관리자 계정 반환 (기본 비밀번호: admin1234)
-    return {"admin": "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"}
+    # 기본 관리자 계정 반환 (기본 비밀번호: coupangmaster2026)
+    return {"admin": "6feafae6f3d4f5618b2d9e2ce728601e5e37789c10eeb4a703e552c1efadab62"}
 
 def save_users(users):
     try:
@@ -244,7 +627,9 @@ def logout():
 # 2-1. 로그인 화면 렌더링
 # -----------------------------------------------------------------------------
 if not st.session_state["logged_in"]:
-    st.markdown("<div style='text-align: center; margin-top: 80px;'><h1 class='title-gradient'>🚀 쿠팡 광고 최적화 마스터 Web</h1></div>", unsafe_allow_html=True)
+    with st.sidebar:
+        st.markdown("<div style='text-align: center; margin-top: 30px;'><h2>🚀</h2><h3 style='color: #60A5FA;'>쿠팡 광고 마스터 Web</h3><p style='color: #94A3B8; font-size: 0.9rem;'>시스템 사용을 위해 로그인을 진행해 주세요.</p></div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align: center; margin-top: 80px;'><h1><span class='rocket-icon'>🚀</span> <span class='title-gradient'>쿠팡 광고 최적화 마스터 Web</span></h1></div>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
@@ -1609,7 +1994,7 @@ if st.sidebar.button("🔓 로그아웃", use_container_width=True):
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📂 데이터 가져오기")
-uploaded_file = st.sidebar.file_uploader("쿠팡 광고성과 엑셀 파일 (.xlsx)", type=["xlsx"])
+uploaded_file = st.sidebar.file_uploader("쿠팡 광고성과 엑셀 파일 (.xlsx)", type=["xlsx"], label_visibility="collapsed")
 
 # 분석 상태 세션 저장
 if "analyzer" not in st.session_state:
@@ -1660,7 +2045,7 @@ elif st.session_state["analyzer"] is None:
                     analyzer.process()
                     st.session_state["analyzer"] = analyzer
                     st.session_state["current_file_name"] = latest_file_name
-                    st.sidebar.info(f"📂 로컬 최신 파일 자동 감지 및 로드 완료:\n`{latest_file_name}`")
+                    # st.sidebar.info(f"📂 로컬 최신 파일 자동 감지 및 로드 완료:\n`{latest_file_name}`")
             except Exception as e:
                 st.sidebar.warning(f"로컬 파일 자동 로드 실패: {e}")
 
@@ -1877,7 +2262,8 @@ def render_real_price_chart_streamlit(df, p_val, memos):
     show_pyplot_with_tooltip(fig)
     plt.close(fig)
 
-st.markdown("<h1 class='title-gradient'>🚀 쿠팡 광고 최적화 마스터 Web</h1>", unsafe_allow_html=True)
+
+st.markdown("<h1><span class='rocket-icon'>🚀</span> <span class='title-gradient'>쿠팡 광고 최적화 마스터 Web</span></h1>", unsafe_allow_html=True)
 
 if st.session_state["analyzer"] is None:
     st.info("💡 좌측 사이드바에서 **쿠팡 광고 성과 엑셀 파일**을 먼저 올려 분석을 실행해 주세요!")
@@ -1885,6 +2271,74 @@ if st.session_state["analyzer"] is None:
 
 analyzer = st.session_state["analyzer"]
 st.caption(f"📅 실시간 분석 중인 파일: **{st.session_state['current_file_name']}** | {analyzer.last_analysis_info}")
+
+
+
+
+
+# ── Rerun 후 대기 중인 toast 알림 출력 ──
+if st.session_state.get("pending_toast"):
+    st.toast(st.session_state["pending_toast"])
+    del st.session_state["pending_toast"]
+
+# 탭 자동 포커싱 스크립트 주입 (Rerun 후 실행)
+if st.session_state.get("pending_tab_focus"):
+    target_tab_label = st.session_state["pending_tab_focus"]
+    del st.session_state["pending_tab_focus"]
+    
+    js_code = f"""
+    <script>
+    (function() {{
+        var parentDoc = window.parent.document;
+        var clickSubTab = function() {{
+            var attempts = 0;
+            var interval = setInterval(function() {{
+                var newTabs = parentDoc.querySelectorAll('[role=\\'tab\\'], button[data-baseweb=\\'tab\\'], button[id*=\\'tab\\']');
+                var cleanTarget = '{target_tab_label}'.replace(/[^가-힣a-zA-Z0-9 ]/g, '').trim();
+                var found = false;
+                for (var j = 0; j < newTabs.length; j++) {{
+                    var tabTxt = newTabs[j].textContent.replace(/[^가-힣a-zA-Z0-9 ]/g, '').trim();
+                    if (tabTxt.includes(cleanTarget)) {{
+                        newTabs[j].click();
+                        found = true;
+                        break;
+                    }}
+                }}
+                attempts++;
+                if (found || attempts > 20) {{
+                    clearInterval(interval);
+                }}
+            }}, 100);
+        }};
+
+        var tabs = parentDoc.querySelectorAll('[role=\\'tab\\'], button[data-baseweb=\\'tab\\'], button[id*=\\'tab\\']');
+        var kwTab = null;
+        for (var i = 0; i < tabs.length; i++) {{
+            var txt = tabs[i].textContent || '';
+            if (txt.includes('키워드/입찰')) {{
+                kwTab = tabs[i];
+                break;
+            }}
+        }}
+        
+        if (kwTab) {{
+            var isAlreadyActive = kwTab.getAttribute('aria-selected') === 'true';
+            if (isAlreadyActive) {{
+                clickSubTab();
+            }} else {{
+                kwTab.click();
+                setTimeout(clickSubTab, 150);
+            }}
+        }} else {{
+            clickSubTab();
+        }}
+    }})();
+    </script>
+    """
+    import streamlit.components.v1 as components
+    components.html(js_code, height=0)
+
+
 
 tab_perf, tab_keyword, tab_tools, tab_memo = st.tabs([
     "📊 종합 성과", "⚙️ 키워드/입찰", "🛡️ AI분석/도구", "📝 일별 메모"
@@ -1902,6 +2356,14 @@ with tab_perf:
     
     # 5-1-1. 광고요약
     with sub_perf_tab1:
+        st.markdown("""
+        <style>
+            /* 광고요약 탭 내의 Streamlit columns 여백 축소 */
+            div[data-testid="column"] {
+                margin-bottom: -10px !important;
+            }
+        </style>
+        """, unsafe_allow_html=True)
         st.subheader("📊 광고 주요 성과 지표")
         
         # --- 영역별 세부 분류 계산 (카드 서브라벨용) ---
@@ -1978,8 +2440,8 @@ with tab_perf:
         # =====================================================
         # 📈 성과 그래프 (집행 광고비 vs 광고 전환 매출)
         # =====================================================
-        st.markdown("---")
-        st.subheader("📈 성과 그래프")
+        st.markdown("<hr style='margin-top: 5px; margin-bottom: 12px; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.1);'>", unsafe_allow_html=True)
+        st.markdown("<h3 style='margin-top: -5px; margin-bottom: 15px; font-family: \"Malgun Gothic\", sans-serif; font-weight: bold; color: white; font-size: 1.25rem;'>📈 성과 그래프</h3>", unsafe_allow_html=True)
         pd_data = analyzer.get_daily_performance()
         if not pd_data['total'].empty:
             df_perf = pd_data['total']
@@ -2507,7 +2969,7 @@ with tab_keyword:
     # 스타일은 상단 글로벌 CSS 블록으로 통합 이관 완료
     
     keyword_classes = load_json(CLASSES_FILE, {})
-    
+
     sub_kw_tab1, sub_kw_tab2, sub_kw_tab3, sub_kw_tab4 = st.tabs([
         "🔍 키워드 분석", "🎯 타겟 관리", "⚙️ 수동 관리", "🚫 제외 관리"
     ])
@@ -2520,17 +2982,9 @@ with tab_keyword:
     with sub_kw_tab1:
         if summary_df is not None and not summary_df.empty:
             df_display = summary_df.copy()
-            
-            # 우측 상단 필터 해제 버튼 배치
-            col_reset_top = st.columns([10, 1.5])
-            with col_reset_top[1]:
-                reset_all = st.button("필터 해제", use_container_width=True, key="reset_all_kw_filters_btn")
-                if reset_all:
-                    st.session_state["kw_search_input"] = ""
-                    st.rerun()
 
-            # 키워드 검색 한 줄 배치
-            col_search1, col_search2, col_search3, col_search4, col_search5 = st.columns([1.5, 3.5, 1.2, 1.2, 3.2])
+            # 키워드 검색 및 필터 해제 한 줄 통합 배치 (세로 여백 최소화)
+            col_search1, col_search2, col_search3, col_search4, col_search5, col_search6 = st.columns([1.5, 3.0, 1.0, 1.0, 1.5, 2.6])
             with col_search1:
                 st.markdown("<div style='margin-top: 6px; font-size: 0.95rem; font-weight: bold; color: #E2E8F0; text-align: right;'>🔍 키워드 검색:</div>", unsafe_allow_html=True)
             with col_search2:
@@ -2545,6 +2999,12 @@ with tab_keyword:
                 if btn_init:
                     st.session_state["kw_search_input"] = ""
                     st.rerun()
+            with col_search5:
+                # 초기화 버튼 옆으로 배치 이동된 필터 해제 버튼
+                reset_all = st.button("필터 해제", use_container_width=True, key="reset_all_kw_filters_btn")
+                if reset_all:
+                    st.session_state["kw_search_input"] = ""
+                    st.rerun()
                     
             # 필터링 적용
             if st.session_state["kw_search_input"].strip():
@@ -2553,89 +3013,182 @@ with tab_keyword:
                     df_display['kw'].str.contains(search_q, case=False, na=False) |
                     df_display['pname'].str.contains(search_q, case=False, na=False)
                 ]
+            # --- Pagination (페이지 나누기) 도입 시작 ---
+            ITEMS_PER_PAGE = 200
+            total_items = len(df_display)
+            total_pages = max(1, (total_items + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE)
             
-            # 데스크톱 Populate Treeview 포맷팅 완벽 이식
-            formatted_rows = []
-            for _, r in df_display.iterrows():
-                st_val = r.get('status', '유지')
-                diff_v = int(r.get('imp_diff', 0))
-                if st_val == "신규":
-                    diff_text = f"✨[신규] ▲{diff_v:,}"
-                elif st_val == "중단":
-                    diff_text = f"🛑[중단] (전일:{int(r.get('p_imp',0)):,})"
-                else:
-                    p_imp = int(r.get('p_imp', 0))
-                    pct = (diff_v / p_imp * 100) if p_imp > 0 else 0
-                    if diff_v > 0:
-                        diff_text = f"▲{diff_v:,} (+{pct:.1f}%)"
-                    elif diff_v < 0:
-                        diff_text = f"▼{abs(diff_v):,} ({pct:.1f}%)"
-                    else:
-                        diff_text = "-"
-                        
-                sp_diff = int(r.get('spend_diff', 0))
-                sp_diff_text = f"▲{sp_diff:,}" if sp_diff > 0 else (f"▼{abs(sp_diff):,}" if sp_diff < 0 else "-")
+            if "kw_page_num" not in st.session_state:
+                st.session_state["kw_page_num"] = 1
                 
-                ck_diff = int(r.get('click_diff', 0))
-                p_click = int(r.get('p_click', 0))
-                if st_val == "신규":
-                    ck_diff_text = f"✨[신규]"
-                elif st_val == "중단":
-                    ck_diff_text = f"🛑[중단]"
-                else:
-                    if ck_diff > 0:
-                        pct_ck = (ck_diff / p_click * 100) if p_click > 0 else 0
-                        ck_diff_text = f"▲{ck_diff:,} (+{pct_ck:.0f}%)"
-                    elif ck_diff < 0:
-                        pct_ck = (ck_diff / p_click * 100) if p_click > 0 else 0
-                        ck_diff_text = f"▼{abs(ck_diff):,} ({pct_ck:.0f}%)"
-                    else:
-                        ck_diff_text = "-"
-                        
-                formatted_rows.append({
-                    "구분": r.get('region', '-'),
-                    "키워드": r['kw'],
-                    "최신노출": f"{int(r.get('l_imp',0)):,}",
-                    "전일대비": diff_text,
-                    "누적노출": f"{int(r['imp']):,}",
-                    "클릭수": f"{int(r['click']):,}",
-                    "클릭증감": ck_diff_text,
-                    "CTR%": f"{r['CTR']:.2f}%",
-                    "전환율%": f"{r['CVR']:.1f}%",
-                    "주문건수": f"{int(r['orders']):,}",
-                    "최신광고비": f"{int(r.get('l_spend',0)):,}",
-                    "지출변동": sp_diff_text,
-                    "누적광고비": f"{int(r['spend']):,}",
-                    "전환매출": f"{int(r['sales']):,}",
-                    "CPC": f"{int(r['CPC']):,}",
-                    "ROAS": f"{r['ROAS']:.1f}%",
-                    "광고순위": f"{r.get('rank',0):.1f}위",
-                    "상품명": r.get('pname', '-')
-                })
+            # 검색어가 바뀌거나 전체 아이템 수가 변하면 페이지 1로 리셋
+            if st.session_state.get("last_search_q") != st.session_state["kw_search_input"] or st.session_state.get("last_total_items") != total_items:
+                st.session_state["kw_page_num"] = 1
+                st.session_state["last_search_q"] = st.session_state["kw_search_input"]
+                st.session_state["last_total_items"] = total_items
+
+            page_num = st.session_state["kw_page_num"]
+            if page_num > total_pages:
+                page_num = total_pages
+                st.session_state["kw_page_num"] = page_num
+                
+            col_p1, col_p2, col_p3, col_p4 = st.columns([2, 1, 1, 6])
+            with col_p1:
+                st.markdown(f"<div style='margin-top: 8px; color: #E2E8F0; font-weight: bold;'>📊 총 {total_items:,}건 (현재 {page_num}/{total_pages} 페이지)</div>", unsafe_allow_html=True)
+            with col_p2:
+                if st.button("◀ 이전", disabled=(page_num <= 1), use_container_width=True, key="kw_btn_prev"):
+                    st.session_state["kw_page_num"] -= 1
+                    st.rerun()
+            with col_p3:
+                if st.button("다음 ▶", disabled=(page_num >= total_pages), use_container_width=True, key="kw_btn_next"):
+                    st.session_state["kw_page_num"] += 1
+                    st.rerun()
+                    
+            # 현재 페이지에 해당하는 200건만 추출 (렌더링 렉 완벽 제거)
+            start_idx = (page_num - 1) * ITEMS_PER_PAGE
+            end_idx = start_idx + ITEMS_PER_PAGE
+            df_display_page = df_display.iloc[start_idx:end_idx]
+            # --- Pagination 도입 끝 ---
             
-            formatted_df = pd.DataFrame(formatted_rows)
+            # 데스크톱 Populate Treeview 포맷팅 완벽 이식 (캐싱 + 페이징 적용으로 체감속도 극대화)
+            df_display_dict = df_display_page.to_dict('records')
+            search_q = st.session_state.get("kw_search_input", "")
             
-            # 1번 그림처럼 주황색 표 내 글자 크기를 8.5px로 축소하고, 세로 길이를 대폭 늘려서(max-height: 1200px) 많은 데이터가 한눈에 보이도록 커스텀 HTML 테이블로 렌더링
-            html_table = """
-            <div style="max-height: 1200px; overflow-y: auto; border: 1.5px solid #BF360C; border-radius: 6px; font-family: 'Malgun Gothic', sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
-                <table style="width: 100%; border-collapse: collapse; font-size: 8.5px; font-weight: bold; color: #FFFFFF; text-align: left;">
-                    <thead>
-                        <tr style="background-color: #F1F5F9; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid #BF360C; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-            """
-            for col in formatted_df.columns:
-                # 3번 그림의 헤더 글자색 검정(#000000) 강제 적용 및 패딩 축소
-                html_table += f'<th style="padding: 4px 6px; color: #000000 !important; border: 0.5px solid #BF360C; font-weight: bold; text-align: left; white-space: nowrap; background-color: #F1F5F9;"><span style="color: #000000 !important;">{col}</span></th>'
-            html_table += "</tr></thead><tbody>"
-            
-            for _, row in formatted_df.iterrows():
-                # 주황색 배경 테마 구현 및 가독성 개선, 패딩 축소
-                html_table += '<tr style="background-color: #E65100; border-bottom: 0.5px solid #BF360C;">'
-                for val in row:
-                    html_table += f'<td style="padding: 3px 6px; color: #FFFFFF !important; border: 0.5px solid #BF360C; white-space: nowrap;"><span style="color: #FFFFFF !important;">{val}</span></td>'
-                html_table += "</tr>"
-            html_table += "</tbody></table></div>"
-            
+            # st.markdown을 이용한 메인 DOM 렌더링으로 iframe 보안 샌드박스 우회
+            html_table, row_count = get_cached_keyword_html(df_display_dict, search_q)
             st.markdown(html_table, unsafe_allow_html=True)
+            
+            # 메인 DOM에 스크립트를 직접 주입 (iframe 우회 방식을 완벽하게 복구)
+            js_code = """
+            <script>
+            (function(){
+                var parentDoc = window.parent.document;
+
+                window.parent.doAction = function(action){
+                    var menu = parentDoc.getElementById("ctx-menu");
+                    if(!menu) return;
+                    var kw = menu.dataset.kw || "";
+                    if(kw && action){
+                        try {
+                            var inputs = parentDoc.querySelectorAll('input[aria-label="kw_mover_secret_trigger"]');
+                            if(inputs.length > 0) {
+                                var input = inputs[inputs.length - 1];
+                                var nativeSetter = Object.getOwnPropertyDescriptor(window.parent.HTMLInputElement.prototype, "value").set;
+                                nativeSetter.call(input, action + "|||" + kw + "|||" + Date.now());
+                                input.dispatchEvent(new Event("input", { bubbles: true }));
+                                input.dispatchEvent(new Event("change", { bubbles: true }));
+                                input.focus({preventScroll: true});
+                                setTimeout(function(){ input.blur(); }, 100);
+                            }
+                        }catch(e){console.error(e);}
+                    }
+                    menu.style.display="none";
+                };
+
+                var sortState={};
+                function sortTable(ci){
+                    var tb = parentDoc.querySelector("#orange-keyword-table tbody");
+                    if(!tb)return;
+                    var rows = Array.from(tb.querySelectorAll("tr.keyword-row"));
+                    var desc = !sortState[ci];
+                    sortState[ci] = desc;
+                    rows.sort(function(a,b){
+                        var at=(a.cells[ci]?a.cells[ci].innerText:"").trim();
+                        var bt=(b.cells[ci]?b.cells[ci].innerText:"").trim();
+                        var an=parseFloat(at.replace(/[^0-9.\-]/g,""));
+                        var bn=parseFloat(bt.replace(/[^0-9.\-]/g,""));
+                        if(!isNaN(an)&&!isNaN(bn))return desc?bn-an:an-bn;
+                        return desc?bt.localeCompare(at,"ko"):at.localeCompare(bt,"ko");
+                    });
+                    rows.forEach(function(r){tb.appendChild(r);});
+                    parentDoc.querySelectorAll("#orange-keyword-table th").forEach(function(th,i){
+                        var sp=th.querySelector(".sort-arrow");
+                        if(sp)sp.innerText="";
+                        if(i===ci){
+                            if(!sp){
+                                sp=parentDoc.createElement("span");
+                                sp.className="sort-arrow";
+                                sp.style.marginLeft="4px";
+                                th.appendChild(sp);
+                            }
+                            sp.innerText=desc?" ▼":" ▲";
+                        }
+                    });
+                }
+
+                function bindHeaders(){
+                    parentDoc.querySelectorAll("#orange-keyword-table th").forEach(function(th,i){
+                        if(th.dataset.sortBound)return;
+                        th.dataset.sortBound="1";
+                        th.style.cursor="pointer";
+                        th.addEventListener("click",function(){sortTable(i);});
+                    });
+                }
+
+                var selRow = null;
+                function showMenu(e, kw, row){
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if(selRow && selRow !== row) selRow.style.backgroundColor="#E65100";
+                    selRow = row;
+                    row.style.backgroundColor="#1d4ed8";
+                    var menu = parentDoc.getElementById("ctx-menu");
+                    if(!menu) return;
+                    var title = parentDoc.getElementById("ctx-kw-title");
+                    if(title) title.innerText="🔑 "+kw;
+                    menu.dataset.kw = kw;
+                    menu.style.display="block";
+                    var x = e.clientX, y = e.clientY;
+                    if(x+215 > window.parent.innerWidth) x = window.parent.innerWidth-220;
+                    if(y+240 > window.parent.innerHeight) y = window.parent.innerHeight-245;
+                    menu.style.left = x+"px";
+                    menu.style.top = y+"px";
+                    setTimeout(function(){
+                        parentDoc.addEventListener("click", hideMenu, {once:true});
+                    }, 50);
+                }
+
+                function hideMenu(){
+                    var m = parentDoc.getElementById("ctx-menu");
+                    if(m) m.style.display="none";
+                }
+                
+                function bindRows(){
+                    parentDoc.querySelectorAll("tr.keyword-row").forEach(function(row){
+                        if(row.dataset.bound)return;
+                        row.dataset.bound="1";
+                        row.addEventListener("click",function(){
+                            if(selRow && selRow !== row) selRow.style.backgroundColor="#E65100";
+                            selRow = row;
+                            row.style.backgroundColor="#1d4ed8";
+                        });
+                        row.addEventListener("contextmenu",function(e){
+                            showMenu(e, row.dataset.keyword||"", row);
+                        });
+                    });
+                }
+                
+                var attempts = 0;
+                function tryBind(){
+                    var tb = parentDoc.querySelector("#orange-keyword-table tbody");
+                    if(tb){
+                        bindRows();
+                        bindHeaders();
+                    } else if(attempts < 10){
+                        attempts++;
+                        setTimeout(tryBind, 200);
+                    }
+                }
+                setTimeout(tryBind, 500);
+            })();
+            </script>
+            """
+            import streamlit.components.v1 as components
+            components.html(js_code, height=0, width=0)
+
+            
+            # 하단 여백 추가
+            st.markdown("<div style='height: 50px;'></div>", unsafe_allow_html=True)
         else:
             st.warning("분석 결과 테이블을 로드할 수 없습니다.")
             

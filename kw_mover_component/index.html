@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <script src="https://cdn.jsdelivr.net/npm/streamlit-component-lib@1.3.0/dist/streamlit.js"></script>
+    <script>
+      function onRender(event) {
+        Streamlit.setFrameHeight(0);
+        
+        // Expose doAction to the parent window so the context menu can call it
+        window.parent.doAction = function(action) {
+            try {
+                var menu = window.parent.document.getElementById("ctx-menu");
+                var kw = menu ? (menu.dataset.kw || "") : "";
+                
+                // Hide the menu
+                if (menu) menu.style.display = "none";
+                
+                if(action === "복사") {
+                    try {
+                        window.parent.navigator.clipboard.writeText(kw).then(function(){ window.parent.alert("📋 복사 완료: " + kw); });
+                    } catch(err) {
+                        var t = window.parent.document.createElement("textarea"); t.value = kw; window.parent.document.body.appendChild(t); t.select(); window.parent.document.execCommand("copy"); window.parent.document.body.removeChild(t); window.parent.alert("📋 복사 완료: " + kw);
+                    }
+                } else {
+                    // Show the toast popup in the parent window
+                    var toast = window.parent.document.createElement("div");
+                    toast.innerText = "🚀 [" + kw + "] → [" + action + " 관리] 이동 중...";
+                    toast.style.cssText = "position:fixed; top:30px; left:50%; transform:translateX(-50%); background:#C2185B; color:#fff; padding:15px 30px; border-radius:30px; font-weight:bold; font-size:16px; z-index:999999; box-shadow:0 4px 15px rgba(0,0,0,0.5); transition: opacity 0.5s;";
+                    window.parent.document.body.appendChild(toast);
+                    setTimeout(function(){ toast.style.opacity = "0"; setTimeout(function(){ if(toast.parentNode) toast.parentNode.removeChild(toast); }, 500); }, 3000);
+                    
+                    // Send the data back to Python via Streamlit Native Component API!
+                    Streamlit.setComponentValue(action + "|||" + kw + "|||" + Date.now());
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        };
+      }
+      
+      Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, onRender);
+      Streamlit.setComponentReady();
+    </script>
+  </head>
+  <body>
+  </body>
+</html>

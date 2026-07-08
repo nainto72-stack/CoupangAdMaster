@@ -3242,8 +3242,8 @@ with tab_keyword:
 # 5-3. Tab 3: 🛡️ AI분석/도구
 # -----------------------------------------------------------------------------
 with tab_tools:
-    sub_tool_tab1, sub_tool_tab2, sub_tool_tab3, sub_tool_tab4 = st.tabs([
-        "🛡️ AI 나침반", "📦 상품 성과", "🧮 순익 계산기", "🔮 AI 시뮬레이터"
+    sub_tool_tab1, sub_tool_tab2, sub_tool_tab3, sub_tool_tab4, sub_tool_tab5 = st.tabs([
+        "🛡️ AI 나침반", "📦 상품 성과", "🧮 순익 계산기", "📐 0.64법칙 공급가 계산기", "🔮 AI 시뮬레이터"
     ])
     
     # 5-3-1. AI 나침반
@@ -3450,8 +3450,63 @@ with tab_tools:
               *(마진율 20%를 지키기 위해 사입할 수 있는 최대 단가 마지노선)*
             """, unsafe_allow_html=True)
 
-    # 5-3-4. AI 시뮬레이터
+    # 5-3-4. 0.64법칙 공급가 계산기
     with sub_tool_tab4:
+        st.subheader("📐 0.64법칙 공급가 계산기")
+        
+        # 가이드라인 섹션
+        st.markdown("""
+        <div class="premium-card" style="border-color: #FBBF24; background-color: rgba(30, 41, 59, 0.6); margin-bottom: 20px;">
+            <h4 style="color: #FBBF24; margin-top: 0;">💡 0.64 법칙이란?</h4>
+            <p style="color: #E2E8F0; line-height: 1.6;">
+                초보 셀러분들이 <b>내 판매가</b>를 기준으로 얼마에 물건을 떼와야(소싱해야) 내가 원하는 마진을 남길 수 있는지 한방에 알려주는 마법의 공식입니다.<br><br>
+                <b>[계산 원리]</b><br>
+                판매가(100%)에서 <b>쿠팡 수수료(부가세 포함 12%)</b>와 내가 남기고 싶은 <b>내 마진(24%)</b>을 빼면 <b>64%</b>가 남습니다.<br>
+                즉, <b>내 판매가의 64%</b>가 내가 지출할 수 있는 [원가 + 택배비]의 최대치가 됩니다.<br>
+                여기서 배송비(택배비)를 빼주면 내가 도매처에서 사올 수 있는 <b>'실제 공급처 타겟 단가'</b>가 나옵니다!
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        col_rule1, col_rule2 = st.columns(2)
+        with col_rule1:
+            st.markdown("#### 📥 기준값 입력")
+            rule_price = st.number_input("판매가 (원)", value=12300, step=100, key="rule_price")
+            rule_fee = st.number_input("쿠팡 수수료율 (%, 부가세 포함)", value=12.0, step=0.1, key="rule_fee")
+            rule_margin = st.number_input("내 목표 마진율 (%)", value=24.0, step=0.1, key="rule_margin")
+            rule_shipping = st.number_input("배송비/택배비 (원)", value=3000, step=100, key="rule_shipping")
+            rule_qty = st.number_input("예상 판매량 (개)", value=100, step=10, key="rule_qty")
+
+        with col_rule2:
+            st.markdown("#### 📋 0.64법칙 타겟 단가 분석표")
+            
+            # 계산 로직
+            rule_ratio = (100 - rule_fee - rule_margin) / 100.0
+            rule_cost_with_shipping = rule_price * rule_ratio
+            rule_target_cost = rule_cost_with_shipping - rule_shipping
+            rule_profit_per_item = rule_price * (rule_margin / 100.0)
+            rule_total_profit = rule_profit_per_item * rule_qty
+            
+            st.markdown(f"""
+            <div class="premium-card" style="border-color: #3B82F6; background-color: rgba(15, 23, 42, 0.9);">
+                <div class="card-header" style="color: white; font-size:1.1rem;">공급처에서 받아야 하는 실제 단가</div>
+                <div class="metric-value" style="color: #3B82F6; font-size: 2.2rem; margin-top: 10px;">{int(rule_target_cost):,} 원</div>
+                <div style="font-weight: bold; font-size:1rem; color: #94A3B8; margin-top: 5px;">(순수 도매 타겟 가격, 택배비 차감 후)</div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown(f"""
+            <div style="margin-top: 15px; padding: 15px; background-color: rgba(30, 41, 59, 0.5); border-radius: 10px;">
+                <ul style="color: #E2E8F0; line-height: 2.0; font-size: 1.05rem; list-style-type: none; padding-left: 0;">
+                    <li>📦 <b>택배비 포함원가 ({int(rule_ratio*100)}%):</b> <span style="color: #00E5FF; font-weight: bold;">{int(rule_cost_with_shipping):,}원</span></li>
+                    <li>💸 <b>1개당 내 순수익 ({rule_margin}%):</b> <span style="color: #10B981; font-weight: bold;">{int(rule_profit_per_item):,}원</span></li>
+                    <li>💰 <b>예상 총 수익 ({int(rule_qty)}개 판매 시):</b> <span style="color: #FBBF24; font-weight: bold;">{int(rule_total_profit):,}원</span></li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+
+    # 5-3-5. AI 시뮬레이터
+    with sub_tool_tab5:
         st.subheader("🔮 AI 광고 작동원리 & 미래 시뮬레이터")
         st.markdown("<p style='color: #C084FC;'>설정하신 예산과 단가를 토대로 쿠팡 AI 마케터의 예상 행동 방안을 시뮬레이션해 줍니다.</p>", unsafe_allow_html=True)
         

@@ -252,7 +252,7 @@ class AdOptimizerApp(ctk.CTk):
         self.sub_ai_container.pack(fill="both", expand=True, padx=20)
         
         self.sub_ai_buttons = {}
-        sub_ai_tabs = ["🛡️ AI 나침반", "📦 상품 성과", "🧮 순익 계산기", "🔮 AI 시뮬레이터"]
+        sub_ai_tabs = ["🛡️ AI 나침반", "📦 상품 성과", "🧮 순익 계산기", "📐 0.64법칙 공급가 계산기", "🔮 AI 시뮬레이터"]
         
         for col_idx in range(len(sub_ai_tabs)):
             self.sub_ai_frame.columnconfigure(col_idx, weight=1, uniform="subtab")
@@ -279,12 +279,14 @@ class AdOptimizerApp(ctk.CTk):
         self.tab_diagnosis = ctk.CTkFrame(self.sub_ai_container, fg_color="transparent")
         self.tab_product_metrics = ctk.CTkFrame(self.sub_ai_container, fg_color="transparent")
         self.tab_calculator = ctk.CTkFrame(self.sub_ai_container, fg_color="transparent")
+        self.tab_064_calculator = ctk.CTkFrame(self.sub_ai_container, fg_color="transparent")
         self.tab_ai_simulator = ctk.CTkFrame(self.sub_ai_container, fg_color="transparent")
         
         self.ai_frames = {
             "🛡️ AI 나침반": self.tab_diagnosis,
             "📦 상품 성과": self.tab_product_metrics,
             "🧮 순익 계산기": self.tab_calculator,
+            "📐 0.64법칙 공급가 계산기": self.tab_064_calculator,
             "🔮 AI 시뮬레이터": self.tab_ai_simulator
         }
         
@@ -301,6 +303,7 @@ class AdOptimizerApp(ctk.CTk):
         self._setup_memos_tab()
         self._setup_diagnosis_tab()
         self._setup_calculator_tab()
+        self._setup_064_calculator_tab()
         self._setup_region_metrics_tab()
         self._setup_ai_simulator_tab()
         self._setup_real_price_tab()
@@ -1225,6 +1228,109 @@ class AdOptimizerApp(ctk.CTk):
         
         self.advice_container = ctk.CTkFrame(self.diag_scroll, fg_color="transparent")
         self.advice_container.pack(fill="both", expand=True, padx=50)
+
+    def _setup_064_calculator_tab(self):
+        calc_scroll = ctk.CTkScrollableFrame(self.tab_064_calculator, fg_color="#0B0B1A")
+        calc_scroll.pack(fill="both", expand=True)
+        
+        title_lbl = ctk.CTkLabel(calc_scroll, text="📐 0.64법칙 공급가 계산기", font=("Malgun Gothic", 26, "bold"), text_color="#FBBF24")
+        title_lbl.pack(pady=20)
+        
+        # 가이드라인 섹션
+        guide_frame = ctk.CTkFrame(calc_scroll, fg_color="#1E293B", corner_radius=10, border_width=1, border_color="#FBBF24")
+        guide_frame.pack(fill="x", padx=30, pady=(0, 20))
+        
+        guide_title = ctk.CTkLabel(guide_frame, text="💡 0.64 법칙이란?", font=("Malgun Gothic", 18, "bold"), text_color="#FBBF24")
+        guide_title.pack(anchor="w", padx=20, pady=(15, 5))
+        
+        guide_text = (
+            "초보 셀러분들이 내 판매가를 기준으로 얼마에 물건을 떼와야(소싱해야) 내가 원하는 마진을 남길 수 있는지 한방에 알려주는 마법의 공식입니다.\n\n"
+            "[계산 원리]\n"
+            "판매가(100%)에서 쿠팡 수수료(부가세 포함 12%)와 내가 남기고 싶은 내 마진(24%)을 빼면 64%가 남습니다.\n"
+            "즉, 내 판매가의 64%가 내가 지출할 수 있는 [원가 + 택배비]의 최대치가 됩니다.\n"
+            "여기서 배송비(택배비)를 빼주면 내가 도매처에서 사올 수 있는 '실제 공급처 타겟 단가'가 나옵니다!"
+        )
+        guide_lbl = ctk.CTkLabel(guide_frame, text=guide_text, font=("Malgun Gothic", 14), text_color="#E2E8F0", justify="left")
+        guide_lbl.pack(anchor="w", padx=20, pady=(0, 15))
+        
+        calc_split = ctk.CTkFrame(calc_scroll, fg_color="transparent")
+        calc_split.pack(fill="both", expand=True, padx=30, pady=10)
+        
+        left_panel = ctk.CTkFrame(calc_split, fg_color="#101026", border_width=2, border_color="#1E293B", corner_radius=15)
+        left_panel.pack(side="left", fill="both", expand=True, padx=(0, 15), pady=10)
+        
+        lbl_input_title = ctk.CTkLabel(left_panel, text="📥 기준값 입력", font=("Malgun Gothic", 18, "bold"), text_color="#38BDF8")
+        lbl_input_title.pack(pady=15, padx=20, anchor="w")
+        
+        self.var_rule_price = ctk.StringVar(value="12300")
+        self.var_rule_fee = ctk.StringVar(value="12.0")
+        self.var_rule_margin = ctk.StringVar(value="24.0")
+        self.var_rule_shipping = ctk.StringVar(value="3000")
+        self.var_rule_qty = ctk.StringVar(value="100")
+        
+        def _add_input(parent, label_text, str_var):
+            row_frame = ctk.CTkFrame(parent, fg_color="transparent")
+            row_frame.pack(fill="x", padx=20, pady=5)
+            lbl = ctk.CTkLabel(row_frame, text=label_text, font=("Malgun Gothic", 14), text_color="#94A3B8", width=220, anchor="w")
+            lbl.pack(side="left")
+            entry = ctk.CTkEntry(row_frame, textvariable=str_var, font=("Malgun Gothic", 14), width=150, justify="right")
+            entry.pack(side="right")
+            entry.bind("<KeyRelease>", lambda e: self._calculate_064_rule())
+            
+        _add_input(left_panel, "판매가 (원):", self.var_rule_price)
+        _add_input(left_panel, "쿠팡 수수료율 (%, 부가세 포함):", self.var_rule_fee)
+        _add_input(left_panel, "내 목표 마진율 (%):", self.var_rule_margin)
+        _add_input(left_panel, "배송비/택배비 (원):", self.var_rule_shipping)
+        _add_input(left_panel, "예상 판매량 (개):", self.var_rule_qty)
+        
+        right_panel = ctk.CTkFrame(calc_split, fg_color="#101026", border_width=2, border_color="#1E293B", corner_radius=15)
+        right_panel.pack(side="right", fill="both", expand=True, padx=(15, 0), pady=10)
+        
+        lbl_result_title = ctk.CTkLabel(right_panel, text="📋 0.64법칙 타겟 단가 분석표", font=("Malgun Gothic", 18, "bold"), text_color="#38BDF8")
+        lbl_result_title.pack(pady=15, padx=20, anchor="w")
+        
+        target_card = ctk.CTkFrame(right_panel, fg_color="#0F172A", border_width=2, border_color="#3B82F6", corner_radius=10)
+        target_card.pack(fill="x", padx=20, pady=10)
+        
+        ctk.CTkLabel(target_card, text="공급처에서 받아야 하는 실제 단가", font=("Malgun Gothic", 16, "bold"), text_color="white").pack(pady=(15, 0))
+        self.lbl_rule_target_cost = ctk.CTkLabel(target_card, text="0 원", font=("Malgun Gothic", 32, "bold"), text_color="#3B82F6")
+        self.lbl_rule_target_cost.pack(pady=(5, 0))
+        ctk.CTkLabel(target_card, text="(순수 도매 타겟 가격, 택배비 차감 후)", font=("Malgun Gothic", 12), text_color="#94A3B8").pack(pady=(0, 15))
+        
+        details_frame = ctk.CTkFrame(right_panel, fg_color="#1E293B", corner_radius=10)
+        details_frame.pack(fill="x", padx=20, pady=15)
+        
+        self.lbl_rule_ratio_cost = ctk.CTkLabel(details_frame, text="📦 택배비 포함원가 (64%): 0원", font=("Malgun Gothic", 15), text_color="#00E5FF", anchor="w")
+        self.lbl_rule_ratio_cost.pack(fill="x", padx=20, pady=(15, 5))
+        
+        self.lbl_rule_profit_item = ctk.CTkLabel(details_frame, text="💸 1개당 내 순수익 (24%): 0원", font=("Malgun Gothic", 15), text_color="#10B981", anchor="w")
+        self.lbl_rule_profit_item.pack(fill="x", padx=20, pady=5)
+        
+        self.lbl_rule_total_profit = ctk.CTkLabel(details_frame, text="💰 예상 총 수익 (100개 판매 시): 0원", font=("Malgun Gothic", 15, "bold"), text_color="#FBBF24", anchor="w")
+        self.lbl_rule_total_profit.pack(fill="x", padx=20, pady=(5, 15))
+        
+        self._calculate_064_rule()
+
+    def _calculate_064_rule(self):
+        try:
+            price = float(self.var_rule_price.get() or 0)
+            fee = float(self.var_rule_fee.get() or 0)
+            margin = float(self.var_rule_margin.get() or 0)
+            shipping = float(self.var_rule_shipping.get() or 0)
+            qty = float(self.var_rule_qty.get() or 0)
+            
+            ratio = (100 - fee - margin) / 100.0
+            cost_with_shipping = price * ratio
+            target_cost = cost_with_shipping - shipping
+            profit_per_item = price * (margin / 100.0)
+            total_profit = profit_per_item * qty
+            
+            self.lbl_rule_target_cost.configure(text=f"{int(target_cost):,} 원")
+            self.lbl_rule_ratio_cost.configure(text=f"📦 택배비 포함원가 ({int(ratio*100)}%): {int(cost_with_shipping):,}원")
+            self.lbl_rule_profit_item.configure(text=f"💸 1개당 내 순수익 ({margin}%): {int(profit_per_item):,}원")
+            self.lbl_rule_total_profit.configure(text=f"💰 예상 총 수익 ({int(qty)}개 판매 시): {int(total_profit):,}원")
+        except Exception:
+            pass
 
     def _setup_calculator_tab(self):
         # 탭 전체를 스크롤 가능하게 구성

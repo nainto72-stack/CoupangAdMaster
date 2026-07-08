@@ -1,3 +1,4 @@
+import textwrap
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
@@ -100,7 +101,7 @@ def get_cached_keyword_html(df_display_dict, search_q=""):
     formatted_df = pd.DataFrame(formatted_rows)
     
     html_table = """
-    <div style="max-height: 1200px; overflow-y: auto; border: 1.5px solid #BF360C; border-radius: 6px; font-family: 'Malgun Gothic', 'NanumGothic', sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+    <div style="max-height: 1200px; overflow-y: auto; border: 1.5px solid #BF360C; border-radius: 6px; font-family: \"Malgun Gothic\", \"NanumGothic\", sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
         <table id="orange-keyword-table" style="width: 100%; border-collapse: collapse; font-size: 8.5px; font-weight: bold; color: #FFFFFF; text-align: left; table-layout: fixed;">
             <thead>
                 <tr style="background-color: #F1F5F9; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid #BF360C; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
@@ -131,7 +132,7 @@ def get_cached_keyword_html(df_display_dict, search_q=""):
         html_table += "</tr>"
     html_table += "</tbody></table></div>"
     # 우클릭 팝업 메뉴 HTML 구조 복구
-    html_table += '<div id="ctx-menu" style="display:none;position:fixed;z-index:99999;width:210px;background:#1a1f35;border:1px solid rgba(255,255,255,0.12);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,0.7);font-family: 'Malgun Gothic', 'NanumGothic',sans-serif;padding:6px 0;"><div id="ctx-kw-title" style="padding:9px 14px 8px;font-size:12px;color:#a78bfa;border-bottom:1px solid rgba(255,255,255,0.09);font-weight:bold;background:#111627;border-radius:10px 10px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🔑 키워드</div><div class="ctx-item" onclick="doAction(\'타겟\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="width:22px;height:22px;background:#f97316;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;">🎯</span>타겟 키워드로 이동</div><div class="ctx-item" onclick="doAction(\'수동\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="width:22px;height:22px;background:#f97316;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;">⚙️</span>수동 관리로 이동</div><div class="ctx-item" onclick="doAction(\'제외\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="width:22px;height:22px;background:#ef4444;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;">🚫</span>제외 키워드로 이동</div><div style="height:1px;background:rgba(255,255,255,0.08);margin:4px 0;"></div><div class="ctx-item" onclick="doAction(\'복사\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="font-size:16px;">📋</span>키워드 복사</div></div><style>.ctx-item:hover{background:rgba(99,102,241,0.3)!important;}</style>'
+    html_table += '<div id="ctx-menu" style="display:none;position:fixed;z-index:99999;width:210px;background:#1a1f35;border:1px solid rgba(255,255,255,0.12);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,0.7);font-family: \"Malgun Gothic\", \"NanumGothic\",sans-serif;padding:6px 0;"><div id="ctx-kw-title" style="padding:9px 14px 8px;font-size:12px;color:#a78bfa;border-bottom:1px solid rgba(255,255,255,0.09);font-weight:bold;background:#111627;border-radius:10px 10px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🔑 키워드</div><div class="ctx-item" onclick="doAction(\'타겟\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="width:22px;height:22px;background:#f97316;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;">🎯</span>타겟 키워드로 이동</div><div class="ctx-item" onclick="doAction(\'수동\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="width:22px;height:22px;background:#f97316;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;">⚙️</span>수동 관리로 이동</div><div class="ctx-item" onclick="doAction(\'제외\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="width:22px;height:22px;background:#ef4444;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;">🚫</span>제외 키워드로 이동</div><div style="height:1px;background:rgba(255,255,255,0.08);margin:4px 0;"></div><div class="ctx-item" onclick="doAction(\'복사\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="font-size:16px;">📋</span>키워드 복사</div></div><style>.ctx-item:hover{background:rgba(99,102,241,0.3)!important;}</style>'
     
     return html_table, len(formatted_rows)
 
@@ -222,7 +223,7 @@ st.markdown("""
     
     /* 타이틀 그라디언트 복구 */
     .title-gradient {
-        font-family: 'Malgun Gothic', 'NanumGothic', sans        font-size: 2.8rem;
+        font-family: 'Malgun Gothic', 'NanumGothic'', 'NanumGothic', sans        font-size: 2.8rem;
         margin-bottom: 20px;
         text-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
     }
@@ -780,7 +781,7 @@ def show_pyplot_with_tooltip(fig):
         border-radius: 8px;
         color: #E2E8F0;
         padding: 10px 14px;
-        font-family: 'Malgun Gothic', 'NanumGothic', 'Apple SD Gothic Neo', sans-serif;
+        font-family: 'Malgun Gothic', 'NanumGothic'', 'NanumGothic', 'Apple SD Gothic Neo', sans-serif;
         font-size: 11.5px;
         pointer-events: none;
         display: none;
@@ -928,16 +929,16 @@ def render_ai_diagnosis_html(d):
     
     html = []
     # 1. 👑 [최상단] AI 최종 종합 판정 대왕 썸머리 카드
-    html.append(f"""
+    html.append(textwrap.dedent(f"""
     <div style="background: #1E1E38; border: 2px solid #60A5FA; border-radius: 18px; padding: 25px; margin-bottom: 20px;">
-        <h2 style="font-family: 'Malgun Gothic', 'NanumGothic', sans-serif; font-size: 22px; font-weight: bold; color: #FBBF24; margin-top: 0; margin-bottom: 15px;">
+        <h2 style="font-family: \"Malgun Gothic\", \"NanumGothic\", sans-serif; font-size: 22px; font-weight: bold; color: #FBBF24; margin-top: 0; margin-bottom: 15px;">
             👑 AI 최종 종합 판정 (Summary)
         </h2>
-        <p style="font-family: 'Malgun Gothic', 'NanumGothic', sans-serif; font-size: 15px; font-weight: bold; color: white; line-height: 1.6; white-space: pre-line; margin: 0;">
+        <p style="font-family: \"Malgun Gothic\", \"NanumGothic\", sans-serif; font-size: 15px; font-weight: bold; color: white; line-height: 1.6; white-space: pre-line; margin: 0;">
             {d['briefing']}
         </p>
     </div>
-    """)
+    """))
     
     # 2. [그 아래] 10개 차트 개별 진단 리포트 카드 자동 생성
     for adv in d.get('advice', []):
@@ -950,21 +951,21 @@ def render_ai_diagnosis_html(d):
         if trend_text:
             trend_html = f"""
             <div style="background: #0F1A2E; border: 1px solid #F59E0B; border-radius: 10px; padding: 12px; margin-top: 10px;">
-                <div style="font-family: 'Malgun Gothic', 'NanumGothic', sans-serif; font-size: 13px; font-weight: bold; color: #FDE68A; line-height: 1.5; white-space: pre-line;">
+                <div style="font-family: \"Malgun Gothic\", \"NanumGothic\", sans-serif; font-size: 13px; font-weight: bold; color: #FDE68A; line-height: 1.5; white-space: pre-line;">
                     {trend_text}
                 </div>
             </div>
             """
             
-        html.append(f"""
+        html.append(textwrap.dedent(f"""
         <div style="background: #1A1A2E; border: 1.5px solid #2E2E4A; border-radius: 15px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);">
-            <h3 style="font-family: 'Malgun Gothic', 'NanumGothic', sans-serif; font-size: 18px; font-weight: bold; color: #60A5FA; margin-top: 0; margin-bottom: 12px;">
+            <h3 style="font-family: \"Malgun Gothic\", \"NanumGothic\", sans-serif; font-size: 18px; font-weight: bold; color: #60A5FA; margin-top: 0; margin-bottom: 12px;">
                 {adv['subject']}
             </h3>
-            <p style="font-family: 'Malgun Gothic', 'NanumGothic', sans-serif; font-size: 14px; font-weight: bold; color: #E2E8F0; margin-bottom: 8px;">
+            <p style="font-family: \"Malgun Gothic\", \"NanumGothic\", sans-serif; font-size: 14px; font-weight: bold; color: #E2E8F0; margin-bottom: 8px;">
                 💡 분석: {adv['meaning']}
             </p>
-            <p style="font-family: 'Malgun Gothic', 'NanumGothic', sans-serif; font-size: 13px; color: #A7F3D0; margin-bottom: 12px; line-height: 1.5; white-space: pre-line;">
+            <p style="font-family: \"Malgun Gothic\", \"NanumGothic\", sans-serif; font-size: 13px; color: #A7F3D0; margin-bottom: 12px; line-height: 1.5; white-space: pre-line;">
                 📖 이렇게 보면 좋은 거 (초등생도 1초 이해!):<br>
                 {adv['easy_story']}
             </p>
@@ -973,7 +974,7 @@ def render_ai_diagnosis_html(d):
             </div>
             {trend_html}
         </div>
-        """)
+        """))
         
     return "\n".join(html)
 
@@ -1298,7 +1299,7 @@ def render_magnifier_diagnosis_streamlit(df, by_region_df=None):
         font-weight: bold;
         color: #F472B6;
         margin-bottom: 18px;
-        font-family: 'Malgun Gothic', 'NanumGothic', sans-serif;
+        font-family: \"Malgun Gothic\", \"NanumGothic\", sans-serif;
     }
     .diag-subcard {
         background-color: #1A1A2E;
@@ -1310,7 +1311,7 @@ def render_magnifier_diagnosis_streamlit(df, by_region_df=None):
         font-size: 1rem;
         font-weight: bold;
         margin-bottom: 8px;
-        font-family: 'Malgun Gothic', 'NanumGothic', sans-serif;
+        font-family: \"Malgun Gothic\", \"NanumGothic\", sans-serif;
     }
     .diag-grid {
         display: grid;
@@ -1325,13 +1326,13 @@ def render_magnifier_diagnosis_streamlit(df, by_region_df=None):
         text-align: center;
         font-size: 0.85rem;
         font-weight: bold;
-        font-family: 'Malgun Gothic', 'NanumGothic', sans-serif;
+        font-family: \"Malgun Gothic\", \"NanumGothic\", sans-serif;
     }
     .diag-verdict {
         font-size: 0.88rem;
         font-weight: bold;
         margin-top: 8px;
-        font-family: 'Malgun Gothic', 'NanumGothic', sans-serif;
+        font-family: \"Malgun Gothic\", \"NanumGothic\", sans-serif;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1465,7 +1466,7 @@ def _draw_memo_vlines(axes, date_labels, pe, memos, fontsize=8):
             y_pos = ylim[0] + (ylim[1] - ylim[0]) * 0.90
             txt = ax.text(mmdd, y_pos, summary, rotation=90, va='top', ha=ha_val,
                    color=color, fontsize=max(6, fontsize-1), weight='bold', alpha=0.85,
-                   path_effects=pe)
+                   path_effects=pe, fontfamily='NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic')
             txt.set_gid(f"memo_text_{memo_date}_{safe_text}")
 
 
@@ -2267,7 +2268,7 @@ def render_real_price_chart_streamlit(df, p_val, memos):
     for sp in ax.spines.values():
         sp.set_color('#1F2937')
         
-    ax.legend(loc='upper right', fontsize=9, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
+    ax.legend(loc='upper right', fontsize=9, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8, prop={'family': 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'})
     
     try:
         pe = [path_effects.withStroke(linewidth=2, foreground='black')]

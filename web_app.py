@@ -3,6 +3,21 @@ import streamlit.components.v1 as components
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+
+# ---------------------------------------------------------
+# Custom Font Loading for Streamlit Cloud (Linux)
+# ---------------------------------------------------------
+import matplotlib.font_manager as fm
+import os
+import platform
+try:
+    _font_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'NanumGothic.ttf')
+    if os.path.exists(_font_path):
+        if 'NanumGothic' not in [f.name for f in fm.fontManager.ttflist]:
+            fm.fontManager.addfont(_font_path)
+except Exception:
+    pass
+# ---------------------------------------------------------
 import matplotlib.patheffects as path_effects
 import os
 import json

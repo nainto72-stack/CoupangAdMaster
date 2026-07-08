@@ -2223,7 +2223,7 @@ class AdOptimizerApp(ctk.CTk):
         self.reg_summary_tree.insert("", "end", values=total_vals)
 
     def _render_region_trend_charts(self, df, by_region, master):
-        plt.rcParams['font.family'] = 'Malgun Gothic'
+        plt.rcParams['font.family'] = 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'
         pe = [path_effects.withStroke(linewidth=2.5, foreground='black')]
         
         fig = Figure(figsize=(12, 10), dpi=100)
@@ -2808,7 +2808,7 @@ class AdOptimizerApp(ctk.CTk):
         영역별(검색/비검색/오디언스) 상대 지수 돋보기 차트를 렌더링합니다.
         by_region_df가 제공되면 영역별 서브플롯으로, 없으면 전체 합산 단일 차트로 동작합니다.
         """
-        plt.rcParams['font.family'] = 'Malgun Gothic'
+        plt.rcParams['font.family'] = 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'
         pe = [path_effects.withStroke(linewidth=2, foreground='black')]
         
         # 오디언스 등 데이터 누락 영역의 dates 덮어쓰기 오염 방지용 마스터 날짜
@@ -2999,7 +2999,7 @@ class AdOptimizerApp(ctk.CTk):
         self._add_hover_tooltip(fig, canvas)
 
     def _render_large_trend_chart(self, df, kw_data, master):
-        plt.rcParams['font.family'] = 'Malgun Gothic'
+        plt.rcParams['font.family'] = 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'
         pe = [path_effects.withStroke(linewidth=2, foreground='black')]
         n = len(df)
         step = 3 if n > 10 else 2 if n > 5 else 1
@@ -3796,13 +3796,13 @@ class AdOptimizerApp(ctk.CTk):
     
     def _render_dash_profit(self, df, overall, master):
         """💰 수익성 한눈에 보기: 총 광고비 vs 총 매출 비교 + 순수익"""
-        plt.rcParams['font.family'] = 'Malgun Gothic'
+        plt.rcParams['font.family'] = 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'
         pe = [path_effects.withStroke(linewidth=3, foreground='black')]
         
         fig = Figure(figsize=(6.5, 4.5), dpi=95); ax = fig.add_subplot(111)
         fig.patch.set_facecolor('#0B0B1A'); ax.set_facecolor('#0B0B1A')
         ax.set_title("수익성 한눈에 보기", color='white', pad=40, loc='center',
-                     fontdict={'size': 16, 'weight': 'bold', 'family': 'Malgun Gothic'})
+                     fontdict={'size': 16, 'weight': 'bold', 'family': 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'})
         ax.text(0.5, 1.01, '매출이 광고비보다 높으면 이익! ROAS 330% 이상이 안전권', 
                 transform=ax.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=11, style='italic')
         
@@ -3859,7 +3859,7 @@ class AdOptimizerApp(ctk.CTk):
 
     def _render_dash_performance_trend(self, df, master):
         """📈 대시보드 메인 성과 그래프: 집행 광고비 vs 광고 전환 매출 (이중 Y축)"""
-        plt.rcParams['font.family'] = 'Malgun Gothic'
+        plt.rcParams['font.family'] = 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'
         
         # 가로로 긴 비율로 피겨 설정
         fig = Figure(figsize=(13, 3.8), dpi=95)
@@ -3870,7 +3870,7 @@ class AdOptimizerApp(ctk.CTk):
         
         # 타이틀 설정
         ax1.set_title("성과 그래프", color='white', pad=25, loc='left',
-                     fontdict={'size': 14, 'weight': 'bold', 'family': 'Malgun Gothic'})
+                     fontdict={'size': 14, 'weight': 'bold', 'family': 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'})
         
         dates = df['date_s'].tolist()
         spend = df['spend'].tolist()
@@ -3937,13 +3937,13 @@ class AdOptimizerApp(ctk.CTk):
 
     def _render_dash_top_keywords(self, kw_data, master):
         """🏆 TOP5 효자 키워드: 매출 기여 상위 키워드"""
-        plt.rcParams['font.family'] = 'Malgun Gothic'
+        plt.rcParams['font.family'] = 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'
         pe = [path_effects.withStroke(linewidth=3, foreground='black')]
         
         fig = Figure(figsize=(6.5, 4.5), dpi=95); ax = fig.add_subplot(111)
         fig.patch.set_facecolor('#0B0B1A'); ax.set_facecolor('#0B0B1A')
         ax.set_title("TOP5 효자 키워드", color='white', pad=40, loc='center',
-                     fontdict={'size': 16, 'weight': 'bold', 'family': 'Malgun Gothic'})
+                     fontdict={'size': 16, 'weight': 'bold', 'family': 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'})
         ax.text(0.5, 1.01, '매출을 가장 많이 만드는 키워드에 예산을 집중하세요',
                 transform=ax.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=11, style='italic')
         
@@ -3975,14 +3975,14 @@ class AdOptimizerApp(ctk.CTk):
         self._add_hover_tooltip(fig, canvas)
 
     def _render_dashboard_pie(self, br_df, master):
-        plt.rcParams['font.family'] = 'Malgun Gothic'
+        plt.rcParams['font.family'] = 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'
         plt.rcParams['axes.unicode_minus'] = False
         pe = [path_effects.withStroke(linewidth=3, foreground='black')]
         
         fig = Figure(figsize=(6.5, 4.5), dpi=95); ax = fig.add_subplot(111)
         fig.patch.set_facecolor('#0B0B1A'); ax.set_facecolor('#0B0B1A')
         ax.set_title("노출 영역별 상세 성과", color='white', pad=40, loc='center',
-                     fontdict={'size': 16, 'weight': 'bold', 'family': 'Malgun Gothic'})
+                     fontdict={'size': 16, 'weight': 'bold', 'family': 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'})
         ax.text(0.5, 1.01, '광고비(막대) 대비 클릭수와 주문수(선) 효율을 확인하세요',
                transform=ax.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=11, style='italic')
         
@@ -4105,7 +4105,7 @@ class AdOptimizerApp(ctk.CTk):
 
     def _render_dash_kpi_gauge(self, overall, master):
         """⚡ 핵심 KPI 건강도: 4대 지표를 직관적 게이지로 표시"""
-        plt.rcParams['font.family'] = 'Malgun Gothic'
+        plt.rcParams['font.family'] = 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'
         pe = [path_effects.withStroke(linewidth=2, foreground='black')]
         
         fig = Figure(figsize=(6.5, 4.5), dpi=95)
@@ -4114,7 +4114,7 @@ class AdOptimizerApp(ctk.CTk):
         ax = fig.add_subplot(111)
         ax.set_facecolor('#0B0B1A')
         ax.set_title("광고 핵심 KPI 건강도", color='white', pad=40, loc='center',
-                     fontdict={'size': 16, 'weight': 'bold', 'family': 'Malgun Gothic'})
+                     fontdict={'size': 16, 'weight': 'bold', 'family': 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'})
         ax.text(0.5, 1.01, '초록=양호 / 노랑=주의 / 빨강=위험 (기준: 업계 평균)',
                transform=ax.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=11, style='italic')
         
@@ -4175,13 +4175,13 @@ class AdOptimizerApp(ctk.CTk):
         self._add_hover_tooltip(fig, canvas)
 
     def _render_dashboard_dual(self, df, master, title, y1, y2, c1, c2):
-        plt.rcParams['font.family'] = 'Malgun Gothic'
+        plt.rcParams['font.family'] = 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'
         plt.rcParams['axes.unicode_minus'] = False
         pe = [path_effects.withStroke(linewidth=3, foreground='black')]
         
         fig = Figure(figsize=(6.5, 4.5), dpi=95); ax = fig.add_subplot(111)
         fig.patch.set_facecolor('#0B0B1A'); ax.set_facecolor('#0B0B1A')
-        ax.set_title(title, color='white', pad=40, loc='center', fontdict={'size': 16, 'weight': 'bold', 'family': 'Malgun Gothic'})
+        ax.set_title(title, color='white', pad=40, loc='center', fontdict={'size': 16, 'weight': 'bold', 'family': 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'})
         
         guides = {
             '매출': '매출 상승 시 ROAS도 유지되는지 확인',
@@ -4854,14 +4854,14 @@ class AdOptimizerApp(ctk.CTk):
             real_vals.append(s_real)
             spend_vals.append(spend)
         
-        plt.rcParams['font.family'] = 'Malgun Gothic'
+        plt.rcParams['font.family'] = 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'
         fig = Figure(figsize=(13, 4.2), dpi=95)
         fig.patch.set_facecolor('#0B0B1A')
         ax = fig.add_subplot(111)
         ax.set_facecolor('#0B0B1A')
         
         ax.set_title("집행광고비 vs 광고전환매출 추이 비교", color='white', pad=25, loc='left',
-                     fontdict={'size': 14, 'weight': 'bold', 'family': 'Malgun Gothic'})
+                     fontdict={'size': 14, 'weight': 'bold', 'family': 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'})
                      
         # 3선 플로팅 (집행광고비, 쿠팡시스템 기준 매출, 내 판매가 기준 매출)
         ax.plot(dates, spend_vals, color='#F59E0B', marker='x', markersize=6, linewidth=2, linestyle='--', label='집행광고비')

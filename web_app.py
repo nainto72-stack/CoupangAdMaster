@@ -188,7 +188,7 @@ if trigger_val:
                 st.rerun()
 
 # matplotlib 한글 폰트 설정 (Windows 기준 맑은 고딕 우선)
-plt.rcParams['font.family'] = 'Malgun Gothic'
+plt.rcParams['font.family'] = 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'
 plt.rcParams['axes.unicode_minus'] = False
 
 # 네온 글래스모피즘 스타일 적용을 위한 Custom CSS
@@ -965,7 +965,7 @@ def render_ai_diagnosis_html(d):
 
 def render_dash_kpi_gauge_streamlit(overall):
     """⚡ 핵심 KPI 건강도: 4대 지표를 직관적 게이지로 표시"""
-    plt.rcParams['font.family'] = 'Malgun Gothic'
+    plt.rcParams['font.family'] = 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'
     pe = [path_effects.withStroke(linewidth=2, foreground='black')]
     
     fig, ax = plt.subplots(figsize=(6.5, 4.5), dpi=95)
@@ -973,7 +973,7 @@ def render_dash_kpi_gauge_streamlit(overall):
     
     ax.set_facecolor('#0B0B1A')
     ax.set_title("광고 핵심 KPI 건강도", color='white', pad=40, loc='center',
-                 fontdict={'size': 16, 'weight': 'bold', 'family': 'Malgun Gothic'})
+                 fontdict={'size': 16, 'weight': 'bold', 'family': 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'})
     ax.text(0.5, 1.01, '초록=양호 / 노랑=주의 / 빨강=위험 (기준: 업계 평균)',
             transform=ax.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=11, style='italic')
     
@@ -1032,7 +1032,7 @@ def render_dash_kpi_gauge_streamlit(overall):
 
 
 def render_dashboard_pie_streamlit(br_df):
-    plt.rcParams['font.family'] = 'Malgun Gothic'
+    plt.rcParams['font.family'] = 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'
     plt.rcParams['axes.unicode_minus'] = False
     pe = [path_effects.withStroke(linewidth=3, foreground='black')]
     
@@ -1040,7 +1040,7 @@ def render_dashboard_pie_streamlit(br_df):
     fig.patch.set_facecolor('#0B0B1A')
     ax.set_facecolor('#0B0B1A')
     ax.set_title("노출 영역별 상세 성과", color='white', pad=40, loc='center',
-                 fontdict={'size': 16, 'weight': 'bold', 'family': 'Malgun Gothic'})
+                 fontdict={'size': 16, 'weight': 'bold', 'family': 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'})
     ax.text(0.5, 1.01, '광고비(막대) 대비 클릭수와 주문수(선) 효율을 확인하세요',
             transform=ax.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=11, style='italic')
     
@@ -2088,7 +2088,7 @@ if st.session_state["username"] == "admin":
 def render_region_trend_charts_streamlit(df, by_region, memos):
     import matplotlib.patheffects as path_effects
     
-    plt.rcParams['font.family'] = 'Malgun Gothic'
+    plt.rcParams['font.family'] = 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'
     pe = [path_effects.withStroke(linewidth=2.5, foreground='black')]
     
     fig = plt.figure(figsize=(12, 10), dpi=100)
@@ -2224,7 +2224,7 @@ def render_real_price_chart_streamlit(df, p_val, memos):
         real_vals.append(s_real)
         spend_vals.append(spend)
         
-    plt.rcParams['font.family'] = 'Malgun Gothic'
+    plt.rcParams['font.family'] = 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'
     fig = plt.figure(figsize=(13, 4.2), dpi=95)
     fig.df_json = df.to_json(orient='records')
     fig.patch.set_facecolor('#0B0B1A')
@@ -2232,7 +2232,7 @@ def render_real_price_chart_streamlit(df, p_val, memos):
     ax.set_facecolor('#0B0B1A')
     
     ax.set_title("집행광고비 vs 광고전환매출 추이 비교", color='white', pad=25, loc='left',
-                 fontdict={'size': 14, 'weight': 'bold', 'family': 'Malgun Gothic'})
+                 fontdict={'size': 14, 'weight': 'bold', 'family': 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'})
                  
     ax.plot(dates, spend_vals, color='#F59E0B', marker='x', markersize=6, linewidth=2, linestyle='--', label='집행광고비')
     ax.plot(dates, coupang_vals, color='#3B82F6', marker='o', markersize=6, linewidth=2.5, label='광고전환매출 (쿠팡시스템)')
@@ -2555,7 +2555,7 @@ with tab_perf:
             st.markdown("#### 🏆 TOP5 효자 키워드")
             st.caption("매출을 가장 많이 만드는 키워드에 예산을 집중하세요")
             
-            plt.rcParams['font.family'] = 'Malgun Gothic'
+            plt.rcParams['font.family'] = 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'
             plt.rcParams['axes.unicode_minus'] = False
             
             kw_data = analyzer.summary_df

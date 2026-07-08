@@ -902,7 +902,9 @@ def show_pyplot_with_tooltip(fig):
     svg_str = re.sub(r'\bwidth="[^"]+"', '', svg_str, count=1)
     svg_str = re.sub(r'\bheight="[^"]+"', '', svg_str, count=1)
     svg_str = re.sub(r'<svg\b', '<svg style="width: 100%; height: auto;"', svg_str, count=1)
-    st.markdown(svg_str + tooltip_html, unsafe_allow_html=True)
+    import streamlit.components.v1 as components
+    height_val = int(fig.get_figheight() * fig.dpi) + 30
+    components.html(svg_str + tooltip_html, height=height_val, scrolling=False)
 
 
 def render_ai_diagnosis_html(d):

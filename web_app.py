@@ -770,6 +770,12 @@ def show_pyplot_with_tooltip(fig):
         
         # Preserve original axes height by setting bottom margin correctly
         fig.subplots_adjust(bottom=padding_inches / (h + padding_inches))
+        
+        # SUPER HACK: Add an invisible rectangle at the very bottom of the figure
+        # so that bbox_inches='tight' does NOT delete our carefully calculated padding!
+        import matplotlib.patches as patches
+        rect = patches.Rectangle((0, 0), 1, 0.01, transform=fig.transFigure, alpha=0.0)
+        fig.patches.append(rect)
     
     # 데이터프레임 JSON 획득
     df_json_str = getattr(fig, 'df_json', '[]')

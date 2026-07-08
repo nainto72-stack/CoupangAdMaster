@@ -762,20 +762,26 @@ def show_pyplot_with_tooltip(fig):
     max_memo_len = getattr(fig, 'max_memo_len', 0)
     if max_memo_len > 0:
         # 1 char at fontsize 7-8 is about 8.5 points width when rotated
-        # 8.5 / 72 inches
-        padding_inches = max_memo_len * (8.5 / 72.0)
-        # Add a tiny bit of fixed padding
-        padding_inches += 0.5
-        padding_inches = max(padding_inches, 1.0) # Minimum padding
+        text_length_inches = max_memo_len * (8.5 / 72.0)
         
         w, h = fig.get_size_inches()
-        fig.set_size_inches(w, h + padding_inches)
         
-        # Preserve original axes height by setting bottom margin correctly
-        fig.subplots_adjust(bottom=padding_inches / (h + padding_inches))
+        # The text is drawn starting from inside the axes (around 90% height) downwards.
+        # This means there is already 'h * 0.8' inches of space available inside the figure!
+        # We ONLY need to pad if the text length exceeds this available space.
+        available_space = h * 0.8
+        padding_inches = text_length_inches - available_space
         
-        # SUPER HACK: Add an invisible rectangle at the very bottom of the figure
-        # so that bbox_inches='tight' does NOT delete our carefully calculated padding!
+        if padding_inches > 0:
+            padding_inches += 0.2  # tiny safety buffer
+            fig.set_size_inches(w, h + padding_inches)
+            
+            # Adjust bottom margin to accommodate the padding without shrinking the axes
+            fig.subplots_adjust(bottom=padding_inches / (h + padding_inches))
+        
+        # ALWAYS add an invisible rectangle at the very bottom of the figure (y=0)
+        # so that bbox_inches='tight' does NOT delete our carefully calculated padding
+        # or the default figure margins!
         import matplotlib.patches as patches
         rect = patches.Rectangle((0, 0), 1, 0.01, transform=fig.transFigure, alpha=0.0)
         fig.patches.append(rect)

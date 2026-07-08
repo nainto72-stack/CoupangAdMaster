@@ -919,7 +919,13 @@ def show_pyplot_with_tooltip(fig):
     svg_str = re.sub(r'\bheight="[^"]+"', '', svg_str, count=1)
     svg_str = re.sub(r'<svg\b', '<svg style="width: 100%; height: auto;"', svg_str, count=1)
     import streamlit.components.v1 as components
-    height_val = int(fig.get_figheight() * fig.dpi) + 30
+        # Parse actual SVG height
+    import re
+    svg_height_match = re.search(r'<svg[^>]*height="([\d.]+)pt"', svg_str)
+    if svg_height_match:
+        height_val = int(float(svg_height_match.group(1)) * 1.333) + 30
+    else:
+        height_val = int(fig.get_figheight() * fig.dpi) + 30
     components.html(svg_str + tooltip_html, height=height_val, scrolling=False)
 
 
@@ -2459,7 +2465,7 @@ with tab_perf:
         # 📈 성과 그래프 (집행 광고비 vs 광고 전환 매출)
         # =====================================================
         st.markdown("<hr style='margin-top: 5px; margin-bottom: 12px; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.1);'>", unsafe_allow_html=True)
-        st.markdown("<h3 style='margin-top: -5px; margin-bottom: 15px; font-family: \"Malgun Gothic\", sans-serif; font-weight: bold; color: white; font-size: 1.25rem;'>📈 성과 그래프</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='margin-top: -5px; margin-bottom: 15px; font-family: 'Malgun Gothic', sans-serif; font-weight: bold; color: white; font-size: 1.25rem;'>📈 성과 그래프</h3>", unsafe_allow_html=True)
         pd_data = analyzer.get_daily_performance()
         if not pd_data['total'].empty:
             df_perf = pd_data['total']
@@ -3031,42 +3037,11 @@ with tab_keyword:
                     df_display['kw'].str.contains(search_q, case=False, na=False) |
                     df_display['pname'].str.contains(search_q, case=False, na=False)
                 ]
-            # --- Pagination (페이지 나누기) 도입 시작 ---
-            ITEMS_PER_PAGE = 200
+            # --- Pagination 제거 (전체 렌더링) ---
             total_items = len(df_display)
-            total_pages = max(1, (total_items + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE)
-            
-            if "kw_page_num" not in st.session_state:
-                st.session_state["kw_page_num"] = 1
-                
-            # 검색어가 바뀌거나 전체 아이템 수가 변하면 페이지 1로 리셋
-            if st.session_state.get("last_search_q") != st.session_state["kw_search_input"] or st.session_state.get("last_total_items") != total_items:
-                st.session_state["kw_page_num"] = 1
-                st.session_state["last_search_q"] = st.session_state["kw_search_input"]
-                st.session_state["last_total_items"] = total_items
-
-            page_num = st.session_state["kw_page_num"]
-            if page_num > total_pages:
-                page_num = total_pages
-                st.session_state["kw_page_num"] = page_num
-                
-            col_p1, col_p2, col_p3, col_p4 = st.columns([2, 1, 1, 6])
-            with col_p1:
-                st.markdown(f"<div style='margin-top: 8px; color: #E2E8F0; font-weight: bold;'>📊 총 {total_items:,}건 (현재 {page_num}/{total_pages} 페이지)</div>", unsafe_allow_html=True)
-            with col_p2:
-                if st.button("◀ 이전", disabled=(page_num <= 1), use_container_width=True, key="kw_btn_prev"):
-                    st.session_state["kw_page_num"] -= 1
-                    st.rerun()
-            with col_p3:
-                if st.button("다음 ▶", disabled=(page_num >= total_pages), use_container_width=True, key="kw_btn_next"):
-                    st.session_state["kw_page_num"] += 1
-                    st.rerun()
-                    
-            # 현재 페이지에 해당하는 200건만 추출 (렌더링 렉 완벽 제거)
-            start_idx = (page_num - 1) * ITEMS_PER_PAGE
-            end_idx = start_idx + ITEMS_PER_PAGE
-            df_display_page = df_display.iloc[start_idx:end_idx]
-            # --- Pagination 도입 끝 ---
+            st.markdown(f"<div style='margin-top: 8px; margin-bottom: 8px; color: #E2E8F0; font-weight: bold;'>📊 총 {total_items:,}건</div>", unsafe_allow_html=True)
+            df_display_page = df_display
+            # --- Pagination 제거 끝 ---
             
             # 데스크톱 Populate Treeview 포맷팅 완벽 이식 (캐싱 + 페이징 적용으로 체감속도 극대화)
             df_display_dict = df_display_page.to_dict('records')

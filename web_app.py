@@ -761,9 +761,12 @@ def show_pyplot_with_tooltip(fig):
     # Apply dynamic bottom padding if there are memos to prevent clipping
     max_memo_len = getattr(fig, 'max_memo_len', 0)
     if max_memo_len > 0:
-        # 1 char ~= 12 points = 12/72 inches
-        padding_inches = max_memo_len * (12.0 / 72.0)
-        padding_inches = max(padding_inches, 1.5) # Minimum padding
+        # 1 char at fontsize 7-8 is about 8.5 points width when rotated
+        # 8.5 / 72 inches
+        padding_inches = max_memo_len * (8.5 / 72.0)
+        # Add a tiny bit of fixed padding
+        padding_inches += 0.5
+        padding_inches = max(padding_inches, 1.0) # Minimum padding
         
         w, h = fig.get_size_inches()
         fig.set_size_inches(w, h + padding_inches)
@@ -1443,7 +1446,17 @@ def _draw_memo_vlines(axes, date_labels, pe, memos, fontsize=8):
         
     if axes:
         axes[0].figure.has_memos = True
-        axes[0].figure.max_memo_len = max([len(m.get('memo', '')) for m in memos])
+        
+        # Only calculate max length for memos that are actually drawn on this figure!
+        valid_memos = [m for m in memos if _memo_date_to_mmdd(m['date']) in date_labels]
+        if valid_memos:
+            current_max = max([len(m.get('memo', '')) for m in valid_memos])
+        else:
+            current_max = 0
+            
+        # Update figure's max_memo_len (keep max if called multiple times)
+        existing_max = getattr(axes[0].figure, 'max_memo_len', 0)
+        axes[0].figure.max_memo_len = max(existing_max, current_max)
         
     memo_colors = ['#FFD700', '#FF6B6B', '#69DB7C', '#74C0FC', '#DA77F2']
     color_idx = 0

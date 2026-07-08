@@ -919,9 +919,9 @@ def show_pyplot_with_tooltip(fig):
     svg_str = re.sub(r'\bheight="[^"]+"', '', svg_str, count=1)
     svg_str = re.sub(r'<svg\b', '<svg style="width: 100%; height: auto;"', svg_str, count=1)
     import streamlit.components.v1 as components
-        # Parse actual SVG height
+        # Parse actual SVG height from viewBox because height attribute was removed
     import re
-    svg_height_match = re.search(r'<svg[^>]*height="([\d.]+)pt"', svg_str)
+    svg_height_match = re.search(r'viewBox="[\d.]+\s+[\d.]+\s+[\d.]+\s+([\d.]+)"', svg_str)
     if svg_height_match:
         height_val = int(float(svg_height_match.group(1)) * 1.333) + 30
     else:

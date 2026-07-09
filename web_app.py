@@ -3693,10 +3693,11 @@ with tab_tools:
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("""
             <div style="background-color: rgba(30, 30, 56, 0.6); border: 1px solid #A855F7; border-radius: 8px; padding: 15px;">
-                <div style="color: #C084FC; font-weight: bold; margin-bottom: 15px;">🤖 외부 GPT / Claude AI 개입 연동</div>
             """, unsafe_allow_html=True)
             
-            c_gpt1, c_gpt2 = st.columns([1, 1.5])
+            c_gpt1, c_gpt2 = st.columns([1.5, 1])
+            with c_gpt1:
+                st.markdown("<div style='margin-top: 10px; color: #C084FC; font-weight: bold;'>🤖 외부 GPT / Claude AI 개입 연동</div>", unsafe_allow_html=True)
             with c_gpt2:
                 ai_provider = st.selectbox("API 선택", ["OpenAI (GPT)", "Anthropic (Claude)"], label_visibility="collapsed")
                 api_key = st.text_input("API 키", type="password", placeholder="API 키를 입력하세요 (sk-...)", label_visibility="collapsed")

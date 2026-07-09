@@ -3439,7 +3439,7 @@ with tab_tools:
                     render_kpi_summary_cards_streamlit(sub_overall, sub_region_summary)
                     
                     # --- [Part 2] 경영 투자 나침반 가이드라인 (expander) 렌더링 ---
-                    st.markdown("---")
+                    st.markdown('<hr style="margin: 0.5rem 0; border: none; border-top: 1px solid #334155;">', unsafe_allow_html=True)
                     st.markdown("#### 🧭 대표님을 위한 2대 광고투자 경영 나침반 가이드라인")
                     
                     roas = sub_overall.get('ROAS', 0.0) if sub_overall else 0.0
@@ -3485,7 +3485,7 @@ with tab_tools:
                         st.markdown(q2_detail_text)
                         
                     # --- [Part 3] 돋보기 AI 진단 처방전 및 상대 지수 차트 ---
-                    st.markdown("---")
+                    st.markdown('<hr style="margin: 0.5rem 0; border: none; border-top: 1px solid #334155;">', unsafe_allow_html=True)
                     sub_pd_data = sub_analyzer.get_daily_performance()
                     if sub_pd_data and not sub_pd_data['total'].empty:
                         sub_df = sub_pd_data['total'].copy().sort_values('p_date')

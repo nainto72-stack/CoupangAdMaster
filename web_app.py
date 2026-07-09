@@ -3744,10 +3744,10 @@ with tab_tools:
             </div>
             """, unsafe_allow_html=True)
             
-        # 3. 처방전 & 예상 행로 (하단에 넓게)
-        st.markdown("#### 💡 AI 튜닝 처방 및 예상 행로")
-        col_s_bot1, col_s_bot2 = st.columns(2)
-        with col_s_bot1:
+            # 3. 처방전 & 예상 행로 (col_s2 영역으로 이동)
+            st.markdown("<br>#### 💡 AI 튜닝 처방 및 예상 행로", unsafe_allow_html=True)
+            
+            # 처방전
             max_realistic_roas = (3.0 * s_price / s_cpc)
             max_realistic_cpc = (3.0 * s_price) / s_roas if s_roas > 0 else 0
             
@@ -3769,7 +3769,6 @@ with tab_tools:
             </div>
             """, unsafe_allow_html=True)
             
-        with col_s_bot2:
             # AI 잠입 행동 예측
             tail_kw1 = f"가성비 {s_pname}"
             tail_kw2 = f"실속형 {s_pname}"

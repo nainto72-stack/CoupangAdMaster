@@ -798,7 +798,7 @@ def show_pyplot_with_tooltip(fig):
     memos_json_str = json.dumps(memos_list, ensure_ascii=False)
     
     f = io.BytesIO()
-    fig.savefig(f, format='svg', bbox_inches='tight')
+    fig.savefig(f, format='svg')  # Removed bbox_inches='tight' because it crops Korean text!
     svg_str = f.getvalue().decode('utf-8')
     plt.close(fig)
     

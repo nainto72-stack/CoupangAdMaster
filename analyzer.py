@@ -737,4 +737,53 @@ class CoupangAdAnalyzer:
             "trend_insight": imp_trend
         })
 
+                # (11) 7. 광고비 비중
+        ad_ratio = (o['spend'] / o['sales'] * 100) if o['sales'] > 0 else 100.0
+        ad_ratio_trend = ""
+        if has_trend:
+            ad_ratio_trend = f"🔍 [현시점 트렌드 조언]\n"
+            recent_ratio = (recent['spend'] / recent['sales'] * 100) if recent['sales'] > 0 else 100.0
+            prev_ratio = (prev['spend'] / prev['sales'] * 100) if prev['sales'] > 0 else 100.0
+            diff = recent_ratio - prev_ratio
+            if diff > 5:
+                ad_ratio_trend += f"  🚨 광고비 비중이 {recent_ratio:.1f}%로 최근 {diff:.1f}%p 급증했습니다. 마진율을 위협하고 있으니 예산 관리가 필요합니다!"
+            elif diff < -5:
+                ad_ratio_trend += f"  🌟 광고비 비중이 {recent_ratio:.1f}%로 최근 {abs(diff):.1f}%p 감소했습니다. 수익성이 극대화되고 있습니다!"
+            else:
+                ad_ratio_trend += f"  ➡️ 광고비 비중 변동 없이 안정적으로 유지 중입니다. (최근 {recent_ratio:.1f}%)"
+                
+        advice.append({
+            "subject": "⚖️ 11. 광고비 비중 및 광고 기여도 추이 (마진 방어선 점검)",
+            "meaning": f"현재 매출 대비 광고비 비중은 {ad_ratio:.1f}% 입니다.",
+            "easy_story": "광고비 비중 선이 내 마진율 선 위로 뚫고 올라가면 팔수록 손해 보는 적자 상태라는 뜻이에요! 경고선 아래에서 낮게 찰싹 붙어 다녀야 진짜배기 알짜배기 장사입니다.",
+            "solution": ["광고비 비중 선이 마진 안전선에 닿을락 말락 한다면 위험 신호이니 비효율 지출을 과감히 줄이세요.",
+                         "최대한 경고선 아래로 유지되도록 CPC 단가를 통제해야 합니다."],
+            "trend_insight": ad_ratio_trend
+        })
+
+        # (12) 8. 광고 차감 후 최종 순수익
+        profit = o['sales'] * 0.3 - o['spend'] # Default 30% margin assumption
+        profit_trend = ""
+        if has_trend:
+            profit_trend = f"🔍 [현시점 트렌드 조언]\n"
+            recent_profit = recent['sales'] * 0.3 - recent['spend']
+            prev_profit = prev['sales'] * 0.3 - prev['spend']
+            if recent_profit > prev_profit and recent_profit > 0:
+                profit_trend += f"  🌟 찐 순수익이 가파르게 우상향하고 있습니다! 최근 평균 순수익: {int(recent_profit):,}원/일. 훌륭한 성과입니다!"
+            elif recent_profit < prev_profit and recent_profit < 0:
+                profit_trend += f"  🚨 찐 순수익이 적자로 돌아서며 악화되고 있습니다! 최근 평균 순수익: {int(recent_profit):,}원/일. 긴급 점검이 필요합니다."
+            elif recent_profit > 0:
+                profit_trend += f"  ✅ 흑자를 유지 중입니다. 최근 평균 순수익: {int(recent_profit):,}원/일."
+            else:
+                profit_trend += f"  ⚠️ 적자를 벗어나지 못하고 있습니다. 최근 평균 순수익: {int(recent_profit):,}원/일."
+                
+        advice.append({
+            "subject": "💸 12. 광고 차감 후 최종 순수익 vs 광고비 추이 (진짜 내 지갑에 들어온 돈)",
+            "meaning": f"추정된 최종 순수익(마진 30% 기준)은 {int(profit):,}원 입니다.",
+            "easy_story": "결국 내 손에 떨어지는 찐 순수익(하늘색 굵은 선)이 지출 광고비(빨간 점선)를 압도적으로 이기고 위에서 날아다녀야 진정한 흑자입니다! 광고비 선은 오르는데 순익 선이 곤두박질친다면 '가짜 흑자'에 속고 있는 거예요.",
+            "solution": ["하늘색 진짜 순익 선이 0원 밑으로 떨어지면 당장 위험한 상태이므로 지출을 잠그고 재정비하세요.",
+                         "광고비가 늘어나도 진짜 순수익 선이 꺾이지 않고 버텨줘야 진짜 매출 성장입니다."],
+            "trend_insight": profit_trend
+        })
+        
         return {'status': status, 'avg_metrics': o, 'advice': advice, 'briefing': briefing}

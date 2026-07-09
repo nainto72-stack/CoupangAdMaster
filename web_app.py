@@ -285,44 +285,53 @@ st.markdown("""
         display: none !important;
     }
     
-    /* 최상단 마스터 타이틀 고정 (:has 속성 사용하여 정확한 타겟팅) */
-    div.block-container > div:first-child > div[data-testid="stVerticalBlock"] > div:has(h1) {
+    /* 🚨 가장 중요한 핵심: 부모 컨테이너들의 overflow 속성을 해제해야 sticky가 작동함! */
+    .main, .block-container, div[data-testid="stVerticalBlock"], div.element-container, div[data-testid="stTabs"] {
+        overflow: visible !important;
+    }
+    
+    /* 최상단 마스터 타이틀 고정 */
+    div[data-testid="stVerticalBlock"] > div:has(h1) {
         position: sticky !important;
         top: 0px !important;
         z-index: 1000 !important;
         background-color: #0B0B1A !important;
-        padding-top: 10px !important;
+        padding-top: 15px !important;
         padding-bottom: 5px !important;
-        margin-top: -40px !important; 
+        margin-top: -30px !important;
     }
 
     /* 실시간 분석 중인 파일명 (Caption) 고정 */
-    div.block-container > div:first-child > div[data-testid="stVerticalBlock"] > div:has(div[data-testid="stCaptionContainer"]) {
+    div[data-testid="stVerticalBlock"] > div:has(div[data-testid="stCaptionContainer"]) {
         position: sticky !important;
         top: 60px !important; 
         z-index: 1000 !important;
         background-color: #0B0B1A !important;
-        padding-bottom: 10px !important;
+        padding-bottom: 15px !important;
         border-bottom: 1px solid rgba(255,255,255,0.05) !important;
     }
 
-    /* 메인 탭 (모든 탭 리스트의 기본 고정 설정) */
+    /* 메인 탭 (stTabs 컨테이너 내에서 탭 리스트만 고정) */
     div[data-testid="stTabs"] > div[role="tablist"] {
         position: sticky !important;
-        top: 90px !important; /* 타이틀+캡션 아래 */
+        top: 95px !important; /* 타이틀+캡션 높이 */
         z-index: 999 !important;
         background-color: #0B0B1A !important;
         padding-top: 15px !important;
         padding-bottom: 15px !important;
+        margin-top: -15px !important;
         border-bottom: 1px solid rgba(255,255,255,0.05) !important;
     }
 
     /* 서브 탭 (메인 탭 안에 중첩된 탭) 고정 */
     div[data-testid="stTabs"] div[data-testid="stTabs"] > div[role="tablist"] {
-        top: 165px !important; /* 메인 탭 아래 */
+        position: sticky !important;
+        top: 170px !important; /* 메인 탭 아래 */
         z-index: 998 !important;
+        background-color: #0B0B1A !important;
         padding-top: 10px !important;
         padding-bottom: 10px !important;
+        border-bottom: 1px solid rgba(255,255,255,0.05) !important;
         box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
     }
     

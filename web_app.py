@@ -1692,12 +1692,12 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
             available_regions = region_labels[:1]
         
         n_regions = len(available_regions)
-        fig = plt.figure(figsize=(24, 7.5 * n_regions + 1.5))
+        fig = plt.figure(figsize=(26, 7.5 * n_regions + 1.5))
         fig.df_json = df.to_json(orient='records')
         fig.patch.set_facecolor('#0B0B1A')
         
         fig.suptitle("0. 영역별 광고효율 돋보기 상대 지수 분석 (첫 날 = 100% 기준)", 
-                    color='white', fontsize=36, fontweight='bold', y=0.98)
+                    color='white', fontsize=40, fontweight='bold', y=0.98)
         
         for idx, region_name in enumerate(available_regions):
             rdata = rdf[rdf['norm_region'] == region_name].copy()
@@ -1717,8 +1717,8 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
             
             ax = fig.add_subplot(n_regions, 1, idx + 1)
             ax.set_facecolor('#0B0B1A')
-            ax.tick_params(axis='x', labelcolor='#94A3B8', labelsize=12, rotation=15)
-            ax.tick_params(axis='y', labelcolor='#94A3B8', labelsize=12)
+            ax.tick_params(axis='x', labelcolor='#94A3B8', labelsize=18, rotation=45)
+            ax.tick_params(axis='y', labelcolor='#94A3B8', labelsize=18)
             ax.grid(True, axis='y', color='#1F2937', linestyle='--', alpha=0.4)
             for sp in ax.spines.values(): sp.set_color('#1F2937')
             
@@ -1755,9 +1755,9 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
                     label='🌸 광고효율(ROAS) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
             
             ax.axhline(y=100, color='#FFFFFF', linestyle='--', linewidth=1.0, alpha=0.5, label='— 첫 날 기준선 (100%)')
-            ax.set_title(f"【{region_name}】 노출·클릭률·전환율·ROAS 상대 지수 추이", color=rc, pad=10, fontdict={'size': 24, 'weight': 'bold'})
-            ax.set_ylabel('상대 지수 (%)', color='white', size=8, weight='bold')
-            ax.legend(loc='upper left', fontsize=7.5, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
+            ax.set_title(f"【{region_name}】 노출·클릭률·전환율·ROAS 상대 지수 추이", color=rc, pad=30, fontdict={'size': 28, 'weight': 'bold'})
+            ax.set_ylabel('상대 지수 (%)', color='white', size=22, weight='bold')
+            ax.legend(loc='upper left', fontsize=18, markerscale=1.5, handletextpad=0.5, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
             
             _draw_memo_vlines([ax], dates, pe, memos, fontsize=20)
         
@@ -1770,8 +1770,8 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
         fig.patch.set_facecolor('#0B0B1A')
         ax = fig.add_subplot(1, 1, 1)
         ax.set_facecolor('#0B0B1A')
-        ax.tick_params(axis='x', labelcolor='#94A3B8', labelsize=12, rotation=15)
-        ax.tick_params(axis='y', labelcolor='#94A3B8', labelsize=12)
+        ax.tick_params(axis='x', labelcolor='#94A3B8', labelsize=18, rotation=45)
+        ax.tick_params(axis='y', labelcolor='#94A3B8', labelsize=18)
         ax.grid(True, axis='y', color='#1F2937', linestyle='--', alpha=0.4)
         for sp in ax.spines.values(): sp.set_color('#1F2937')
         
@@ -1805,9 +1805,9 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
                 label='🌸 광고효율(ROAS) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
         ax.axhline(y=100, color='#FFFFFF', linestyle='--', linewidth=1.0, alpha=0.5, label='— 첫 날 기준선 (100%)')
         
-        ax.set_ylabel('상대 지수 (%)', color='white', size=8, weight='bold')
-        ax.set_title("0. 광고효율 돋보기 상대 지수 분석 (첫 날 데이터 = 100% 기준)", color='white', pad=10, fontdict={'size': 24, 'weight': 'bold'})
-        ax.legend(loc='upper left', fontsize=7.5, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
+        ax.set_ylabel('상대 지수 (%)', color='white', size=22, weight='bold')
+        ax.set_title("0. 광고효율 돋보기 상대 지수 분석 (첫 날 데이터 = 100% 기준)", color='white', pad=30, fontdict={'size': 28, 'weight': 'bold'})
+        ax.legend(loc='upper left', fontsize=18, markerscale=1.5, handletextpad=0.5, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
         
         _draw_memo_vlines([ax], dates, pe, memos, fontsize=20)
         fig.tight_layout(h_pad=3.5)
@@ -2270,7 +2270,7 @@ def render_region_trend_charts_streamlit(df, by_region, memos):
     ax1.bar(dates, s_search, bottom=s_audience+s_non_search, color=colors['검색'], width=bar_w, alpha=0.9, label='검색매출')
     
     ax1.set_ylabel('매출/광고비 (원)', color='white', size=10, weight='bold')
-    ax1.tick_params(axis='y', labelcolor='#94A3B8', labelsize=12)
+    ax1.tick_params(axis='y', labelcolor='#94A3B8', labelsize=18)
     
     daily_spend = spend_pivot.sum(axis=1).values
     ax1.plot(dates, daily_spend, color='#FFA726', linewidth=2.5, marker='o', markersize=3, label='광고비',
@@ -2312,7 +2312,7 @@ def render_region_trend_charts_streamlit(df, by_region, memos):
     ax2.bar(dates, sp_search, bottom=sp_audience+sp_non_search, color=colors['검색'], width=bar_w, alpha=0.9, label='검색광고비')
     
     ax2.set_ylabel('광고비 (원)', color='white', size=10, weight='bold')
-    ax2.tick_params(axis='y', labelcolor='#94A3B8', labelsize=12)
+    ax2.tick_params(axis='y', labelcolor='#94A3B8', labelsize=18)
     ax2.legend(loc='upper left', fontsize=12.5, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
     
     _draw_memo_vlines([ax1, ax2], dates, pe, memos, fontsize=12)

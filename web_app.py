@@ -1692,12 +1692,12 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
             available_regions = region_labels[:1]
         
         n_regions = len(available_regions)
-        fig = plt.figure(figsize=(24, 6.0 * n_regions + 1.5))
+        fig = plt.figure(figsize=(18, 6.5 * n_regions + 1.5))
         fig.df_json = df.to_json(orient='records')
         fig.patch.set_facecolor('#0B0B1A')
         
         fig.suptitle("0. 영역별 광고효율 돋보기 상대 지수 분석 (첫 날 = 100% 기준)", 
-                    color='white', fontsize=24, fontweight='bold', y=0.98)
+                    color='white', fontsize=20, fontweight='bold', y=0.98)
         
         for idx, region_name in enumerate(available_regions):
             rdata = rdf[rdf['norm_region'] == region_name].copy()
@@ -1755,11 +1755,11 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
                     label='🌸 광고효율(ROAS) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
             
             ax.axhline(y=100, color='#FFFFFF', linestyle='--', linewidth=1.0, alpha=0.5, label='— 첫 날 기준선 (100%)')
-            ax.set_title(f"【{region_name}】 노출·클릭률·전환율·ROAS 상대 지수 추이", color=rc, pad=10, fontdict={'size': 11, 'weight': 'bold'})
+            ax.set_title(f"【{region_name}】 노출·클릭률·전환율·ROAS 상대 지수 추이", color=rc, pad=10, fontdict={'size': 13, 'weight': 'bold'})
             ax.set_ylabel('상대 지수 (%)', color='white', size=8, weight='bold')
             ax.legend(loc='upper left', fontsize=7.5, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
             
-            _draw_memo_vlines([ax], dates, pe, memos, fontsize=12)
+            _draw_memo_vlines([ax], dates, pe, memos, fontsize=13)
         
         fig.tight_layout(rect=[0, 0, 1, 0.96])
         show_pyplot_with_tooltip(fig)
@@ -1806,11 +1806,11 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
         ax.axhline(y=100, color='#FFFFFF', linestyle='--', linewidth=1.0, alpha=0.5, label='— 첫 날 기준선 (100%)')
         
         ax.set_ylabel('상대 지수 (%)', color='white', size=8, weight='bold')
-        ax.set_title("0. 광고효율 돋보기 상대 지수 분석 (첫 날 데이터 = 100% 기준)", color='white', pad=10, fontdict={'size': 11, 'weight': 'bold'})
+        ax.set_title("0. 광고효율 돋보기 상대 지수 분석 (첫 날 데이터 = 100% 기준)", color='white', pad=10, fontdict={'size': 13, 'weight': 'bold'})
         ax.legend(loc='upper left', fontsize=7.5, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
         
-        _draw_memo_vlines([ax], dates, pe, memos, fontsize=12)
-        fig.tight_layout()
+        _draw_memo_vlines([ax], dates, pe, memos, fontsize=13)
+        fig.tight_layout(h_pad=3.5)
         show_pyplot_with_tooltip(fig)
         plt.close(fig)
 
@@ -1820,7 +1820,7 @@ def render_large_trend_chart_streamlit(df, kw_data, memos):
     fs_title = 16; fs_guide = 11; fs_ann = 11; fs_label = 12; fs_tick = 11; fs_leg = 12
     ms = 3.5; lw = 1.6
     
-    fig = plt.figure(figsize=(26, 38))
+    fig = plt.figure(figsize=(18, 55))
     fig.df_json = df.to_json(orient='records')
     fig.patch.set_facecolor('#0B0B1A')
     
@@ -1832,7 +1832,7 @@ def render_large_trend_chart_streamlit(df, kw_data, memos):
     
     def setup_ax(ax):
         ax.set_facecolor('#0B0B1A')
-        ax.tick_params(axis='x', labelcolor='#94A3B8', labelsize=fs_tick, rotation=20)
+        ax.tick_params(axis='x', labelcolor='#94A3B8', labelsize=fs_tick, rotation=35)
         ax.grid(True, axis='y', color='#1F2937', linestyle='--', alpha=0.4)
         for sp in ax.spines.values(): sp.set_color('#1F2937')
     
@@ -2374,11 +2374,11 @@ def render_real_price_chart_streamlit(df, p_val, memos):
     
     try:
         pe = [path_effects.withStroke(linewidth=2, foreground='black')]
-        _draw_memo_vlines([ax], dates, pe, memos, fontsize=12)
+        _draw_memo_vlines([ax], dates, pe, memos, fontsize=13)
     except Exception:
         pass
         
-    fig.tight_layout()
+    fig.tight_layout(h_pad=3.5)
     show_pyplot_with_tooltip(fig)
     plt.close(fig)
 

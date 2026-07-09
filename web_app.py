@@ -1692,7 +1692,7 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
             available_regions = region_labels[:1]
         
         n_regions = len(available_regions)
-        fig = plt.figure(figsize=(26, 7.5 * n_regions + 1.5))
+        fig = plt.figure(figsize=(26, 12.0 * n_regions + 1.5))
         fig.df_json = df.to_json(orient='records')
         fig.patch.set_facecolor('#0B0B1A')
         
@@ -1759,7 +1759,7 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
             ax.set_ylabel('상대 지수 (%)', color='white', size=22, weight='bold')
             ax.legend(loc='upper left', fontsize=18, markerscale=1.5, handletextpad=0.5, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
             
-            _draw_memo_vlines([ax], dates, pe, memos, fontsize=20)
+            _draw_memo_vlines([ax], dates, pe, memos, fontsize=13)
         
         fig.tight_layout(rect=[0, 0, 1, 0.96])
         show_pyplot_with_tooltip(fig)

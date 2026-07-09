@@ -280,36 +280,36 @@ st.markdown("""
     /* ------------------------------------------------------------- */
     /* 📌 상단 탭 고정 (Sticky Header) CSS                           */
     /* ------------------------------------------------------------- */
-    /* Streamlit 기본 헤더(우측 상단 햄버거 메뉴 등) 숨김 처리 (선택사항이나 깔끔함을 위해) */
+    /* Streamlit 기본 헤더 숨김 */
     header[data-testid="stHeader"] {
-        background: transparent !important;
-        box-shadow: none !important;
+        display: none !important;
     }
     
-    /* 최상단 마스터 타이틀과 파일명 정보 영역을 고정 */
-    /* Streamlit의 구조상 stVerticalBlock의 첫 번째와 두 번째 요소를 타겟팅 */
-    div.block-container > div:first-child > div[data-testid="stVerticalBlock"] > div:nth-child(1) {
+    /* 최상단 마스터 타이틀 고정 (:has 속성 사용하여 정확한 타겟팅) */
+    div.block-container > div:first-child > div[data-testid="stVerticalBlock"] > div:has(h1) {
         position: sticky !important;
         top: 0px !important;
         z-index: 1000 !important;
-        background-color: #0B0B1A !important; /* 배경색과 동일하게 */
+        background-color: #0B0B1A !important;
         padding-top: 10px !important;
         padding-bottom: 5px !important;
-        margin-top: -30px !important; /* 기본 여백 상쇄 */
+        margin-top: -40px !important; 
     }
-    div.block-container > div:first-child > div[data-testid="stVerticalBlock"] > div:nth-child(2) {
+
+    /* 실시간 분석 중인 파일명 (Caption) 고정 */
+    div.block-container > div:first-child > div[data-testid="stVerticalBlock"] > div:has(div[data-testid="stCaptionContainer"]) {
         position: sticky !important;
-        top: 60px !important; /* 타이틀 높이만큼 띄움 */
+        top: 60px !important; 
         z-index: 1000 !important;
         background-color: #0B0B1A !important;
         padding-bottom: 10px !important;
         border-bottom: 1px solid rgba(255,255,255,0.05) !important;
     }
 
-    /* 메인 탭 (종합 성과, 키워드/입찰 등) 고정 */
-    div.block-container > div:first-child > div[data-testid="stVerticalBlock"] > div:nth-child(3) > div[data-testid="stTabs"] > div[role="tablist"] {
+    /* 메인 탭 (모든 탭 리스트의 기본 고정 설정) */
+    div[data-testid="stTabs"] > div[role="tablist"] {
         position: sticky !important;
-        top: 90px !important; /* 타이틀+캡션 높이만큼 띄움 */
+        top: 90px !important; /* 타이틀+캡션 아래 */
         z-index: 999 !important;
         background-color: #0B0B1A !important;
         padding-top: 15px !important;
@@ -317,18 +317,15 @@ st.markdown("""
         border-bottom: 1px solid rgba(255,255,255,0.05) !important;
     }
 
-    /* 서브 탭 (AI 나침반, 상품 성과 등) 고정 */
-    div.block-container > div:first-child > div[data-testid="stVerticalBlock"] > div:nth-child(3) > div[data-testid="stTabs"] div[data-testid="stTabs"] > div[role="tablist"] {
-        position: sticky !important;
-        top: 165px !important; /* 메인 탭 높이만큼 띄움 */
+    /* 서브 탭 (메인 탭 안에 중첩된 탭) 고정 */
+    div[data-testid="stTabs"] div[data-testid="stTabs"] > div[role="tablist"] {
+        top: 165px !important; /* 메인 탭 아래 */
         z-index: 998 !important;
-        background-color: #0B0B1A !important;
         padding-top: 10px !important;
         padding-bottom: 10px !important;
-        border-bottom: 1px solid rgba(255,255,255,0.05) !important;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important; /* 그림자로 떠있는 느낌 부여 */
+        box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
     }
-
+    
     /* 4. st.tabs 활성 탭 (단정하고 고급스러운 인디고 블루 적용) */
     .stApp button[role="tab"][aria-selected="true"] {
         background: #6366F1 !important;

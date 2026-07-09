@@ -3498,7 +3498,7 @@ with tab_tools:
                         render_magnifier_chart_streamlit(sub_df, by_region_df=sub_by_region, memos=memos)
                         
                         # --- [Part 4] 상품 성과 12대 대형 추이 차트 ---
-                        st.markdown("---")
+                        st.markdown('<hr style="margin: 0.5rem 0; border: none; border-top: 1px solid #334155;">', unsafe_allow_html=True)
                         st.markdown("#### 📈 상품 12대 광고 성과 추이 그래프")
                         sub_kw = sub_analyzer.summary_df
                         render_large_trend_chart_streamlit(sub_df, sub_kw, memos)

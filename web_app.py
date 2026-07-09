@@ -1025,7 +1025,7 @@ def render_ai_diagnosis_html(d):
         </div>
         """))
         
-    return "\n".join(html)
+    return "\n".join(line.strip() for line in "\n".join(html).split("\n"))
 
 
 def render_dash_kpi_gauge_streamlit(overall):

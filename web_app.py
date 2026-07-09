@@ -3682,6 +3682,28 @@ with tab_tools:
             s_price = sim_input_row("4. 제품 판매 가격 (원)", 20000, None, "s_price")
             s_pname = sim_text_row("5. 대상 제품명 (카테고리)", "가방백팩", "s_pname")
             
+            # AI 작동 원리 시뮬레이션 시작 버튼 (디자인용)
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown(
+                '<button style="width: 100%; background-color: #DB2777; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; font-size: 1.05rem;">🧠 AI 작동 원리 시뮬레이션 시작</button>', 
+                unsafe_allow_html=True
+            )
+            
+            # 외부 GPT 연동 프레임
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("""
+            <div style="background-color: rgba(30, 30, 56, 0.6); border: 1px solid #A855F7; border-radius: 8px; padding: 15px;">
+                <div style="color: #C084FC; font-weight: bold; margin-bottom: 15px;">🤖 외부 GPT / Claude AI 개입 연동</div>
+            """, unsafe_allow_html=True)
+            
+            c_gpt1, c_gpt2 = st.columns([1, 1.5])
+            with c_gpt2:
+                ai_provider = st.selectbox("API 선택", ["OpenAI (GPT)", "Anthropic (Claude)"], label_visibility="collapsed")
+                api_key = st.text_input("API 키", type="password", placeholder="API 키를 입력하세요 (sk-...)", label_visibility="collapsed")
+                run_ai = st.button("AI 실시간 심층 컨설팅 받기", use_container_width=True)
+            
+            st.markdown("</div>", unsafe_allow_html=True)
+            
         with col_s2:
             st.markdown("#### 📋 AI 행동 예측 보고서")
             

@@ -490,6 +490,19 @@ st.markdown("""
         background-color: #6366F1 !important;
     }
 
+    
+    /* 13. 본문 내 숫자 강조 (백틱 ` 코드 블록) 가시성 극대화 */
+    .stApp code {
+        background-color: rgba(0, 229, 255, 0.1) !important; /* 네온 사이언 반투명 배경 */
+        color: #00E5FF !important; /* 밝고 선명한 네온 사이언 텍스트 */
+        font-weight: 800 !important;
+        font-size: 1.15em !important;
+        padding: 2px 8px !important;
+        border-radius: 6px !important;
+        border: 1px solid rgba(0, 229, 255, 0.3) !important;
+        text-shadow: 0 0 5px rgba(0, 229, 255, 0.3) !important;
+    }
+
     /* 11. 사이드바 다크테마 적용 */
     [data-testid="stSidebar"] {
         background-color: #060913 !important; /* 무광 매트 딥 그레이 */

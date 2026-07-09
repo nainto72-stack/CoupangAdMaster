@@ -278,63 +278,6 @@ st.markdown("""
     
     
     /* ------------------------------------------------------------- */
-    /* 📌 상단 탭 고정 (Sticky Header) CSS                           */
-    /* ------------------------------------------------------------- */
-    /* Streamlit 기본 헤더 숨김 */
-    header[data-testid="stHeader"] {
-        display: none !important;
-    }
-    
-    /* 🚨 가장 중요한 핵심: 부모 컨테이너들의 overflow 속성을 해제해야 sticky가 작동함! */
-    .main, .block-container, div[data-testid="stVerticalBlock"], div.element-container, div[data-testid="stTabs"] {
-        overflow: visible !important;
-    }
-    
-    /* 최상단 마스터 타이틀 고정 */
-    div[data-testid="stVerticalBlock"] > div:has(h1) {
-        position: sticky !important;
-        top: 0px !important;
-        z-index: 1000 !important;
-        background-color: #0B0B1A !important;
-        padding-top: 15px !important;
-        padding-bottom: 5px !important;
-        margin-top: -30px !important;
-    }
-
-    /* 실시간 분석 중인 파일명 (Caption) 고정 */
-    div[data-testid="stVerticalBlock"] > div:has(div[data-testid="stCaptionContainer"]) {
-        position: sticky !important;
-        top: 60px !important; 
-        z-index: 1000 !important;
-        background-color: #0B0B1A !important;
-        padding-bottom: 15px !important;
-        border-bottom: 1px solid rgba(255,255,255,0.05) !important;
-    }
-
-    /* 메인 탭 (stTabs 컨테이너 내에서 탭 리스트만 고정) */
-    div[data-testid="stTabs"] > div[role="tablist"] {
-        position: sticky !important;
-        top: 95px !important; /* 타이틀+캡션 높이 */
-        z-index: 999 !important;
-        background-color: #0B0B1A !important;
-        padding-top: 15px !important;
-        padding-bottom: 15px !important;
-        margin-top: -15px !important;
-        border-bottom: 1px solid rgba(255,255,255,0.05) !important;
-    }
-
-    /* 서브 탭 (메인 탭 안에 중첩된 탭) 고정 */
-    div[data-testid="stTabs"] div[data-testid="stTabs"] > div[role="tablist"] {
-        position: sticky !important;
-        top: 170px !important; /* 메인 탭 아래 */
-        z-index: 998 !important;
-        background-color: #0B0B1A !important;
-        padding-top: 10px !important;
-        padding-bottom: 10px !important;
-        border-bottom: 1px solid rgba(255,255,255,0.05) !important;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
-    }
-    
     /* 4. st.tabs 활성 탭 (단정하고 고급스러운 인디고 블루 적용) */
     .stApp button[role="tab"][aria-selected="true"] {
         background: #6366F1 !important;
@@ -2428,6 +2371,71 @@ st.caption(f"📅 실시간 분석 중인 파일: **{st.session_state['current_f
 if st.session_state.get("pending_toast"):
     st.toast(st.session_state["pending_toast"])
     del st.session_state["pending_toast"]
+
+
+# ==========================================
+# 🔥 궁극의 상단 고정 (Sticky) JS 강제 주입
+# ==========================================
+components.html('''
+<script>
+setInterval(function() {
+    var parentDoc = window.parent.document;
+    
+    // 1. Title 고정
+    var h1 = parentDoc.querySelector("h1");
+    if(h1) {
+        var h1Container = h1.closest("div.element-container") || h1.closest("div[data-testid='stVerticalBlock'] > div");
+        if(h1Container) {
+            h1Container.style.position = "sticky";
+            h1Container.style.top = "0px";
+            h1Container.style.zIndex = "1000";
+            h1Container.style.backgroundColor = "#0B0B1A";
+            h1Container.style.paddingTop = "15px";
+            h1Container.style.paddingBottom = "5px";
+        }
+    }
+    
+    // 2. 탭 리스트 고정
+    var tablists = parentDoc.querySelectorAll('div[role="tablist"]');
+    if(tablists.length >= 1) {
+        // 메인 탭
+        tablists[0].style.position = "sticky";
+        tablists[0].style.top = "60px";
+        tablists[0].style.zIndex = "999";
+        tablists[0].style.backgroundColor = "#0B0B1A";
+        tablists[0].style.paddingTop = "10px";
+        tablists[0].style.paddingBottom = "10px";
+        tablists[0].style.borderBottom = "1px solid rgba(255,255,255,0.05)";
+        
+        // 서브 탭들 (화면에 보이는 모든 서브 탭)
+        for(var i=1; i<tablists.length; i++) {
+            tablists[i].style.position = "sticky";
+            tablists[i].style.top = "120px";
+            tablists[i].style.zIndex = "998";
+            tablists[i].style.backgroundColor = "#0B0B1A";
+            tablists[i].style.paddingTop = "10px";
+            tablists[i].style.paddingBottom = "10px";
+            tablists[i].style.borderBottom = "1px solid rgba(255,255,255,0.05)";
+            tablists[i].style.boxShadow = "0 4px 20px rgba(0,0,0,0.5)";
+        }
+    }
+    
+    // 3. 모든 부모 요소의 overflow 방해꾼 강제 제거 (가장 중요!)
+    if(tablists.length > 0) {
+        var el = tablists[0];
+        while(el && el.tagName !== "BODY" && el.className && el.className.indexOf && el.className.indexOf("stApp") === -1) {
+            var compStyle = window.parent.getComputedStyle(el);
+            if(compStyle.overflow === "hidden" || compStyle.overflow === "auto" || compStyle.overflow === "scroll" || compStyle.overflow === "clip") {
+                el.style.setProperty("overflow", "visible", "important");
+                el.style.setProperty("overflow-x", "visible", "important");
+                el.style.setProperty("overflow-y", "visible", "important");
+            }
+            el = el.parentElement;
+        }
+    }
+}, 500);
+</script>
+''', height=0)
 
 # 탭 자동 포커싱 스크립트 주입 (Rerun 후 실행)
 if st.session_state.get("pending_tab_focus"):

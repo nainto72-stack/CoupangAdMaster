@@ -1688,12 +1688,12 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
             available_regions = region_labels[:1]
         
         n_regions = len(available_regions)
-        fig = plt.figure(figsize=(20, 5.5 * n_regions + 1.5))
+        fig = plt.figure(figsize=(12, 3.5 * n_regions + 1.0))
         fig.df_json = df.to_json(orient='records')
         fig.patch.set_facecolor('#0B0B1A')
         
         fig.suptitle("0. 영역별 광고효율 돋보기 상대 지수 분석 (첫 날 = 100% 기준)", 
-                    color='white', fontsize=24, fontweight='bold', y=0.98)
+                    color='white', fontsize=16, fontweight='bold', y=0.98)
         
         for idx, region_name in enumerate(available_regions):
             rdata = rdf[rdf['norm_region'] == region_name].copy()
@@ -1755,7 +1755,7 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
             ax.set_ylabel('상대 지수 (%)', color='white', size=8, weight='bold')
             ax.legend(loc='upper left', fontsize=7.5, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
             
-            _draw_memo_vlines([ax], dates, pe, memos, fontsize=9.5)
+            _draw_memo_vlines([ax], dates, pe, memos, fontsize=8)
         
         fig.tight_layout(rect=[0, 0, 1, 0.96])
         show_pyplot_with_tooltip(fig)
@@ -1805,7 +1805,7 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
         ax.set_title("0. 광고효율 돋보기 상대 지수 분석 (첫 날 데이터 = 100% 기준)", color='white', pad=10, fontdict={'size': 11, 'weight': 'bold'})
         ax.legend(loc='upper left', fontsize=7.5, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
         
-        _draw_memo_vlines([ax], dates, pe, memos, fontsize=9.5)
+        _draw_memo_vlines([ax], dates, pe, memos, fontsize=8)
         fig.tight_layout()
         show_pyplot_with_tooltip(fig)
         plt.close(fig)
@@ -1813,10 +1813,10 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
 def render_large_trend_chart_streamlit(df, kw_data, memos):
     pe = [path_effects.withStroke(linewidth=2, foreground='black')]
     n = len(df)
-    fs_title = 16; fs_guide = 10; fs_ann = 9.5; fs_label = 11; fs_tick = 10; fs_leg = 11
+    fs_title = 13; fs_guide = 8.5; fs_ann = 8.5; fs_label = 9.5; fs_tick = 9; fs_leg = 9
     ms = 3.5; lw = 1.6
     
-    fig = plt.figure(figsize=(22, 65))
+    fig = plt.figure(figsize=(12, 40))
     fig.df_json = df.to_json(orient='records')
     fig.patch.set_facecolor('#0B0B1A')
     

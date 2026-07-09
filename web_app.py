@@ -949,15 +949,26 @@ def show_pyplot_with_tooltip(fig):
     # SVG 반응형 스타일 적용 (가로폭 100% 꽉 채우기)
     svg_str = re.sub(r'\bwidth="[^"]+"', '', svg_str, count=1)
     svg_str = re.sub(r'\bheight="[^"]+"', '', svg_str, count=1)
-    svg_str = re.sub(r'<svg\b', '<svg style="max-width: 100%; height: auto; display: block; margin: 0 auto;"', svg_str, count=1)
+    
     import streamlit.components.v1 as components
-        # Parse actual SVG height from viewBox because height attribute was removed
     import re
-    svg_height_match = re.search(r'viewBox="[\d.]+\s+[\d.]+\s+[\d.]+\s+([\d.]+)"', svg_str)
-    if svg_height_match:
-        height_val = int(float(svg_height_match.group(1)) * 1.333) + 30
+    # Extract width and height from viewBox to correctly limit max-width
+    svg_viewbox_match = re.search(r'viewBox="([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)"', svg_str)
+    if svg_viewbox_match:
+        width_pt = float(svg_viewbox_match.group(3))
+        height_pt = float(svg_viewbox_match.group(4))
+        width_px = int(width_pt * 1.333)
+        height_val = int(height_pt * 1.333) + 30
+        
+        # We MUST bound the max-width to its native width_px, otherwise on huge monitors 
+        # it will scale up infinitely but the iframe height_val is fixed, leading to bottom cropping!
+        style_injection = f'<svg style="width: 100%; max-width: {width_px}px; height: auto; display: block; margin: 0 auto;"'
     else:
+        # Fallback
         height_val = int(fig.get_figheight() * fig.dpi) + 30
+        style_injection = '<svg style="width: 100%; height: auto; display: block; margin: 0 auto;"'
+        
+    svg_str = re.sub(r'<svg\b', style_injection, svg_str, count=1)
     components.html(svg_str + tooltip_html, height=height_val, scrolling=False)
 
 

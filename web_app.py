@@ -3594,11 +3594,23 @@ with tab_tools:
         col_rule1, col_rule2 = st.columns(2)
         with col_rule1:
             st.markdown("#### 📥 기준값 입력")
-            rule_price = st.number_input("판매가 (원)", value=12300, step=100, key="rule_price")
-            rule_fee = st.number_input("쿠팡 수수료율 (%, 부가세 포함)", value=12.0, step=0.1, key="rule_fee")
-            rule_margin = st.number_input("내 목표 마진율 (%)", value=24.0, step=0.1, key="rule_margin")
-            rule_shipping = st.number_input("배송비/택배비 (원)", value=3000, step=100, key="rule_shipping")
-            rule_qty = st.number_input("예상 판매량 (개)", value=100, step=10, key="rule_qty")
+            
+            # 숫자 입력 우측 정렬 CSS 적용 (전역)
+            st.markdown('<style>div[data-testid="stNumberInput"] input { text-align: right !important; }</style>', unsafe_allow_html=True)
+            
+            def input_row(label, val, step_val, key_name):
+                c1, c2 = st.columns([1.5, 1])
+                with c1:
+                    st.markdown(f"<div style='margin-top: 10px; font-size: 0.9rem; color: #94A3B8;'>{label}</div>", unsafe_allow_html=True)
+                with c2:
+                    # step=None으로 큼직한 +,- 버튼 제거하여 깔끔하게 표시
+                    return st.number_input(label, value=val, step=None, key=key_name, label_visibility="collapsed")
+
+            rule_price = input_row("판매가 (원):", 12300, None, "rule_price")
+            rule_fee = input_row("쿠팡 수수료율 (%, 부가세 포함):", 12.0, None, "rule_fee")
+            rule_margin = input_row("내 목표 마진율 (%):", 24.0, None, "rule_margin")
+            rule_shipping = input_row("배송비/택배비 (원):", 3000, None, "rule_shipping")
+            rule_qty = input_row("예상 판매량 (개):", 100, None, "rule_qty")
 
         with col_rule2:
             st.markdown("#### 📋 0.64법칙 타겟 단가 분석표")

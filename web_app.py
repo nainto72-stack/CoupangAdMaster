@@ -101,7 +101,7 @@ def get_cached_keyword_html(df_display_dict, search_q=""):
     formatted_df = pd.DataFrame(formatted_rows)
     
     html_table = """
-    <div style="max-height: 1200px; overflow-y: auto; border: 1.5px solid #BF360C; border-radius: 6px; font-family: \"Malgun Gothic\", \"NanumGothic\", sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+  <div style="max-height: 1200px; overflow-y: auto; border: 1.5px solid #BF360C; border-radius: 6px; font-family: 'Malgun Gothic', 'NanumGothic', sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
         <table id="orange-keyword-table" style="width: 100%; border-collapse: collapse; font-size: 8.5px; font-weight: bold; color: #FFFFFF; text-align: left; table-layout: fixed;">
             <thead>
                 <tr style="background-color: #F1F5F9; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid #BF360C; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
@@ -132,7 +132,7 @@ def get_cached_keyword_html(df_display_dict, search_q=""):
         html_table += "</tr>"
     html_table += "</tbody></table></div>"
     # 우클릭 팝업 메뉴 HTML 구조 복구
-    html_table += '<div id="ctx-menu" style="display:none;position:fixed;z-index:99999;width:210px;background:#1a1f35;border:1px solid rgba(255,255,255,0.12);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,0.7);font-family: \"Malgun Gothic\", \"NanumGothic\",sans-serif;padding:6px 0;"><div id="ctx-kw-title" style="padding:9px 14px 8px;font-size:12px;color:#a78bfa;border-bottom:1px solid rgba(255,255,255,0.09);font-weight:bold;background:#111627;border-radius:10px 10px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🔑 키워드</div><div class="ctx-item" onclick="doAction(\'타겟\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="width:22px;height:22px;background:#f97316;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;">🎯</span>타겟 키워드로 이동</div><div class="ctx-item" onclick="doAction(\'수동\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="width:22px;height:22px;background:#f97316;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;">⚙️</span>수동 관리로 이동</div><div class="ctx-item" onclick="doAction(\'제외\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="width:22px;height:22px;background:#ef4444;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;">🚫</span>제외 키워드로 이동</div><div style="height:1px;background:rgba(255,255,255,0.08);margin:4px 0;"></div><div class="ctx-item" onclick="doAction(\'복사\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="font-size:16px;">📋</span>키워드 복사</div></div><style>.ctx-item:hover{background:rgba(99,102,241,0.3)!important;}</style>'
+    html_table += '<div id="ctx-menu" style="display:none;position:fixed;z-index:99999;width:210px;background:#1a1f35;border:1px solid rgba(255,255,255,0.12);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,0.7);font-family: 'Malgun Gothic', 'NanumGothic',sans-serif;padding:6px 0;"><div id="ctx-kw-title" style="padding:9px 14px 8px;font-size:12px;color:#a78bfa;border-bottom:1px solid rgba(255,255,255,0.09);font-weight:bold;background:#111627;border-radius:10px 10px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🔑 키워드</div><div class="ctx-item" onclick="doAction(\'타겟\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="width:22px;height:22px;background:#f97316;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;">🎯</span>타겟 키워드로 이동</div><div class="ctx-item" onclick="doAction(\'수동\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="width:22px;height:22px;background:#f97316;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;">⚙️</span>수동 관리로 이동</div><div class="ctx-item" onclick="doAction(\'제외\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="width:22px;height:22px;background:#ef4444;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;">🚫</span>제외 키워드로 이동</div><div style="height:1px;background:rgba(255,255,255,0.08);margin:4px 0;"></div><div class="ctx-item" onclick="doAction(\'복사\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="font-size:16px;">📋</span>키워드 복사</div></div><style>.ctx-item:hover{background:rgba(99,102,241,0.3)!important;}</style>'
     
     return html_table, len(formatted_rows)
 
@@ -979,11 +979,11 @@ def render_ai_diagnosis_html(d):
     html = []
     # 1. 👑 [최상단] AI 최종 종합 판정 대왕 썸머리 카드
     html.append(textwrap.dedent(f"""
-    <div style="background: #1E1E38; border: 2px solid #60A5FA; border-radius: 18px; padding: 25px; margin-bottom: 20px;">
-        <h2 style="font-family: \"Malgun Gothic\", \"NanumGothic\", sans-serif; font-size: 22px; font-weight: bold; color: #FBBF24; margin-top: 0; margin-bottom: 15px;">
+  <div style="background: #1E1E38; border: 2px solid #60A5FA; border-radius: 18px; padding: 25px; margin-bottom: 20px;">
+      <h2 style="font-family: 'Malgun Gothic', 'NanumGothic', sans-serif; font-size: 22px; font-weight: bold; color: #FBBF24; margin-top: 0; margin-bottom: 15px;">
             👑 AI 최종 종합 판정 (Summary)
         </h2>
-        <p style="font-family: \"Malgun Gothic\", \"NanumGothic\", sans-serif; font-size: 15px; font-weight: bold; color: white; line-height: 1.6; white-space: pre-line; margin: 0;">
+      <p style="font-family: 'Malgun Gothic', 'NanumGothic', sans-serif; font-size: 15px; font-weight: bold; color: white; line-height: 1.6; white-space: pre-line; margin: 0;">
             {d['briefing']}
         </p>
     </div>
@@ -999,26 +999,26 @@ def render_ai_diagnosis_html(d):
         trend_text = adv.get('trend_insight', '')
         if trend_text:
             trend_html = f"""
-            <div style="background: #0F1A2E; border: 1px solid #F59E0B; border-radius: 10px; padding: 12px; margin-top: 10px;">
-                <div style="font-family: \"Malgun Gothic\", \"NanumGothic\", sans-serif; font-size: 13px; font-weight: bold; color: #FDE68A; line-height: 1.5; white-space: pre-line;">
+          <div style="background: #0F1A2E; border: 1px solid #F59E0B; border-radius: 10px; padding: 12px; margin-top: 10px;">
+              <div style="font-family: 'Malgun Gothic', 'NanumGothic', sans-serif; font-size: 13px; font-weight: bold; color: #FDE68A; line-height: 1.5; white-space: pre-line;">
                     {trend_text}
                 </div>
             </div>
             """
             
         html.append(textwrap.dedent(f"""
-        <div style="background: #1A1A2E; border: 1.5px solid #2E2E4A; border-radius: 15px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);">
-            <h3 style="font-family: \"Malgun Gothic\", \"NanumGothic\", sans-serif; font-size: 18px; font-weight: bold; color: #60A5FA; margin-top: 0; margin-bottom: 12px;">
+      <div style="background: #1A1A2E; border: 1.5px solid #2E2E4A; border-radius: 15px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);">
+          <h3 style="font-family: 'Malgun Gothic', 'NanumGothic', sans-serif; font-size: 18px; font-weight: bold; color: #60A5FA; margin-top: 0; margin-bottom: 12px;">
                 {adv['subject']}
             </h3>
-            <p style="font-family: \"Malgun Gothic\", \"NanumGothic\", sans-serif; font-size: 14px; font-weight: bold; color: #E2E8F0; margin-bottom: 8px;">
+          <p style="font-family: 'Malgun Gothic', 'NanumGothic', sans-serif; font-size: 14px; font-weight: bold; color: #E2E8F0; margin-bottom: 8px;">
                 💡 분석: {adv['meaning']}
             </p>
-            <p style="font-family: \"Malgun Gothic\", \"NanumGothic\", sans-serif; font-size: 13px; color: #A7F3D0; margin-bottom: 12px; line-height: 1.5; white-space: pre-line;">
+          <p style="font-family: 'Malgun Gothic', 'NanumGothic', sans-serif; font-size: 13px; color: #A7F3D0; margin-bottom: 12px; line-height: 1.5; white-space: pre-line;">
                 📖 이렇게 보면 좋은 거 (초등생도 1초 이해!):<br>
                 {adv['easy_story']}
             </p>
-            <div style="background: #0D0D21; border-radius: 10px; padding: 12px; margin-bottom: 5px;">
+          <div style="background: #0D0D21; border-radius: 10px; padding: 12px; margin-bottom: 5px;">
                 {solutions_html}
             </div>
             {trend_html}
@@ -1284,10 +1284,10 @@ def render_kpi_summary_cards_streamlit(overall, region_summary):
             sub_text = _sub_label(k, u)
             with cols[c]:
                 st.markdown(f"""
-                <div class="premium-card" style="padding: 12px; margin-bottom: 10px; border-color: #3B82F6;">
-                    <div class="card-header" style="font-size: 0.85rem; text-align: center; margin-bottom: 4px;">{t}</div>
-                    <div class="metric-value" style="color: {color}; font-size: 1.35rem; text-align: center; margin-bottom: 2px;">{text}</div>
-                    <div style="font-size: 0.65rem; color: #94A3B8; text-align: center; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{sub_text}</div>
+              <div class="premium-card" style="padding: 12px; margin-bottom: 10px; border-color: #3B82F6;">
+                  <div class="card-header" style="font-size: 0.85rem; text-align: center; margin-bottom: 4px;">{t}</div>
+                  <div class="metric-value" style="color: {color}; font-size: 1.35rem; text-align: center; margin-bottom: 2px;">{text}</div>
+                  <div style="font-size: 0.65rem; color: #94A3B8; text-align: center; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{sub_text}</div>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -1348,7 +1348,7 @@ def render_magnifier_diagnosis_streamlit(df, by_region_df=None):
         font-weight: bold;
         color: #F472B6;
         margin-bottom: 18px;
-        font-family: \"Malgun Gothic\", \"NanumGothic\", sans-serif;
+        font-family: 'Malgun Gothic', 'NanumGothic', sans-serif;
     }
     .diag-subcard {
         background-color: #1A1A2E;
@@ -1360,7 +1360,7 @@ def render_magnifier_diagnosis_streamlit(df, by_region_df=None):
         font-size: 1rem;
         font-weight: bold;
         margin-bottom: 8px;
-        font-family: \"Malgun Gothic\", \"NanumGothic\", sans-serif;
+        font-family: 'Malgun Gothic', 'NanumGothic', sans-serif;
     }
     .diag-grid {
         display: grid;
@@ -1375,13 +1375,13 @@ def render_magnifier_diagnosis_streamlit(df, by_region_df=None):
         text-align: center;
         font-size: 0.85rem;
         font-weight: bold;
-        font-family: \"Malgun Gothic\", \"NanumGothic\", sans-serif;
+        font-family: 'Malgun Gothic', 'NanumGothic', sans-serif;
     }
     .diag-verdict {
         font-size: 0.88rem;
         font-weight: bold;
         margin-top: 8px;
-        font-family: \"Malgun Gothic\", \"NanumGothic\", sans-serif;
+        font-family: 'Malgun Gothic', 'NanumGothic', sans-serif;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1439,14 +1439,14 @@ def render_magnifier_diagnosis_streamlit(df, by_region_df=None):
             
         diag_html += f"""
 <div class="diag-subcard" style="border: 1px solid {border_color};">
-    <div class="diag-target-name" style="color: {border_color};">{target_name}</div>
-    <div class="diag-grid">
-        <div class="diag-badge" style="color: #00E5FF;">🔹 노출수 [{lamp_imp}] ({chg_imp:+.1f}%)</div>
-        <div class="diag-badge" style="color: #FB923C;">🔸 클릭률 [{lamp_ctr}] ({chg_ctr:+.1f}%)</div>
-        <div class="diag-badge" style="color: #10B981;">🔹 전환율 [{lamp_cvr}] ({chg_cvr:+.1f}%)</div>
-        <div class="diag-badge" style="color: #FF00FF;">🔸 ROAS [{'양호' if chg_roas>=0 else '위험'}] ({chg_roas:+.1f}%)</div>
+  <div class="diag-target-name" style="color: {border_color};">{target_name}</div>
+  <div class="diag-grid">
+      <div class="diag-badge" style="color: #00E5FF;">🔹 노출수 [{lamp_imp}] ({chg_imp:+.1f}%)</div>
+      <div class="diag-badge" style="color: #FB923C;">🔸 클릭률 [{lamp_ctr}] ({chg_ctr:+.1f}%)</div>
+      <div class="diag-badge" style="color: #10B981;">🔹 전환율 [{lamp_cvr}] ({chg_cvr:+.1f}%)</div>
+      <div class="diag-badge" style="color: #FF00FF;">🔸 ROAS [{'양호' if chg_roas>=0 else '위험'}] ({chg_roas:+.1f}%)</div>
     </div>
-    <div class="diag-verdict" style="color: {v_color};">{verdict}</div>
+  <div class="diag-verdict" style="color: {v_color};">{verdict}</div>
 </div>
 """
         
@@ -1617,10 +1617,10 @@ def render_kpi_summary_cards_streamlit(overall, region_summary):
             
             with cols[c]:
                 st.markdown(f"""
-                <div class="premium-card" style="padding: 10px; margin-bottom: 10px; border-width: 1.5px; border-color: #3B82F6;">
-                    <div style="font-size: 0.75rem; font-weight: bold; color: #E2E8F0; text-align: center;">{t}</div>
-                    <div style="font-size: 1.15rem; font-weight: bold; color: {color}; text-align: center; margin: 4px 0;">{text}</div>
-                    <div style="font-size: 0.6rem; color: #94A3B8; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{sub_label}</div>
+              <div class="premium-card" style="padding: 10px; margin-bottom: 10px; border-width: 1.5px; border-color: #3B82F6;">
+                  <div style="font-size: 0.75rem; font-weight: bold; color: #E2E8F0; text-align: center;">{t}</div>
+                  <div style="font-size: 1.15rem; font-weight: bold; color: {color}; text-align: center; margin: 4px 0;">{text}</div>
+                  <div style="font-size: 0.6rem; color: #94A3B8; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{sub_label}</div>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -2511,10 +2511,10 @@ with tab_perf:
                         val_str = f"{int(val):,} {unit}"
                     sub_text = _sub_label(sub_key, unit)
                     st.markdown(f"""
-                    <div class="premium-card" style="padding: 10px; margin-bottom: 10px; border-width: 1.5px; border-color: #3B82F6;">
-                        <div style="font-size: 0.75rem; font-weight: bold; color: #E2E8F0; text-align: center;">{title}</div>
-                        <div class="metric-value" style="color: {color}; font-size: 1.35rem; text-align: center; margin-bottom: 2px;">{val_str}</div>
-                        <div style="font-size: 0.65rem; color: #94A3B8; text-align: center; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{sub_text}</div>
+                  <div class="premium-card" style="padding: 10px; margin-bottom: 10px; border-width: 1.5px; border-color: #3B82F6;">
+                      <div style="font-size: 0.75rem; font-weight: bold; color: #E2E8F0; text-align: center;">{title}</div>
+                      <div class="metric-value" style="color: {color}; font-size: 1.35rem; text-align: center; margin-bottom: 2px;">{val_str}</div>
+                      <div style="font-size: 0.65rem; color: #94A3B8; text-align: center; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{sub_text}</div>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -2965,11 +2965,11 @@ with tab_perf:
                            
                     with cols_card[c_idx]:
                         st.markdown(f"""
-                        <div class="premium-card" style="padding: 12px 10px; margin-bottom: 5px; height: 145px; border-color: #3B82F6; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                            <div style="font-size: 0.95rem; font-weight: bold; color: #E2E8F0; margin-bottom: 8px;">{t}</div>
-                            <div style="font-size: 0.8rem; color: #94A3B8; margin-bottom: 4px;">쿠팡시스템 기준: {txt_coupang}</div>
-                            <div style="font-size: 0.95rem; font-weight: bold; color: #FFA726; margin-bottom: 4px;">내 판매가 기준: {real_val_disp}</div>
-                            <div style="font-size: 0.8rem; color: {diff_color}; font-weight: bold;">{diff_disp}</div>
+                      <div class="premium-card" style="padding: 12px 10px; margin-bottom: 5px; height: 145px; border-color: #3B82F6; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                          <div style="font-size: 0.95rem; font-weight: bold; color: #E2E8F0; margin-bottom: 8px;">{t}</div>
+                          <div style="font-size: 0.8rem; color: #94A3B8; margin-bottom: 4px;">쿠팡시스템 기준: {txt_coupang}</div>
+                          <div style="font-size: 0.95rem; font-weight: bold; color: #FFA726; margin-bottom: 4px;">내 판매가 기준: {real_val_disp}</div>
+                          <div style="font-size: 0.8rem; color: {diff_color}; font-weight: bold;">{diff_disp}</div>
                         </div>
                         """, unsafe_allow_html=True)
                         
@@ -3480,10 +3480,10 @@ with tab_tools:
             profit_word = "흑자 (수익발생) 🟢" if real_profit > 0 else "적자 (손실발생) 🔴"
             
             st.markdown(f"""
-            <div class="premium-card" style="border-color: {status_color}; background-color: rgba(15, 23, 42, 0.9);">
-                <div class="card-header" style="color: white; font-size:1.2rem;">최종 결과 판정</div>
-                <div class="metric-value" style="color: {status_color}; font-size: 2.2rem;">{int(real_profit):,} 원</div>
-                <div style="font-weight: bold; font-size:1.1rem; color: {status_color};">{profit_word}</div>
+          <div class="premium-card" style="border-color: {status_color}; background-color: rgba(15, 23, 42, 0.9);">
+              <div class="card-header" style="color: white; font-size:1.2rem;">최종 결과 판정</div>
+              <div class="metric-value" style="color: {status_color}; font-size: 2.2rem;">{int(real_profit):,} 원</div>
+              <div style="font-weight: bold; font-size:1.1rem; color: {status_color};">{profit_word}</div>
             </div>
             """, unsafe_allow_html=True)
             
@@ -3506,9 +3506,9 @@ with tab_tools:
         
         # 가이드라인 섹션
         st.markdown("""
-        <div class="premium-card" style="border-color: #FBBF24; background-color: rgba(30, 41, 59, 0.6); margin-bottom: 20px;">
-            <h4 style="color: #FBBF24; margin-top: 0;">💡 0.64 법칙이란?</h4>
-            <p style="color: #E2E8F0; line-height: 1.6;">
+      <div class="premium-card" style="border-color: #FBBF24; background-color: rgba(30, 41, 59, 0.6); margin-bottom: 20px;">
+          <h4 style="color: #FBBF24; margin-top: 0;">💡 0.64 법칙이란?</h4>
+          <p style="color: #E2E8F0; line-height: 1.6;">
                 초보 셀러분들이 <b>내 판매가</b>를 기준으로 얼마에 물건을 떼와야(소싱해야) 내가 원하는 마진을 남길 수 있는지 한방에 알려주는 마법의 공식입니다.<br><br>
                 <b>[계산 원리]</b><br>
                 판매가(100%)에서 <b>쿠팡 수수료(부가세 포함 12%)</b>와 내가 남기고 싶은 <b>내 마진(24%)</b>을 빼면 <b>64%</b>가 남습니다.<br>
@@ -3538,15 +3538,15 @@ with tab_tools:
             rule_total_profit = rule_profit_per_item * rule_qty
             
             st.markdown(f"""
-            <div class="premium-card" style="border-color: #3B82F6; background-color: rgba(15, 23, 42, 0.9);">
-                <div class="card-header" style="color: white; font-size:1.1rem;">공급처에서 받아야 하는 실제 단가</div>
-                <div class="metric-value" style="color: #3B82F6; font-size: 2.2rem; margin-top: 10px;">{int(rule_target_cost):,} 원</div>
-                <div style="font-weight: bold; font-size:1rem; color: #94A3B8; margin-top: 5px;">(순수 도매 타겟 가격, 택배비 차감 후)</div>
+          <div class="premium-card" style="border-color: #3B82F6; background-color: rgba(15, 23, 42, 0.9);">
+              <div class="card-header" style="color: white; font-size:1.1rem;">공급처에서 받아야 하는 실제 단가</div>
+              <div class="metric-value" style="color: #3B82F6; font-size: 2.2rem; margin-top: 10px;">{int(rule_target_cost):,} 원</div>
+              <div style="font-weight: bold; font-size:1rem; color: #94A3B8; margin-top: 5px;">(순수 도매 타겟 가격, 택배비 차감 후)</div>
             </div>
             """, unsafe_allow_html=True)
             
             st.markdown(f"""
-            <div style="margin-top: 15px; padding: 15px; background-color: rgba(30, 41, 59, 0.5); border-radius: 10px;">
+          <div style="margin-top: 15px; padding: 15px; background-color: rgba(30, 41, 59, 0.5); border-radius: 10px;">
                 <ul style="color: #E2E8F0; line-height: 2.0; font-size: 1.05rem; list-style-type: none; padding-left: 0;">
                     <li>📦 <b>택배비 포함원가 ({int(rule_ratio*100)}%):</b> <span style="color: #00E5FF; font-weight: bold;">{int(rule_cost_with_shipping):,}원</span></li>
                     <li>💸 <b>1개당 내 순수익 ({rule_margin}%):</b> <span style="color: #10B981; font-weight: bold;">{int(rule_profit_per_item):,}원</span></li>
@@ -3585,9 +3585,9 @@ with tab_tools:
             
             # 1. 특명 카드
             st.markdown(f"""
-            <div class="premium-card">
-                <div class="card-header" style="color: #60A5FA;">🎯 쿠팡 AI가 부여받은 특명 (목표치)</div>
-                <p style="margin-bottom:0; font-size:0.95rem; line-height:1.6;">
+          <div class="premium-card">
+              <div class="card-header" style="color: #60A5FA;">🎯 쿠팡 AI가 부여받은 특명 (목표치)</div>
+              <p style="margin-bottom:0; font-size:0.95rem; line-height:1.6;">
                     • <b>목표 매출액:</b> {int(target_revenue):,} 원 (일 {int(s_budget):,}원 예산으로 {s_roas:.0f}% 달성 미션)<br>
                     • <b>목표 판매량:</b> 약 {target_sales:.1f}개 ({int(s_price):,}원짜리 {s_pname} 기준)<br>
                     • <i>AI의 속마음: "나는 하루 만에 {int(s_price):,}원짜리 {s_pname}를 {target_sales:.1f}개 팔아야만 해!"</i>
@@ -3599,9 +3599,9 @@ with tab_tools:
             cvr_warning_color = "#EF4444" if req_cvr > 5.0 else "#10B981"
             status_text = "❌ 도저히 불가능 (정공법 불가)" if req_cvr > 5.0 else "✅ 운영 가능 범위"
             st.markdown(f"""
-            <div class="premium-card" style="border-color: {cvr_warning_color};">
-                <div class="card-header" style="color: {cvr_warning_color};">📊 AI의 현실 계산기 & 예산 대비 부족 판단</div>
-                <p style="margin-bottom:0; font-size:0.95rem; line-height:1.6;">
+          <div class="premium-card" style="border-color: {cvr_warning_color};">
+              <div class="card-header" style="color: {cvr_warning_color};">📊 AI의 현실 계산기 & 예산 대비 부족 판단</div>
+              <p style="margin-bottom:0; font-size:0.95rem; line-height:1.6;">
                     • <b>예산 내 최대 클릭 한계:</b> {max_clicks:.1f} 회<br>
                     • <b>목표 달성에 필요한 극단적 CVR(전환율):</b> <span style="color:{cvr_warning_color}; font-weight:bold;">{req_cvr:.1f}%</span><br>
                     • <i>카테고리 평균 CVR은 3% 내외입니다.</i><br>
@@ -3631,9 +3631,9 @@ with tab_tools:
                 tune_text = "🎉 현재 설정은 매우 훌륭하고 이상적인 밸런스를 가집니다! AI가 적극적으로 광고 노출 입찰에 가담할 것입니다."
                 
             st.markdown(f"""
-            <div class="tune-card">
-                <div class="card-header" style="color:#C084FC;"> 처방전 (성공 공식)</div>
-                <p style="font-size:0.92rem; line-height:1.6; margin-bottom:0;">{tune_text}</p>
+          <div class="tune-card">
+              <div class="card-header" style="color:#C084FC;"> 처방전 (성공 공식)</div>
+              <p style="font-size:0.92rem; line-height:1.6; margin-bottom:0;">{tune_text}</p>
             </div>
             """, unsafe_allow_html=True)
             
@@ -3666,9 +3666,9 @@ with tab_tools:
                 """
                 
             st.markdown(f"""
-            <div class="predict-card">
-                <div class="card-header" style="color:#93C5FD;">🕵️‍♂️ AI 잠입 행동 예측 (우회 도피 경로)</div>
-                <p style="font-size:0.92rem; line-height:1.6; margin-bottom:0;">{behavior_text}</p>
+          <div class="predict-card">
+              <div class="card-header" style="color:#93C5FD;">🕵️‍♂️ AI 잠입 행동 예측 (우회 도피 경로)</div>
+              <p style="font-size:0.92rem; line-height:1.6; margin-bottom:0;">{behavior_text}</p>
             </div>
             """, unsafe_allow_html=True)
 

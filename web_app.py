@@ -769,7 +769,11 @@ def show_pyplot_with_tooltip(fig):
         # The text is drawn starting from inside the axes (around 90% height) downwards.
         # This means there is already 'h * 0.8' inches of space available inside the figure!
         # We ONLY need to pad if the text length exceeds this available space.
-        available_space = h * 0.8
+                # For multi-row figures, h * 0.8 is completely wrong because the bottom axes 
+        # only has a few inches of space before the figure ends.
+        # Since most axes in this app are roughly 4-5 inches tall, the available space
+        # inside the bottom-most axis is safely around 3.0 inches.
+        available_space = 3.0
         padding_inches = text_length_inches - available_space
         
         if padding_inches > 0:

@@ -994,7 +994,7 @@ def show_pyplot_with_tooltip(fig):
         native_height_px = height_pt * 1.333
         
         # Streamlit container is typically max 1150px wide in wide mode
-        displayed_width_px = min(1150.0, native_width_px)
+        displayed_width_px = min(1800.0, native_width_px)
         displayed_height_px = native_height_px * (displayed_width_px / native_width_px)
         
         height_val = int(displayed_height_px) + 20
@@ -1075,7 +1075,7 @@ def render_dash_kpi_gauge_streamlit(overall):
     
     ax.set_facecolor('#0B0B1A')
     ax.set_title("광고 핵심 KPI 건강도", color='white', pad=20, loc='center',
-                 fontdict={'size': 16, 'weight': 'bold', 'family': 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'})
+                 fontdict={'size': 24, 'weight': 'bold', 'family': 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'})
     ax.text(0.5, 1.01, '초록=양호 / 노랑=주의 / 빨강=위험 (기준: 업계 평균)',
             transform=ax.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=11, style='italic')
     
@@ -1142,7 +1142,7 @@ def render_dashboard_pie_streamlit(br_df):
     fig.patch.set_facecolor('#0B0B1A')
     ax.set_facecolor('#0B0B1A')
     ax.set_title("노출 영역별 상세 성과", color='white', pad=20, loc='center',
-                 fontdict={'size': 16, 'weight': 'bold', 'family': 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'})
+                 fontdict={'size': 24, 'weight': 'bold', 'family': 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'})
     ax.text(0.5, 1.01, '광고비(막대) 대비 클릭수와 주문수(선) 효율을 확인하세요',
             transform=ax.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=11, style='italic')
     
@@ -1565,7 +1565,7 @@ def _draw_memo_vlines(axes, date_labels, pe, memos, fontsize=12):
             line.set_gid(f"memo_line_{memo_date}_{safe_text}")
             star.set_gid(f"memo_star_{memo_date}_{safe_text}")
             
-            y_pos = ylim[0] + (ylim[1] - ylim[0]) * 0.90
+            y_pos = ylim[0] + (ylim[1] - ylim[0]) * (0.95 - (color_idx % 3) * 0.20)
             txt = ax.text(mmdd, y_pos, summary, rotation=90, va='top', ha=ha_val,
                    color=color, fontsize=fontsize, weight='bold', alpha=0.85,
                    path_effects=pe, fontfamily='NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic')
@@ -1697,7 +1697,7 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
         fig.patch.set_facecolor('#0B0B1A')
         
         fig.suptitle("0. 영역별 광고효율 돋보기 상대 지수 분석 (첫 날 = 100% 기준)", 
-                    color='white', fontsize=28, fontweight='bold', y=0.98)
+                    color='white', fontsize=36, fontweight='bold', y=0.98)
         
         for idx, region_name in enumerate(available_regions):
             rdata = rdf[rdf['norm_region'] == region_name].copy()
@@ -1755,11 +1755,11 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
                     label='🌸 광고효율(ROAS) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
             
             ax.axhline(y=100, color='#FFFFFF', linestyle='--', linewidth=1.0, alpha=0.5, label='— 첫 날 기준선 (100%)')
-            ax.set_title(f"【{region_name}】 노출·클릭률·전환율·ROAS 상대 지수 추이", color=rc, pad=10, fontdict={'size': 16, 'weight': 'bold'})
+            ax.set_title(f"【{region_name}】 노출·클릭률·전환율·ROAS 상대 지수 추이", color=rc, pad=10, fontdict={'size': 24, 'weight': 'bold'})
             ax.set_ylabel('상대 지수 (%)', color='white', size=8, weight='bold')
             ax.legend(loc='upper left', fontsize=7.5, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
             
-            _draw_memo_vlines([ax], dates, pe, memos, fontsize=15)
+            _draw_memo_vlines([ax], dates, pe, memos, fontsize=20)
         
         fig.tight_layout(rect=[0, 0, 1, 0.96])
         show_pyplot_with_tooltip(fig)
@@ -1806,11 +1806,11 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
         ax.axhline(y=100, color='#FFFFFF', linestyle='--', linewidth=1.0, alpha=0.5, label='— 첫 날 기준선 (100%)')
         
         ax.set_ylabel('상대 지수 (%)', color='white', size=8, weight='bold')
-        ax.set_title("0. 광고효율 돋보기 상대 지수 분석 (첫 날 데이터 = 100% 기준)", color='white', pad=10, fontdict={'size': 16, 'weight': 'bold'})
+        ax.set_title("0. 광고효율 돋보기 상대 지수 분석 (첫 날 데이터 = 100% 기준)", color='white', pad=10, fontdict={'size': 24, 'weight': 'bold'})
         ax.legend(loc='upper left', fontsize=7.5, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
         
-        _draw_memo_vlines([ax], dates, pe, memos, fontsize=15)
-        fig.tight_layout(h_pad=2.2)
+        _draw_memo_vlines([ax], dates, pe, memos, fontsize=20)
+        fig.tight_layout(h_pad=3.5)
         show_pyplot_with_tooltip(fig)
         plt.close(fig)
 
@@ -1827,7 +1827,7 @@ def render_large_trend_chart_streamlit(df, kw_data, memos):
     def add_legend(ax, ax2):
         h1, l1 = ax.get_legend_handles_labels()
         h2, l2 = ax2.get_legend_handles_labels()
-        ax.legend(h1+h2, l1+l2, loc='upper right', fontsize=fs_leg, 
+        ax.legend(h1+h2, l1+l2, loc='upper right', fontsize=fs_leg, markerscale=1.5, handletextpad=0.5, 
                   facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
     
     def setup_ax(ax):
@@ -1989,7 +1989,7 @@ def render_large_trend_chart_streamlit(df, kw_data, memos):
     ax8.tick_params(axis='y', labelcolor='#94A3B8', labelsize=fs_tick)
     ax8.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f"{int(x/10000)}만" if x>=10000 else f"{int(x)}"))
     _annotate_smart(ax8, df['date_s'], df['sales'], '#00E5FF', 'won', pe, fontsize=fs_ann-0.5, step=2)
-    ax8.legend(loc='upper right', fontsize=fs_leg, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
+    ax8.legend(loc='upper right', fontsize=fs_leg, markerscale=1.5, handletextpad=0.5, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
 
     # ─── 9. 날짜별 ROAS ───
     ax9 = fig.add_subplot(6, 2, 9); setup_ax(ax9)
@@ -2003,7 +2003,7 @@ def render_large_trend_chart_streamlit(df, kw_data, memos):
     ax9.set_ylabel('ROAS (%)', color='#FF00FF', weight='bold', fontsize=fs_label)
     ax9.tick_params(axis='y', labelcolor='#FF00FF', labelsize=fs_tick)
     _annotate_smart(ax9, df['date_s'], df['ROAS'], '#FF00FF', 'pct', pe, fontsize=fs_ann-0.5, step=2)
-    ax9.legend(loc='upper right', fontsize=fs_leg, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
+    ax9.legend(loc='upper right', fontsize=fs_leg, markerscale=1.5, handletextpad=0.5, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
 
     # ─── 10. 키워드별 광고비 대비 전환수 ───
     ax10 = fig.add_subplot(6, 2, 10); ax10.set_facecolor('#0B0B1A')
@@ -2060,7 +2060,7 @@ def render_large_trend_chart_streamlit(df, kw_data, memos):
     ax11.set_ylabel('비중 (%)', color='white', weight='bold', fontsize=fs_label)
     ax11.tick_params(axis='y', labelcolor='white', labelsize=fs_tick)
     _annotate_smart(ax11, df['date_s'], spend_ratio_series, '#FBBF24', 'pct', pe, fontsize=fs_ann-0.5, step=2)
-    ax11.legend(loc='upper right', fontsize=fs_leg, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
+    ax11.legend(loc='upper right', fontsize=fs_leg, markerscale=1.5, handletextpad=0.5, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
 
     # ─── 12. 광고 차감 후 최종 순수익 vs 광고비 ───
     ax12 = fig.add_subplot(6, 2, 12); setup_ax(ax12)
@@ -2091,7 +2091,7 @@ def render_large_trend_chart_streamlit(df, kw_data, memos):
         ax12.annotate(txt, (df['date_s'].iloc[i], v), 
                        xytext=(0, offset_y), textcoords="offset points", ha='center', color=ann_color, 
                        weight='bold', fontsize=fs_ann-0.8, path_effects=pe)
-    ax12.legend(loc='upper right', fontsize=fs_leg, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
+    ax12.legend(loc='upper right', fontsize=fs_leg, markerscale=1.5, handletextpad=0.5, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
 
     # 모든 차트에 메모 수직선 표시
     date_labels = df['date_s'].tolist()
@@ -2374,11 +2374,11 @@ def render_real_price_chart_streamlit(df, p_val, memos):
     
     try:
         pe = [path_effects.withStroke(linewidth=2, foreground='black')]
-        _draw_memo_vlines([ax], dates, pe, memos, fontsize=15)
+        _draw_memo_vlines([ax], dates, pe, memos, fontsize=20)
     except Exception:
         pass
         
-    fig.tight_layout(h_pad=2.2)
+    fig.tight_layout(h_pad=3.5)
     show_pyplot_with_tooltip(fig)
     plt.close(fig)
 

@@ -3567,9 +3567,9 @@ with tab_tools:
             - **제품 마진율:** `{margin_rate:.1f}`%
             - **총 전환매출:** `{int(sales):,}` 원 (수량 {int(c_qty)}개 기준)
             - **현재 광고 ROAS:** `{roas:.1f}`%
-            - **🛡️ 앤드 로하스 (END ROAS):** `<span style='color: #EC4899; font-weight: bold;'>{real_end_roas:.1f}%</span>`
+            - **🛡️ 앤드 로하스 (END ROAS):** `{real_end_roas:.1f}%`
               *(광고 효율 점수가 이 수치보다 높아야 적자가 면해집니다)*
-            - **🛑 20% 마진 사수 최대원가:** `<span style='color: #FBBF24; font-weight: bold;'>{int(real_max_cost):,}원</span>`
+            - **🛑 20% 마진 사수 최대원가:** `{int(real_max_cost):,}원`
               *(마진율 20%를 지키기 위해 사입할 수 있는 최대 단가 마지노선)*
             """, unsafe_allow_html=True)
 

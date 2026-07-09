@@ -476,6 +476,20 @@ st.markdown("""
         padding-top: 0px !important;
     }
     
+    
+    /* 12. Number Input step buttons fix */
+    .stApp div[data-testid="stNumberInput"] button {
+        background-color: #1F2937 !important;
+        border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    .stApp div[data-testid="stNumberInput"] button * {
+        color: #FFFFFF !important;
+        fill: #FFFFFF !important;
+    }
+    .stApp div[data-testid="stNumberInput"] button:hover {
+        background-color: #6366F1 !important;
+    }
+
     /* 11. 사이드바 다크테마 적용 */
     [data-testid="stSidebar"] {
         background-color: #060913 !important; /* 무광 매트 딥 그레이 */

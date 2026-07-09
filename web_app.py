@@ -3436,7 +3436,6 @@ with tab_tools:
                     sub_region_summary = sub_analyzer.get_region_summary()
                     
                     # --- [Part 1] 상단 12대 성능 요약 카드 렌더링 ---
-                    st.markdown("#### 📊 상품 성능 요약 지표")
                     render_kpi_summary_cards_streamlit(sub_overall, sub_region_summary)
                     
                     # --- [Part 2] 경영 투자 나침반 가이드라인 (expander) 렌더링 ---

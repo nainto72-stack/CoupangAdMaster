@@ -949,7 +949,7 @@ def show_pyplot_with_tooltip(fig):
     # SVG 반응형 스타일 적용 (가로폭 100% 꽉 채우기)
     svg_str = re.sub(r'\bwidth="[^"]+"', '', svg_str, count=1)
     svg_str = re.sub(r'\bheight="[^"]+"', '', svg_str, count=1)
-    svg_str = re.sub(r'<svg\b', '<svg style="width: 100%; height: auto;"', svg_str, count=1)
+    svg_str = re.sub(r'<svg\b', '<svg style="max-width: 100%; height: auto; display: block; margin: 0 auto;"', svg_str, count=1)
     import streamlit.components.v1 as components
         # Parse actual SVG height from viewBox because height attribute was removed
     import re

@@ -3648,11 +3648,39 @@ with tab_tools:
         col_s1, col_s2 = st.columns(2)
         with col_s1:
             st.markdown("#### 📥 시뮬레이션 조건 입력")
-            s_budget = st.number_input("1. 일일 광고 예산 (원)", value=30000, step=5000)
-            s_roas = st.number_input("2. 목표 광고 효율 (ROAS %)", value=350, step=10)
-            s_cpc = st.number_input("3. 평균 CPC 단가 (원)", value=1000, step=50)
-            s_price = st.number_input("4. 제품 판매 가격 (원)", value=20000, step=1000)
-            s_pname = st.text_input("5. 대상 제품명 (카테고리)", value="가방백팩")
+            
+            # 가이드라인 안내 문구 (1.png와 동일하게 구현)
+            st.markdown("""
+            <div style="background-color: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 10px 15px; margin-bottom: 20px;">
+                <span style="color: #94A3B8; font-size: 0.85rem; line-height: 1.4;">
+                💡 설정하신 예산, 목표 ROAS, CPC 단가, 제품가격을 기반으로<br>
+                쿠팡 AI 광고의 실제 예산 운용 한계와 예상 행동 방안을 진단합니다.
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # 입력란 텍스트 우측 정렬 CSS (이 구역 한정)
+            st.markdown('<style>div[data-testid="stTextInput"] input { text-align: right !important; }</style>', unsafe_allow_html=True)
+            
+            def sim_input_row(label, val, step_val, key_name):
+                c1, c2 = st.columns([1.5, 1])
+                with c1:
+                    st.markdown(f"<div style='margin-top: 10px; font-size: 0.9rem; color: #E2E8F0;'>{label}</div>", unsafe_allow_html=True)
+                with c2:
+                    return st.number_input(label, value=val, step=None, key=key_name, label_visibility="collapsed")
+            
+            def sim_text_row(label, val, key_name):
+                c1, c2 = st.columns([1.5, 1])
+                with c1:
+                    st.markdown(f"<div style='margin-top: 10px; font-size: 0.9rem; color: #E2E8F0;'>{label}</div>", unsafe_allow_html=True)
+                with c2:
+                    return st.text_input(label, value=val, key=key_name, label_visibility="collapsed")
+
+            s_budget = sim_input_row("1. 일일 광고 예산 (원)", 30000, None, "s_budget")
+            s_roas = sim_input_row("2. 목표 광고 효율 (ROAS %)", 350, None, "s_roas")
+            s_cpc = sim_input_row("3. 평균 CPC 단가 (원)", 1000, None, "s_cpc")
+            s_price = sim_input_row("4. 제품 판매 가격 (원)", 20000, None, "s_price")
+            s_pname = sim_text_row("5. 대상 제품명 (카테고리)", "가방백팩", "s_pname")
             
         with col_s2:
             st.markdown("#### 📋 AI 행동 예측 보고서")

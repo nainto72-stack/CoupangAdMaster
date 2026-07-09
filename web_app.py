@@ -1074,7 +1074,7 @@ def render_dash_kpi_gauge_streamlit(overall):
     fig.patch.set_facecolor('#0B0B1A')
     
     ax.set_facecolor('#0B0B1A')
-    ax.set_title("광고 핵심 KPI 건강도", color='white', pad=20, loc='center',
+    ax.set_title("광고 핵심 KPI 건강도", color='white', pad=50, loc='center',
                  fontdict={'size': 24, 'weight': 'bold', 'family': 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'})
     ax.text(0.5, 1.01, '초록=양호 / 노랑=주의 / 빨강=위험 (기준: 업계 평균)',
             transform=ax.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=11, style='italic')
@@ -1141,7 +1141,7 @@ def render_dashboard_pie_streamlit(br_df):
     fig, ax = plt.subplots(figsize=(6.5, 4.5), dpi=95)
     fig.patch.set_facecolor('#0B0B1A')
     ax.set_facecolor('#0B0B1A')
-    ax.set_title("노출 영역별 상세 성과", color='white', pad=20, loc='center',
+    ax.set_title("노출 영역별 상세 성과", color='white', pad=50, loc='center',
                  fontdict={'size': 24, 'weight': 'bold', 'family': 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'})
     ax.text(0.5, 1.01, '광고비(막대) 대비 클릭수와 주문수(선) 효율을 확인하세요',
             transform=ax.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=11, style='italic')
@@ -1817,7 +1817,7 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
 def render_large_trend_chart_streamlit(df, kw_data, memos):
     pe = [path_effects.withStroke(linewidth=2, foreground='black')]
     n = len(df)
-    fs_title = 16; fs_guide = 11; fs_ann = 11; fs_label = 12; fs_tick = 11; fs_leg = 12
+    fs_title = 28; fs_guide = 18; fs_ann = 18; fs_label = 22; fs_tick = 18; fs_leg = 18
     ms = 3.5; lw = 1.6
     
     fig = plt.figure(figsize=(26, 46))
@@ -1838,9 +1838,9 @@ def render_large_trend_chart_streamlit(df, kw_data, memos):
     
     # ─── 1. 광고비 vs 광고매출 ───
     ax1 = fig.add_subplot(6, 2, 1); setup_ax(ax1)
-    ax1.set_title("1. 광고비 vs 광고매출 추이", color='white', pad=20, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+    ax1.set_title("1. 광고비 vs 광고매출 추이", color='white', pad=50, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
     guide_str1 = "용돈 지출[광고비 막대] | 열매 수확[광고매출 선] ☞ [적자] 매출 선이 낮음 점검 | [안전] 매출 선이 높음"
-    ax1.text(0.5, 1.02, guide_str1, transform=ax1.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
+    ax1.text(0.5, 1.04, guide_str1, transform=ax1.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
             bbox=dict(boxstyle='round,pad=0.3', facecolor='#111122', edgecolor='#FF00FF', alpha=0.9))
     ax1.bar(df['date_s'], df['spend'], color='#EF4444', alpha=0.35, label='■ 광고비')
     ax1.set_ylabel('광고비 (원)', color='#EF4444', weight='bold', fontsize=fs_label)
@@ -1859,9 +1859,9 @@ def render_large_trend_chart_streamlit(df, kw_data, memos):
 
     # ─── 2. 클릭수 vs 광고매출 ───
     ax2 = fig.add_subplot(6, 2, 2); setup_ax(ax2)
-    ax2.set_title("2. 클릭수 vs 광고매출 추이", color='white', pad=20, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+    ax2.set_title("2. 클릭수 vs 광고매출 추이", color='white', pad=50, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
     guide_str2 = "손님 입장[클릭수 막대] | 지갑 오픈[광고매출 선] ☞ [구경만] 클릭 높고 매출 바닥 | [알짜] 적은 클릭 높은 매출"
-    ax2.text(0.5, 1.02, guide_str2, transform=ax2.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
+    ax2.text(0.5, 1.04, guide_str2, transform=ax2.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
             bbox=dict(boxstyle='round,pad=0.3', facecolor='#111122', edgecolor='#FBBF24', alpha=0.9))
     ax2.bar(df['date_s'], df['click'], color='#F59E0B', alpha=0.35, label='■ 클릭수')
     ax2.set_ylabel('클릭수 (회)', color='#F59E0B', weight='bold', fontsize=fs_label)
@@ -1879,9 +1879,9 @@ def render_large_trend_chart_streamlit(df, kw_data, memos):
 
     # ─── 3. 광고비 vs ROAS ───
     ax3 = fig.add_subplot(6, 2, 3); setup_ax(ax3)
-    ax3.set_title("3. 광고비 vs ROAS 추이", color='white', pad=20, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+    ax3.set_title("3. 광고비 vs ROAS 추이", color='white', pad=50, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
     guide_str3 = "마중물 투입[광고비 막대] | 마법의 효율[ROAS 선] ☞ [비효율] 광고비 늘고 ROAS 하락 | [안정] ROAS 330%선 지탱"
-    ax3.text(0.5, 1.02, guide_str3, transform=ax3.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
+    ax3.text(0.5, 1.04, guide_str3, transform=ax3.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
             bbox=dict(boxstyle='round,pad=0.3', facecolor='#111122', edgecolor='#10B981', alpha=0.9))
     ax3.bar(df['date_s'], df['spend'], color='#EF4444', alpha=0.35, label='■ 광고비')
     ax3.set_ylabel('광고비 (원)', color='#EF4444', weight='bold', fontsize=fs_label)
@@ -1900,9 +1900,9 @@ def render_large_trend_chart_streamlit(df, kw_data, memos):
 
     # ─── 4. 노출수 vs 클릭수 ───
     ax4 = fig.add_subplot(6, 2, 4); setup_ax(ax4)
-    ax4.set_title("4. 노출수 vs 클릭수 추이", color='white', pad=20, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+    ax4.set_title("4. 노출수 vs 클릭수 추이", color='white', pad=50, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
     guide_str4 = "스쳐 지나감[노출수 막대] | 발길 멈춤[클릭수 선] ☞ [썸네일 부족] 노출 많은데 클릭 바닥 | [인기] 노출 대비 클릭 높음"
-    ax4.text(0.5, 1.02, guide_str4, transform=ax4.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
+    ax4.text(0.5, 1.04, guide_str4, transform=ax4.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
             bbox=dict(boxstyle='round,pad=0.3', facecolor='#111122', edgecolor='#60A5FA', alpha=0.9))
     ax4.bar(df['date_s'], df['imp'], color='#60A5FA', alpha=0.25, label='■ 노출수')
     ax4.set_ylabel('노출수 (회)', color='#60A5FA', weight='bold', fontsize=fs_label)
@@ -1920,9 +1920,9 @@ def render_large_trend_chart_streamlit(df, kw_data, memos):
 
     # ─── 5. 클릭수 vs CTR ───
     ax5 = fig.add_subplot(6, 2, 5); setup_ax(ax5)
-    ax5.set_title("5. 클릭수 vs CTR 추이", color='white', pad=20, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+    ax5.set_title("5. 클릭수 vs CTR 추이", color='white', pad=50, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
     guide_str5 = "매장 입장[클릭수 막대] | 호기심 지수[CTR 선] ☞ [흥미 없음] CTR 0.5% 미만 | [자석 썸네일] CTR 1.5% 돌파"
-    ax5.text(0.5, 1.02, guide_str5, transform=ax5.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
+    ax5.text(0.5, 1.04, guide_str5, transform=ax5.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
             bbox=dict(boxstyle='round,pad=0.3', facecolor='#111122', edgecolor='#FB923C', alpha=0.9))
     ax5.bar(df['date_s'], df['click'], color='#F59E0B', alpha=0.35, label='■ 클릭수')
     ax5.set_ylabel('클릭수 (회)', color='#F59E0B', weight='bold', fontsize=fs_label)
@@ -1940,9 +1940,9 @@ def render_large_trend_chart_streamlit(df, kw_data, memos):
 
     # ─── 6. 클릭수 vs CVR ───
     ax6 = fig.add_subplot(6, 2, 6); setup_ax(ax6)
-    ax6.set_title("6. 클릭수 vs CVR 추이", color='white', pad=20, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+    ax6.set_title("6. 클릭수 vs CVR 추이", color='white', pad=50, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
     guide_str6 = "매장 입장[클릭수 막대] | 구매 설득력[CVR 선] ☞ [설득 부족] CVR 3% 미만 | [완벽 설득] CVR 5~10% 이상 유지"
-    ax6.text(0.5, 1.02, guide_str6, transform=ax6.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
+    ax6.text(0.5, 1.04, guide_str6, transform=ax6.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
             bbox=dict(boxstyle='round,pad=0.3', facecolor='#111122', edgecolor='#EC4899', alpha=0.9))
     ax6.bar(df['date_s'], df['click'], color='#F59E0B', alpha=0.35, label='■ 클릭수')
     ax6.set_ylabel('클릭수 (회)', color='#F59E0B', weight='bold', fontsize=fs_label)
@@ -1960,9 +1960,9 @@ def render_large_trend_chart_streamlit(df, kw_data, memos):
 
     # ─── 7. 클릭수 vs CPC ───
     ax7 = fig.add_subplot(6, 2, 7); setup_ax(ax7)
-    ax7.set_title("7. 클릭수 vs 평균 클릭비용(CPC) 추이", color='white', pad=20, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+    ax7.set_title("7. 클릭수 vs 평균 클릭비용(CPC) 추이", color='white', pad=50, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
     guide_str7 = "매장 구경[클릭수 막대] | 손님 단가[CPC 선] ☞ [출혈 경쟁] CPC 선 고공행진 | [꿀 매물] 저렴한 CPC 단가 유입"
-    ax7.text(0.5, 1.02, guide_str7, transform=ax7.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
+    ax7.text(0.5, 1.04, guide_str7, transform=ax7.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
             bbox=dict(boxstyle='round,pad=0.3', facecolor='#111122', edgecolor='#8B5CF6', alpha=0.9))
     ax7.bar(df['date_s'], df['click'], color='#F59E0B', alpha=0.35, label='■ 클릭수')
     ax7.set_ylabel('클릭수 (회)', color='#F59E0B', weight='bold', fontsize=fs_label)
@@ -1979,9 +1979,9 @@ def render_large_trend_chart_streamlit(df, kw_data, memos):
 
     # ─── 8. 날짜별 광고비·광고매출 추이 ───
     ax8 = fig.add_subplot(6, 2, 8); setup_ax(ax8)
-    ax8.set_title("8. 날짜별 광고비·광고매출 추이", color='white', pad=20, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+    ax8.set_title("8. 날짜별 광고비·광고매출 추이", color='white', pad=50, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
     guide_str8 = "매일 쓰는 돈[광고비 선] | 매일 버는 돈[광고매출 선] ☞ [적자] 쓴 돈이 높음 | [흑자] 두 선의 간격이 멀어짐"
-    ax8.text(0.5, 1.02, guide_str8, transform=ax8.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
+    ax8.text(0.5, 1.04, guide_str8, transform=ax8.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
             bbox=dict(boxstyle='round,pad=0.3', facecolor='#111122', edgecolor='#34D399', alpha=0.9))
     ax8.plot(df['date_s'], df['spend'], color='#EF4444', marker='s', markersize=ms, linewidth=lw, linestyle='--', label='— 광고비')
     ax8.plot(df['date_s'], df['sales'], color='#00E5FF', marker='o', markersize=ms, linewidth=lw+0.5, label='— 광고매출액', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
@@ -1993,9 +1993,9 @@ def render_large_trend_chart_streamlit(df, kw_data, memos):
 
     # ─── 9. 날짜별 ROAS ───
     ax9 = fig.add_subplot(6, 2, 9); setup_ax(ax9)
-    ax9.set_title("9. 날짜별 ROAS 추이", color='white', pad=20, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+    ax9.set_title("9. 날짜별 ROAS 추이", color='white', pad=50, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
     guide_str9 = "가성비 맥박수[ROAS 선] | 기준선 ☞ [경고등] 주황 경계선(300%) 아래 | [건강] 초록 안전선(330%) 위 유지"
-    ax9.text(0.5, 1.02, guide_str9, transform=ax9.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
+    ax9.text(0.5, 1.04, guide_str9, transform=ax9.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
             bbox=dict(boxstyle='round,pad=0.3', facecolor='#111122', edgecolor='#F59E0B', alpha=0.9))
     ax9.plot(df['date_s'], df['ROAS'], color='#FF00FF', marker='o', markersize=ms+1, linewidth=lw+0.5, label='— ROAS%', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
     ax9.axhline(y=300, color='#F59E0B', linestyle='--', linewidth=1.0, alpha=0.8, label='— 경계선(300%)')
@@ -2009,9 +2009,9 @@ def render_large_trend_chart_streamlit(df, kw_data, memos):
     ax10 = fig.add_subplot(6, 2, 10); ax10.set_facecolor('#0B0B1A')
     ax10.tick_params(axis='y', labelcolor='#94A3B8', labelsize=fs_tick)
     ax10.grid(True, axis='y', color='#1F2937', linestyle='--', alpha=0.4)
-    ax10.set_title("10. 키워드별 광고비 대비 전환수", color='white', pad=20, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+    ax10.set_title("10. 키워드별 광고비 대비 전환수", color='white', pad=50, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
     guide_str10 = "우등생 색출[광고비 막대] | 성적표[전환수 선] ☞ [식충이] 광고비 많고 주문 바닥 | [우등] 적은 비용 높은 주문"
-    ax10.text(0.5, 1.02, guide_str10, transform=ax10.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
+    ax10.text(0.5, 1.04, guide_str10, transform=ax10.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
              bbox=dict(boxstyle='round,pad=0.3', facecolor='#111122', edgecolor='#FB923C', alpha=0.9))
     
     if kw_data is not None and not kw_data.empty:
@@ -2049,9 +2049,9 @@ def render_large_trend_chart_streamlit(df, kw_data, memos):
 
     # ─── 11. 광고비 비중 및 광고 기여도 ───
     ax11 = fig.add_subplot(6, 2, 11); setup_ax(ax11)
-    ax11.set_title("11. 광고비 비중 및 광고 기여도 추이", color='white', pad=20, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+    ax11.set_title("11. 광고비 비중 및 광고 기여도 추이", color='white', pad=50, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
     guide_str11 = "광고비 비중 선 = 매출 대비 광고비 비율 | 마진 안전선 = 내 마진율 마지노선 ☞ [위험] 마진율 선 위로 치솟음"
-    ax11.text(0.5, 1.02, guide_str11, transform=ax11.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
+    ax11.text(0.5, 1.04, guide_str11, transform=ax11.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
             bbox=dict(boxstyle='round,pad=0.3', facecolor='#111122', edgecolor='#FBBF24', alpha=0.9))
     spend_ratio_series = (df['spend'] / df['sales'] * 100).fillna(0)
     ax11.plot(df['date_s'], spend_ratio_series, color='#FBBF24', marker='o', markersize=ms, linewidth=lw, label='— 광고비 비중 (%)')
@@ -2064,9 +2064,9 @@ def render_large_trend_chart_streamlit(df, kw_data, memos):
 
     # ─── 12. 광고 차감 후 최종 순수익 vs 광고비 ───
     ax12 = fig.add_subplot(6, 2, 12); setup_ax(ax12)
-    ax12.set_title("12. 광고 차감 후 최종 순수익 vs 광고비 추이", color='white', pad=20, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
+    ax12.set_title("12. 광고 차감 후 최종 순수익 vs 광고비 추이", color='white', pad=50, loc='center', fontdict={'size': fs_title, 'weight': 'bold'})
     guide_str12 = "알짜 순이익[하늘색 선] | 광고비 예산[빨간 선] ☞ [가짜 흑자] 광고비 선은 오르는데 최종 순이익 선은 하락"
-    ax12.text(0.5, 1.02, guide_str12, transform=ax12.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
+    ax12.text(0.5, 1.04, guide_str12, transform=ax12.transAxes, ha='center', va='bottom', color='#A0AEC0', fontsize=fs_guide, weight='bold',
             bbox=dict(boxstyle='round,pad=0.3', facecolor='#111122', edgecolor='#34D399', alpha=0.9))
     
     margin_rate = 0.3

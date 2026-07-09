@@ -825,7 +825,7 @@ def show_pyplot_with_tooltip(fig):
     max_memo_len = getattr(fig, 'max_memo_len', 0)
     if max_memo_len > 0:
         # 1 char at fontsize 7-8 is about 8.5 points width when rotated
-        text_length_inches = max_memo_len * (8.5 / 72.0)
+        text_length_inches = max_memo_len * (16.0 / 72.0)
         
         w, h = fig.get_size_inches()
         
@@ -1534,7 +1534,7 @@ def _draw_memo_vlines(axes, date_labels, pe, memos, fontsize=12):
         # Only calculate max length for memos that are actually drawn on this figure!
         valid_memos = [m for m in memos if _memo_date_to_mmdd(m['date']) in date_labels]
         if valid_memos:
-            current_max = max([len(m.get('memo', '')) for m in valid_memos])
+            current_max = max([min(len(m.get('memo', '')), 30) for m in valid_memos])
         else:
             current_max = 0
             
@@ -1551,6 +1551,8 @@ def _draw_memo_vlines(axes, date_labels, pe, memos, fontsize=12):
     for m in sorted_memos:
         memo_date = m['date']
         memo_text = m['memo']
+        if len(memo_text) > 30:
+            memo_text = memo_text[:28] + '..'
         
         mmdd = _memo_date_to_mmdd(memo_date)
         if mmdd is None or mmdd not in date_labels:
@@ -1591,7 +1593,7 @@ def _draw_memo_vlines(axes, date_labels, pe, memos, fontsize=12):
             
             y_pos = ylim[0] + (ylim[1] - ylim[0]) * 0.90
             txt = ax.text(mmdd, y_pos, summary, rotation=90, va='top', ha=ha_val,
-                   color=color, fontsize=max(6, fontsize-1), weight='bold', alpha=0.85,
+                   color=color, fontsize=max(12, fontsize+2), weight='bold', alpha=0.85,
                    path_effects=pe, fontfamily='NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic')
             txt.set_gid(f"memo_text_{memo_date}_{safe_text}")
 
@@ -1721,7 +1723,7 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
         fig.patch.set_facecolor('#0B0B1A')
         
         fig.suptitle("0. 영역별 광고효율 돋보기 상대 지수 분석 (첫 날 = 100% 기준)", 
-                    color='white', fontsize=20, fontweight='bold', y=0.98)
+                    color='white', fontsize=24, fontweight='bold', y=0.98)
         
         for idx, region_name in enumerate(available_regions):
             rdata = rdf[rdf['norm_region'] == region_name].copy()
@@ -1783,7 +1785,7 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
             ax.set_ylabel('상대 지수 (%)', color='white', size=8, weight='bold')
             ax.legend(loc='upper left', fontsize=7.5, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
             
-            _draw_memo_vlines([ax], dates, pe, memos, fontsize=7)
+            _draw_memo_vlines([ax], dates, pe, memos, fontsize=14)
         
         fig.tight_layout(rect=[0, 0, 1, 0.96])
         show_pyplot_with_tooltip(fig)
@@ -1833,7 +1835,7 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
         ax.set_title("0. 광고효율 돋보기 상대 지수 분석 (첫 날 데이터 = 100% 기준)", color='white', pad=10, fontdict={'size': 11, 'weight': 'bold'})
         ax.legend(loc='upper left', fontsize=7.5, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
         
-        _draw_memo_vlines([ax], dates, pe, memos, fontsize=7)
+        _draw_memo_vlines([ax], dates, pe, memos, fontsize=14)
         fig.tight_layout()
         show_pyplot_with_tooltip(fig)
         plt.close(fig)
@@ -1841,7 +1843,7 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
 def render_large_trend_chart_streamlit(df, kw_data, memos):
     pe = [path_effects.withStroke(linewidth=2, foreground='black')]
     n = len(df)
-    fs_title = 18; fs_guide = 12; fs_ann = 11; fs_label = 13; fs_tick = 12; fs_leg = 12
+    fs_title = 18; fs_guide = 12; fs_ann = 15; fs_label = 14; fs_tick = 13; fs_leg = 14
     ms = 3.5; lw = 1.6
     
     fig = plt.figure(figsize=(22, 65))

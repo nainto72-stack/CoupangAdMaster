@@ -2351,6 +2351,14 @@ if st.session_state["analyzer"] is None:
     st.stop()
 
 analyzer = st.session_state["analyzer"]
+
+# Force update the class of the analyzer instance to use the latest reloaded methods
+import sys
+if "analyzer" in sys.modules:
+    import importlib
+    importlib.reload(sys.modules["analyzer"])
+    analyzer.__class__ = sys.modules["analyzer"].CoupangAdAnalyzer
+
 st.caption(f"📅 실시간 분석 중인 파일: **{st.session_state['current_file_name']}** | {analyzer.last_analysis_info}")
 
 

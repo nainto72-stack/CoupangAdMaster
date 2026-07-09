@@ -1680,10 +1680,10 @@ def render_kpi_summary_cards_streamlit(overall, region_summary):
             
             with cols[c]:
                 st.markdown(f"""
-              <div class="premium-card" style="padding: 10px; margin-bottom: 10px; border-width: 1.5px; border-color: #3B82F6;">
-                  <div style="font-size: 0.75rem; font-weight: bold; color: #E2E8F0; text-align: center;">{t}</div>
-                  <div style="font-size: 1.15rem; font-weight: bold; color: {color}; text-align: center; margin: 4px 0;">{text}</div>
-                  <div style="font-size: 0.6rem; color: #94A3B8; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{sub_label}</div>
+              <div class="premium-card" style="padding: 12px; margin-bottom: 10px; border-width: 1.5px; border-color: #3B82F6;">
+                  <div style="font-size: 0.95rem; font-weight: bold; color: #E2E8F0; text-align: center;">{t}</div>
+                  <div style="font-size: 1.5rem; font-weight: bold; color: {color}; text-align: center; margin: 6px 0;">{text}</div>
+                  <div style="font-size: 0.75rem; color: #94A3B8; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{sub_label}</div>
                 </div>
                 """, unsafe_allow_html=True)
 

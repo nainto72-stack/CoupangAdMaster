@@ -3204,8 +3204,16 @@ with tab_keyword:
                     if(!menu) return;
                     var kw = menu.dataset.kw || "";
                     if(kw && action){
-                        try {
-                            var inputs = parentDoc.querySelectorAll('input[aria-label="kw_mover_secret_trigger"]');
+                        if(action === '복사'){
+                            var tempInput = parentDoc.createElement("input");
+                            tempInput.value = kw;
+                            parentDoc.body.appendChild(tempInput);
+                            tempInput.select();
+                            try { parentDoc.execCommand("copy"); } catch(e){}
+                            parentDoc.body.removeChild(tempInput);
+                        } else {
+                            try {
+                                var inputs = parentDoc.querySelectorAll('input[aria-label="kw_mover_secret_trigger"]');
                             if(inputs.length > 0) {
                                 var input = inputs[inputs.length - 1];
                                 var nativeSetter = Object.getOwnPropertyDescriptor(window.parent.HTMLInputElement.prototype, "value").set;
@@ -3216,6 +3224,7 @@ with tab_keyword:
                                 setTimeout(function(){ input.blur(); }, 100);
                             }
                         }catch(e){console.error(e);}
+                        }
                     }
                     menu.style.display="none";
                 };
@@ -3272,6 +3281,7 @@ with tab_keyword:
                     var title = parentDoc.getElementById("ctx-kw-title");
                     if(title) title.innerText="🔑 "+kw;
                     menu.dataset.kw = kw;
+                    if (menu.parentNode !== parentDoc.body) { parentDoc.body.appendChild(menu); }
                     menu.style.display="block";
                     var x = e.clientX, y = e.clientY;
                     if(x+215 > window.parent.innerWidth) x = window.parent.innerWidth-220;

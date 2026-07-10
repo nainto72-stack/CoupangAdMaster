@@ -3220,11 +3220,21 @@ with tab_keyword:
 
                 // 이전 rerun에서 body로 이동된 고아 ctx-menu 정리
                 function cleanupOldMenus() {
-                    if (parentDoc && parentDoc.body) {
-                        var oldMenus = parentDoc.body.querySelectorAll(":scope > #ctx-menu");
-                        for (var i = 0; i < oldMenus.length; i++) {
-                            oldMenus[i].remove();
+                    try {
+                        if (parentDoc && parentDoc.body) {
+                            var kids = parentDoc.body.children;
+                            if (kids) {
+                                for (var i = kids.length - 1; i >= 0; i--) {
+                                    if (kids[i] && kids[i].id === "ctx-menu") {
+                                        try { kids[i].remove(); } catch(e) {
+                                            try { kids[i].parentNode.removeChild(kids[i]); } catch(ex){}
+                                        }
+                                    }
+                                }
+                            }
                         }
+                    } catch(err) {
+                        console.error(err);
                     }
                 }
 
@@ -3293,6 +3303,12 @@ with tab_keyword:
                     
                     var menu = parentDoc.getElementById("ctx-menu");
                     if(!menu) return;
+                    
+                    // position: fixed가 translate3d transform 영역을 탈출할 수 있게 body로 강제 이동 (필수!)
+                    if (menu.parentNode !== parentDoc.body) { 
+                        parentDoc.body.appendChild(menu); 
+                    }
+                    
                     var title = parentDoc.getElementById("ctx-kw-title");
                     if(title) {
                         if(keywords.length > 1) {
@@ -3351,92 +3367,100 @@ with tab_keyword:
                 window.parent.doAction = doAction;
 
                 function initDelegation(){
-                    if(!parentDoc || !parentDoc.body){
-                        setTimeout(initDelegation, 50);
-                        return;
-                    }
-                    cleanupOldMenus();
-
-                    // 이전 핸들러 제거 후 새 핸들러 바인딩 (st.rerun 후에도 항상 최신 클로저 사용)
-                    if(window.parent._kwCtxHandler){
-                        parentDoc.body.removeEventListener("contextmenu", window.parent._kwCtxHandler);
-                    }
-                    if(window.parent._kwClickHandler){
-                        parentDoc.body.removeEventListener("click", window.parent._kwClickHandler);
-                    }
-
-                    window.parent._kwCtxHandler = function(e){
-                        var row = e.target.closest("tr.keyword-row");
-                        if(row) {
-                            showMenu(e, row.getAttribute("data-keyword")||"", row);
-                        }
-                    };
-
-                    window.parent._kwClickHandler = function(e){
-                        // 메뉴 아이템 클릭 처리 (data-action 속성 사용)
-                        var menuItem = e.target.closest(".ctx-item[data-action]");
-                        if(menuItem) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            doAction(menuItem.getAttribute("data-action"));
+                    try {
+                        if(!parentDoc || !parentDoc.body){
+                            setTimeout(initDelegation, 50);
                             return;
                         }
-                        
-                        // 메뉴 영역 밖 클릭 시 메뉴 닫기
-                        var menu = parentDoc.getElementById("ctx-menu");
-                        if(menu && menu.style.display === "block"){
-                            if(!e.target.closest("#ctx-menu")){
-                                menu.style.display = "none";
-                            }
+                        cleanupOldMenus();
+
+                        // 이전 핸들러 제거 후 새 핸들러 바인딩 (st.rerun 후에도 항상 최신 클로저 사용)
+                        if(window.parent._kwCtxHandler){
+                            try { parentDoc.body.removeEventListener("contextmenu", window.parent._kwCtxHandler); } catch(e){}
                         }
-                        
-                        var row = e.target.closest("tr.keyword-row");
-                        if(row) {
-                            if(e.shiftKey && selRow) {
-                                var rows = Array.prototype.slice.call(parentDoc.querySelectorAll("tr.keyword-row"));
-                                var currIdx = rows.indexOf(row);
-                                var prevIdx = rows.indexOf(selRow);
-                                if(currIdx >= 0 && prevIdx >= 0) {
-                                    var start = Math.min(currIdx, prevIdx);
-                                    var end = Math.max(currIdx, prevIdx);
-                                    for (var i = 0; i < rows.length; i++) {
-                                        if(i >= start && i <= end) {
-                                            rows[i].setAttribute("data-selected", "1");
-                                            rows[i].style.backgroundColor = "#1d4ed8";
-                                        }
+                        if(window.parent._kwClickHandler){
+                            try { parentDoc.body.removeEventListener("click", window.parent._kwClickHandler); } catch(e){}
+                        }
+
+                        window.parent._kwCtxHandler = function(e){
+                            try {
+                                var row = e.target.closest("tr.keyword-row");
+                                if(row) {
+                                    showMenu(e, row.getAttribute("data-keyword")||"", row);
+                                }
+                            } catch(err){ console.error(err); }
+                        };
+
+                        window.parent._kwClickHandler = function(e){
+                            try {
+                                // 메뉴 아이템 클릭 처리 (data-action 속성 사용)
+                                var menuItem = e.target.closest(".ctx-item[data-action]");
+                                if(menuItem) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    doAction(menuItem.getAttribute("data-action"));
+                                    return;
+                                }
+                                
+                                // 메뉴 영역 밖 클릭 시 메뉴 닫기
+                                var menu = parentDoc.getElementById("ctx-menu");
+                                if(menu && menu.style.display === "block"){
+                                    if(!e.target.closest("#ctx-menu")){
+                                        menu.style.display = "none";
                                     }
                                 }
-                            } else if(e.ctrlKey || e.metaKey) {
-                                if(row.getAttribute("data-selected") === "1") {
-                                    row.removeAttribute("data-selected");
-                                    row.style.backgroundColor = "#E65100";
-                                } else {
-                                    row.setAttribute("data-selected", "1");
-                                    row.style.backgroundColor = "#1d4ed8";
-                                    selRow = row;
+                                
+                                var row = e.target.closest("tr.keyword-row");
+                                if(row) {
+                                    if(e.shiftKey && selRow) {
+                                        var rows = Array.prototype.slice.call(parentDoc.querySelectorAll("tr.keyword-row"));
+                                        var currIdx = rows.indexOf(row);
+                                        var prevIdx = rows.indexOf(selRow);
+                                        if(currIdx >= 0 && prevIdx >= 0) {
+                                            var start = Math.min(currIdx, prevIdx);
+                                            var end = Math.max(currIdx, prevIdx);
+                                            for (var i = 0; i < rows.length; i++) {
+                                                if(i >= start && i <= end) {
+                                                    rows[i].setAttribute("data-selected", "1");
+                                                    rows[i].style.backgroundColor = "#1d4ed8";
+                                                }
+                                            }
+                                        }
+                                    } else if(e.ctrlKey || e.metaKey) {
+                                        if(row.getAttribute("data-selected") === "1") {
+                                            row.removeAttribute("data-selected");
+                                            row.style.backgroundColor = "#E65100";
+                                        } else {
+                                            row.setAttribute("data-selected", "1");
+                                            row.style.backgroundColor = "#1d4ed8";
+                                            selRow = row;
+                                        }
+                                    } else {
+                                        var allRows = Array.prototype.slice.call(parentDoc.querySelectorAll("tr.keyword-row"));
+                                        for (var i = 0; i < allRows.length; i++) {
+                                            allRows[i].removeAttribute("data-selected");
+                                            allRows[i].style.backgroundColor = "#E65100";
+                                        }
+                                        row.setAttribute("data-selected", "1");
+                                        row.style.backgroundColor = "#1d4ed8";
+                                        selRow = row;
+                                    }
                                 }
-                            } else {
-                                var allRows = Array.prototype.slice.call(parentDoc.querySelectorAll("tr.keyword-row"));
-                                for (var i = 0; i < allRows.length; i++) {
-                                    allRows[i].removeAttribute("data-selected");
-                                    allRows[i].style.backgroundColor = "#E65100";
+                                
+                                var th = e.target.closest("#orange-keyword-table th");
+                                if(th) {
+                                    var ths = Array.prototype.slice.call(th.parentNode.children);
+                                    var idx = ths.indexOf(th);
+                                    if(idx >= 0) sortTable(idx);
                                 }
-                                row.setAttribute("data-selected", "1");
-                                row.style.backgroundColor = "#1d4ed8";
-                                selRow = row;
-                            }
-                        }
-                        
-                        var th = e.target.closest("#orange-keyword-table th");
-                        if(th) {
-                            var ths = Array.prototype.slice.call(th.parentNode.children);
-                            var idx = ths.indexOf(th);
-                            if(idx >= 0) sortTable(idx);
-                        }
-                    };
+                            } catch(err){ console.error(err); }
+                        };
 
-                    parentDoc.body.addEventListener("contextmenu", window.parent._kwCtxHandler);
-                    parentDoc.body.addEventListener("click", window.parent._kwClickHandler);
+                        parentDoc.body.addEventListener("contextmenu", window.parent._kwCtxHandler);
+                        parentDoc.body.addEventListener("click", window.parent._kwClickHandler);
+                    } catch(err){
+                        console.error(err);
+                    }
                 }
                 initDelegation();
             })();

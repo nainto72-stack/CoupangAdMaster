@@ -1713,7 +1713,7 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
             available_regions = region_labels[:1]
         
         n_regions = len(available_regions)
-        fig = plt.figure(figsize=(26, 8.5 * n_regions + 1.5))
+        fig = plt.figure(figsize=(26, 4.5 * n_regions + 1.5))
         fig.df_json = df.to_json(orient='records')
         fig._mag_chart = True
         fig.patch.set_facecolor('#0B0B1A')
@@ -1843,7 +1843,7 @@ def render_large_trend_chart_streamlit(df, kw_data, memos):
     fs_title = 28; fs_guide = 18; fs_ann = 18; fs_label = 22; fs_tick = 18; fs_leg = 18
     ms = 3.5; lw = 1.6
     
-    fig = plt.figure(figsize=(26, 46))
+    fig = plt.figure(figsize=(26, 28))
     fig.df_json = df.to_json(orient='records')
     fig.patch.set_facecolor('#0B0B1A')
     

@@ -3219,16 +3219,20 @@ with tab_keyword:
                 var parentDoc = window.parent.document;
 
                 // 이전 rerun에서 body로 이동된 고아 ctx-menu 정리
-                var oldMenus = parentDoc.body.querySelectorAll(":scope > #ctx-menu");
-                oldMenus.forEach(function(m){ m.remove(); });
-
-                // doAction is now defined in the event delegation block below
+                function cleanupOldMenus() {
+                    if (parentDoc && parentDoc.body) {
+                        var oldMenus = parentDoc.body.querySelectorAll(":scope > #ctx-menu");
+                        for (var i = 0; i < oldMenus.length; i++) {
+                            oldMenus[i].remove();
+                        }
+                    }
+                }
 
                 var sortState={};
                 function sortTable(ci){
                     var tb = parentDoc.querySelector("#orange-keyword-table tbody");
                     if(!tb)return;
-                    var rows = Array.from(tb.querySelectorAll("tr.keyword-row"));
+                    var rows = Array.prototype.slice.call(tb.querySelectorAll("tr.keyword-row"));
                     var desc = !sortState[ci];
                     sortState[ci] = desc;
                     rows.sort(function(a,b){
@@ -3239,8 +3243,12 @@ with tab_keyword:
                         if(!isNaN(an)&&!isNaN(bn))return desc?bn-an:an-bn;
                         return desc?bt.localeCompare(at,"ko"):at.localeCompare(bt,"ko");
                     });
-                    rows.forEach(function(r){tb.appendChild(r);});
-                    parentDoc.querySelectorAll("#orange-keyword-table th").forEach(function(th,i){
+                    for (var i = 0; i < rows.length; i++) {
+                        tb.appendChild(rows[i]);
+                    }
+                    var ths = Array.prototype.slice.call(parentDoc.querySelectorAll("#orange-keyword-table th"));
+                    for (var i = 0; i < ths.length; i++) {
+                        var th = ths[i];
                         var sp=th.querySelector(".sort-arrow");
                         if(sp)sp.innerText="";
                         if(i===ci){
@@ -3252,7 +3260,7 @@ with tab_keyword:
                             }
                             sp.innerText=desc?" ▼":" ▲";
                         }
-                    });
+                    }
                 }
 
                 var selRow = null;
@@ -3261,21 +3269,26 @@ with tab_keyword:
                     e.stopPropagation();
                     
                     // 우클릭한 행이 미선택 상태면 단일 선택으로 전환
-                    if(row.dataset.selected !== "1"){
-                        parentDoc.querySelectorAll("tr.keyword-row").forEach(function(r){
-                            delete r.dataset.selected;
-                            r.style.backgroundColor = "#E65100";
-                        });
-                        row.dataset.selected = "1";
+                    if(row.getAttribute("data-selected") !== "1"){
+                        var allRows = Array.prototype.slice.call(parentDoc.querySelectorAll("tr.keyword-row"));
+                        for (var i = 0; i < allRows.length; i++) {
+                            allRows[i].removeAttribute("data-selected");
+                            allRows[i].style.backgroundColor = "#E65100";
+                        }
+                        row.setAttribute("data-selected", "1");
                         row.style.backgroundColor = "#1d4ed8";
                         selRow = row;
                     }
                     
                     // 현재 선택된 모든 키워드 수집
-                    var selectedRows = Array.from(parentDoc.querySelectorAll("tr.keyword-row")).filter(function(r){
-                        return r.dataset.selected === "1";
-                    });
-                    var keywords = selectedRows.map(function(r){ return r.dataset.keyword || ""; }).filter(Boolean);
+                    var allRows = Array.prototype.slice.call(parentDoc.querySelectorAll("tr.keyword-row"));
+                    var selectedRows = [];
+                    for (var i = 0; i < allRows.length; i++) {
+                        if (allRows[i].getAttribute("data-selected") === "1") {
+                            selectedRows.push(allRows[i]);
+                        }
+                    }
+                    var keywords = selectedRows.map(function(r){ return r.getAttribute("data-keyword") || ""; }).filter(Boolean);
                     var kws_str = keywords.join(",");
                     
                     var menu = parentDoc.getElementById("ctx-menu");
@@ -3337,85 +3350,95 @@ with tab_keyword:
                 }
                 window.parent.doAction = doAction;
 
-                // 이전 핸들러 제거 후 새 핸들러 바인딩 (st.rerun 후에도 항상 최신 클로저 사용)
-                if(window.parent._kwCtxHandler){
-                    parentDoc.body.removeEventListener("contextmenu", window.parent._kwCtxHandler);
-                }
-                if(window.parent._kwClickHandler){
-                    parentDoc.body.removeEventListener("click", window.parent._kwClickHandler);
-                }
-
-                window.parent._kwCtxHandler = function(e){
-                    var row = e.target.closest("tr.keyword-row");
-                    if(row) {
-                        showMenu(e, row.dataset.keyword||"", row);
-                    }
-                };
-
-                window.parent._kwClickHandler = function(e){
-                    // 메뉴 아이템 클릭 처리 (data-action 속성 사용)
-                    var menuItem = e.target.closest(".ctx-item[data-action]");
-                    if(menuItem) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        doAction(menuItem.getAttribute("data-action"));
+                function initDelegation(){
+                    if(!parentDoc || !parentDoc.body){
+                        setTimeout(initDelegation, 50);
                         return;
                     }
-                    
-                    // 메뉴 영역 밖 클릭 시 메뉴 닫기
-                    var menu = parentDoc.getElementById("ctx-menu");
-                    if(menu && menu.style.display === "block"){
-                        if(!e.target.closest("#ctx-menu")){
-                            menu.style.display = "none";
-                        }
+                    cleanupOldMenus();
+
+                    // 이전 핸들러 제거 후 새 핸들러 바인딩 (st.rerun 후에도 항상 최신 클로저 사용)
+                    if(window.parent._kwCtxHandler){
+                        parentDoc.body.removeEventListener("contextmenu", window.parent._kwCtxHandler);
                     }
-                    
-                    var row = e.target.closest("tr.keyword-row");
-                    if(row) {
-                        if(e.shiftKey && selRow) {
-                            var rows = Array.from(parentDoc.querySelectorAll("tr.keyword-row"));
-                            var currIdx = rows.indexOf(row);
-                            var prevIdx = rows.indexOf(selRow);
-                            if(currIdx >= 0 && prevIdx >= 0) {
-                                var start = Math.min(currIdx, prevIdx);
-                                var end = Math.max(currIdx, prevIdx);
-                                rows.forEach(function(r, idx){
-                                    if(idx >= start && idx <= end) {
-                                        r.dataset.selected = "1";
-                                        r.style.backgroundColor = "#1d4ed8";
-                                    }
-                                });
+                    if(window.parent._kwClickHandler){
+                        parentDoc.body.removeEventListener("click", window.parent._kwClickHandler);
+                    }
+
+                    window.parent._kwCtxHandler = function(e){
+                        var row = e.target.closest("tr.keyword-row");
+                        if(row) {
+                            showMenu(e, row.getAttribute("data-keyword")||"", row);
+                        }
+                    };
+
+                    window.parent._kwClickHandler = function(e){
+                        // 메뉴 아이템 클릭 처리 (data-action 속성 사용)
+                        var menuItem = e.target.closest(".ctx-item[data-action]");
+                        if(menuItem) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            doAction(menuItem.getAttribute("data-action"));
+                            return;
+                        }
+                        
+                        // 메뉴 영역 밖 클릭 시 메뉴 닫기
+                        var menu = parentDoc.getElementById("ctx-menu");
+                        if(menu && menu.style.display === "block"){
+                            if(!e.target.closest("#ctx-menu")){
+                                menu.style.display = "none";
                             }
-                        } else if(e.ctrlKey || e.metaKey) {
-                            if(row.dataset.selected === "1") {
-                                delete row.dataset.selected;
-                                row.style.backgroundColor = "#E65100";
+                        }
+                        
+                        var row = e.target.closest("tr.keyword-row");
+                        if(row) {
+                            if(e.shiftKey && selRow) {
+                                var rows = Array.prototype.slice.call(parentDoc.querySelectorAll("tr.keyword-row"));
+                                var currIdx = rows.indexOf(row);
+                                var prevIdx = rows.indexOf(selRow);
+                                if(currIdx >= 0 && prevIdx >= 0) {
+                                    var start = Math.min(currIdx, prevIdx);
+                                    var end = Math.max(currIdx, prevIdx);
+                                    for (var i = 0; i < rows.length; i++) {
+                                        if(i >= start && i <= end) {
+                                            rows[i].setAttribute("data-selected", "1");
+                                            rows[i].style.backgroundColor = "#1d4ed8";
+                                        }
+                                    }
+                                }
+                            } else if(e.ctrlKey || e.metaKey) {
+                                if(row.getAttribute("data-selected") === "1") {
+                                    row.removeAttribute("data-selected");
+                                    row.style.backgroundColor = "#E65100";
+                                } else {
+                                    row.setAttribute("data-selected", "1");
+                                    row.style.backgroundColor = "#1d4ed8";
+                                    selRow = row;
+                                }
                             } else {
-                                row.dataset.selected = "1";
+                                var allRows = Array.prototype.slice.call(parentDoc.querySelectorAll("tr.keyword-row"));
+                                for (var i = 0; i < allRows.length; i++) {
+                                    allRows[i].removeAttribute("data-selected");
+                                    allRows[i].style.backgroundColor = "#E65100";
+                                }
+                                row.setAttribute("data-selected", "1");
                                 row.style.backgroundColor = "#1d4ed8";
                                 selRow = row;
                             }
-                        } else {
-                            parentDoc.querySelectorAll("tr.keyword-row").forEach(function(r){
-                                delete r.dataset.selected;
-                                r.style.backgroundColor = "#E65100";
-                            });
-                            row.dataset.selected = "1";
-                            row.style.backgroundColor = "#1d4ed8";
-                            selRow = row;
                         }
-                    }
-                    
-                    var th = e.target.closest("#orange-keyword-table th");
-                    if(th) {
-                        var ths = Array.from(th.parentNode.children);
-                        var idx = ths.indexOf(th);
-                        if(idx >= 0) sortTable(idx);
-                    }
-                };
+                        
+                        var th = e.target.closest("#orange-keyword-table th");
+                        if(th) {
+                            var ths = Array.prototype.slice.call(th.parentNode.children);
+                            var idx = ths.indexOf(th);
+                            if(idx >= 0) sortTable(idx);
+                        }
+                    };
 
-                parentDoc.body.addEventListener("contextmenu", window.parent._kwCtxHandler);
-                parentDoc.body.addEventListener("click", window.parent._kwClickHandler);
+                    parentDoc.body.addEventListener("contextmenu", window.parent._kwCtxHandler);
+                    parentDoc.body.addEventListener("click", window.parent._kwClickHandler);
+                }
+                initDelegation();
             })();
             </script>
             """

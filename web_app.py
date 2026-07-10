@@ -3308,41 +3308,48 @@ with tab_keyword:
                 }
                 window.parent.doAction = doAction;
 
-                if(!parentDoc.body.dataset.kwMenuBound){
-                    parentDoc.body.dataset.kwMenuBound = "1";
-                    
-                    parentDoc.body.addEventListener("contextmenu", function(e){
-                        var row = e.target.closest("tr.keyword-row");
-                        if(row) {
-                            showMenu(e, row.dataset.keyword||"", row);
-                        }
-                    });
-                    
-                    parentDoc.body.addEventListener("click", function(e){
-                        // 메뉴 아이템 클릭 처리 (data-action 속성 사용)
-                        var menuItem = e.target.closest(".ctx-item[data-action]");
-                        if(menuItem) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            doAction(menuItem.getAttribute("data-action"));
-                            return;
-                        }
-                        
-                        var row = e.target.closest("tr.keyword-row");
-                        if(row) {
-                            if(selRow && selRow !== row) selRow.style.backgroundColor="#E65100";
-                            selRow = row;
-                            row.style.backgroundColor="#1d4ed8";
-                        }
-                        
-                        var th = e.target.closest("#orange-keyword-table th");
-                        if(th) {
-                            var ths = Array.from(th.parentNode.children);
-                            var idx = ths.indexOf(th);
-                            if(idx >= 0) sortTable(idx);
-                        }
-                    });
+                // 이전 핸들러 제거 후 새 핸들러 바인딩 (st.rerun 후에도 항상 최신 클로저 사용)
+                if(window.parent._kwCtxHandler){
+                    parentDoc.body.removeEventListener("contextmenu", window.parent._kwCtxHandler);
                 }
+                if(window.parent._kwClickHandler){
+                    parentDoc.body.removeEventListener("click", window.parent._kwClickHandler);
+                }
+
+                window.parent._kwCtxHandler = function(e){
+                    var row = e.target.closest("tr.keyword-row");
+                    if(row) {
+                        showMenu(e, row.dataset.keyword||"", row);
+                    }
+                };
+
+                window.parent._kwClickHandler = function(e){
+                    // 메뉴 아이템 클릭 처리 (data-action 속성 사용)
+                    var menuItem = e.target.closest(".ctx-item[data-action]");
+                    if(menuItem) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        doAction(menuItem.getAttribute("data-action"));
+                        return;
+                    }
+                    
+                    var row = e.target.closest("tr.keyword-row");
+                    if(row) {
+                        if(selRow && selRow !== row) selRow.style.backgroundColor="#E65100";
+                        selRow = row;
+                        row.style.backgroundColor="#1d4ed8";
+                    }
+                    
+                    var th = e.target.closest("#orange-keyword-table th");
+                    if(th) {
+                        var ths = Array.from(th.parentNode.children);
+                        var idx = ths.indexOf(th);
+                        if(idx >= 0) sortTable(idx);
+                    }
+                };
+
+                parentDoc.body.addEventListener("contextmenu", window.parent._kwCtxHandler);
+                parentDoc.body.addEventListener("click", window.parent._kwClickHandler);
             })();
             </script>
             """

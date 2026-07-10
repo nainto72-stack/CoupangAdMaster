@@ -143,7 +143,7 @@ st.set_page_config(
     page_title="쿠팡 광고 최적화 마스터 Web",
     page_icon="🚀",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="auto"
 )
 
 # ── 키워드 분류 파일 경로 (trigger 핸들러보다 먼저 정의) ──

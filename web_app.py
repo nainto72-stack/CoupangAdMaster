@@ -3212,6 +3212,10 @@ with tab_keyword:
             (function(){
                 var parentDoc = window.parent.document;
 
+                // 이전 rerun에서 body로 이동된 고아 ctx-menu 정리
+                var oldMenus = parentDoc.body.querySelectorAll(":scope > #ctx-menu");
+                oldMenus.forEach(function(m){ m.remove(); });
+
                 // doAction is now defined in the event delegation block below
 
                 var sortState={};
@@ -3257,16 +3261,12 @@ with tab_keyword:
                     var title = parentDoc.getElementById("ctx-kw-title");
                     if(title) title.innerText="🔑 "+kw;
                     menu.dataset.kw = kw;
-                    if (menu.parentNode !== parentDoc.body) { parentDoc.body.appendChild(menu); }
                     menu.style.display="block";
                     var x = e.clientX, y = e.clientY;
                     if(x+215 > window.parent.innerWidth) x = window.parent.innerWidth-220;
                     if(y+240 > window.parent.innerHeight) y = window.parent.innerHeight-245;
                     menu.style.left = x+"px";
                     menu.style.top = y+"px";
-                    setTimeout(function(){
-                        parentDoc.addEventListener("click", hideMenu, {once:true});
-                    }, 50);
                 }
 
                 function hideMenu(){
@@ -3331,6 +3331,14 @@ with tab_keyword:
                         e.stopPropagation();
                         doAction(menuItem.getAttribute("data-action"));
                         return;
+                    }
+                    
+                    // 메뉴 영역 밖 클릭 시 메뉴 닫기
+                    var menu = parentDoc.getElementById("ctx-menu");
+                    if(menu && menu.style.display === "block"){
+                        if(!e.target.closest("#ctx-menu")){
+                            menu.style.display = "none";
+                        }
                     }
                     
                     var row = e.target.closest("tr.keyword-row");

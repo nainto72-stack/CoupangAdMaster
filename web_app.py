@@ -681,8 +681,8 @@ def load_users():
                 return json.load(f)
         except Exception:
             pass
-    # 기본 관리자 계정 반환 (기본 비밀번호: coupangmaster2026)
-    return {"admin": "6feafae6f3d4f5618b2d9e2ce728601e5e37789c10eeb4a703e552c1efadab62"}
+    # 기본 관리자 계정 반환 (기본 비밀번호: admin4302)
+    return {"admin": "deb2b6466eb69320f585a4d87ebf13226266b479c679c1ab954868af8e2ab959"}
 
 def save_users(users):
     try:

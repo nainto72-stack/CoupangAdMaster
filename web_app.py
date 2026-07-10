@@ -3248,8 +3248,8 @@ with tab_keyword:
                     rows.sort(function(a,b){
                         var at=(a.cells[ci]?a.cells[ci].innerText:"").trim();
                         var bt=(b.cells[ci]?b.cells[ci].innerText:"").trim();
-                        var an=parseFloat(at.replace(/[^0-9.\-]/g,""));
-                        var bn=parseFloat(bt.replace(/[^0-9.\-]/g,""));
+                        var an=parseFloat(at.replace(/[^0-9.-]/g,""));
+                        var bn=parseFloat(bt.replace(/[^0-9.-]/g,""));
                         if(!isNaN(an)&&!isNaN(bn))return desc?bn-an:an-bn;
                         return desc?bt.localeCompare(at,"ko"):at.localeCompare(bt,"ko");
                     });
@@ -3337,7 +3337,7 @@ with tab_keyword:
                     var kw = menu.dataset.kw || "";
                     if(kw && action){
                         if(action === '복사'){
-                            var copyVal = kw.split(",").join("\n");
+                            var copyVal = kw.split(",").join(String.fromCharCode(10));
                             if(window.parent.navigator.clipboard && window.parent.navigator.clipboard.writeText){
                                 window.parent.navigator.clipboard.writeText(copyVal).catch(function(){});
                             } else {

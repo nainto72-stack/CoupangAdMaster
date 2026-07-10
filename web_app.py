@@ -699,7 +699,8 @@ if "logged_in" not in st.session_state:
     try:
         qp_user = st.query_params.get("user", "")
         qp_token = st.query_params.get("token", "")
-        if qp_user and qp_token == hashlib.sha256((qp_user + "coupang_secret_key_2026").encode('utf-8')).hexdigest():
+        current_users = load_users()
+        if qp_user and qp_user in current_users and qp_token == hashlib.sha256((qp_user + "coupang_secret_key_2026").encode('utf-8')).hexdigest():
             st.session_state["logged_in"] = True
             st.session_state["username"] = qp_user
         else:

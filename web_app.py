@@ -147,7 +147,7 @@ st.set_page_config(
 )
 
 # ── 우클릭 메뉴 통신용 완벽 숨김 입력창 핸들러 ──
-st.markdown("<style>div[data-testid='stTextInput']:has(input[aria-label='kw_mover_secret_trigger']) { display: none !important; }</style>", unsafe_allow_html=True)
+st.markdown("<style>div[data-testid='stTextInput']:has(input[aria-label='kw_mover_secret_trigger']) { width: 0px !important; height: 0px !important; opacity: 0 !important; position: absolute !important; overflow: hidden !important; pointer-events: none !important; }</style>", unsafe_allow_html=True)
 trigger_val = st.text_input("kw_mover_secret_trigger", key="kw_mover_trigger", label_visibility="collapsed")
 
 if trigger_val:
@@ -284,7 +284,7 @@ st.markdown("""
     /* ------------------------------------------------------------- */
     /* Streamlit 기본 헤더 숨김 (공간 확보용) */
     header[data-testid="stHeader"] {
-        display: none !important;
+        width: 0px !important; height: 0px !important; opacity: 0 !important; position: absolute !important; overflow: hidden !important; pointer-events: none !important;
     }
     
     /* 메인 탭 고정 */
@@ -451,7 +451,7 @@ st.markdown("""
         pointer-events: none !important;
     }
     header[data-testid="stHeader"] [data-testid="stHeaderActionElements"] {
-        display: none !important;
+        width: 0px !important; height: 0px !important; opacity: 0 !important; position: absolute !important; overflow: hidden !important; pointer-events: none !important;
     }
     [data-testid="stAppViewContainer"] {
         padding-top: 0rem !important;
@@ -3220,6 +3220,7 @@ with tab_keyword:
                                 nativeSetter.call(input, action + "|||" + kw + "|||" + Date.now());
                                 input.dispatchEvent(new Event("input", { bubbles: true }));
                                 input.dispatchEvent(new Event("change", { bubbles: true }));
+                                input.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true}));
                                 input.focus({preventScroll: true});
                                 setTimeout(function(){ input.blur(); }, 100);
                             }

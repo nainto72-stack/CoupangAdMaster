@@ -1599,7 +1599,7 @@ def _draw_memo_vlines(axes, date_labels, pe, memos, fontsize=12):
                    color=color, fontsize=fontsize, weight='bold', alpha=0.85,
                    path_effects=pe, fontfamily='NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic')
             txt.set_gid(f"memo_text_{memo_date}_{safe_text}")
-            if getattr(ax.figure, '_mag_chart', False) or getattr(ax.figure, '_perf_chart', False) or getattr(ax.figure, '_region_chart', False):
+            if getattr(ax.figure, '_mag_chart', False) or getattr(ax.figure, '_perf_chart', False) or getattr(ax.figure, '_region_chart', False) or getattr(ax.figure, '_real_price_chart', False):
                 txt.set_in_layout(False)
 
 
@@ -1842,7 +1842,7 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
         ax.set_title("0. 광고효율 돋보기 상대 지수 분석 (첫 날 데이터 = 100% 기준)", color='white', pad=30, fontdict={'size': 28, 'weight': 'bold'})
         ax.legend(loc='upper left', fontsize=18, markerscale=1.5, handletextpad=0.5, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
         
-        _draw_memo_vlines([ax], dates, pe, memos, fontsize=20)
+        _draw_memo_vlines([ax], dates, pe, memos, fontsize=8)
         fig.tight_layout(h_pad=3.5)
         show_pyplot_with_tooltip(fig)
         plt.close(fig)
@@ -2377,7 +2377,8 @@ def render_real_price_chart_streamlit(df, p_val, memos):
         spend_vals.append(spend)
         
     plt.rcParams['font.family'] = 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'
-    fig = plt.figure(figsize=(13, 4.2), dpi=95)
+    fig = plt.figure(figsize=(14, 5.5), dpi=95)
+    fig._real_price_chart = True
     fig.df_json = df.to_json(orient='records')
     fig.patch.set_facecolor('#0B0B1A')
     ax = fig.add_subplot(111)
@@ -2408,7 +2409,7 @@ def render_real_price_chart_streamlit(df, p_val, memos):
     
     try:
         pe = [path_effects.withStroke(linewidth=2, foreground='black')]
-        _draw_memo_vlines([ax], dates, pe, memos, fontsize=20)
+        _draw_memo_vlines([ax], dates, pe, memos, fontsize=8)
     except Exception:
         pass
         

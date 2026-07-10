@@ -179,11 +179,10 @@ if trigger_val:
                         # 파일이 손상되었거나 동시 접근 잠금 시 빈 딕셔너리로 초기화
                         pass
                 
-                # 방어 로직: 딕셔너리가 아닌 경우 대비
-                if not isinstance(_kw_classes_early, dict):
-                    _kw_classes_early = {}
-                    
-                _kw_classes_early[q_target] = q_action
+                # Support multiple keywords in q_target (comma-separated)
+                targets = [t.strip() for t in q_target.split(",") if t.strip()]
+                for target in targets:
+                    _kw_classes_early[target] = q_action
                 
                 # 원자적 쓰기(Atomic Write) 모방 및 에러 방어
                 try:
@@ -193,7 +192,11 @@ if trigger_val:
                     pass
                 
                 # toast 메시지 대기 등록 및 탭 포커스 예약
-                st.session_state["pending_toast"] = f"✅ '{q_target}' → [{q_action} 관리] 이동 완료"
+                if len(targets) > 1:
+                    toast_msg = f"✅ '{targets[0]}' 외 {len(targets)-1}개 키워드 → [{q_action} 관리] 이동 완료"
+                else:
+                    toast_msg = f"✅ '{targets[0]}' → [{q_action} 관리] 이동 완료"
+                st.session_state["pending_toast"] = toast_msg
                 
                 tab_labels = {
                     "타겟": "🎯 타겟 관리",
@@ -3256,14 +3259,36 @@ with tab_keyword:
                 function showMenu(e, kw, row){
                     e.preventDefault();
                     e.stopPropagation();
-                    if(selRow && selRow !== row) selRow.style.backgroundColor="#E65100";
-                    selRow = row;
-                    row.style.backgroundColor="#1d4ed8";
+                    
+                    // 우클릭한 행이 미선택 상태면 단일 선택으로 전환
+                    if(row.dataset.selected !== "1"){
+                        parentDoc.querySelectorAll("tr.keyword-row").forEach(function(r){
+                            delete r.dataset.selected;
+                            r.style.backgroundColor = "#E65100";
+                        });
+                        row.dataset.selected = "1";
+                        row.style.backgroundColor = "#1d4ed8";
+                        selRow = row;
+                    }
+                    
+                    // 현재 선택된 모든 키워드 수집
+                    var selectedRows = Array.from(parentDoc.querySelectorAll("tr.keyword-row")).filter(function(r){
+                        return r.dataset.selected === "1";
+                    });
+                    var keywords = selectedRows.map(function(r){ return r.dataset.keyword || ""; }).filter(Boolean);
+                    var kws_str = keywords.join(",");
+                    
                     var menu = parentDoc.getElementById("ctx-menu");
                     if(!menu) return;
                     var title = parentDoc.getElementById("ctx-kw-title");
-                    if(title) title.innerText="🔑 "+kw;
-                    menu.dataset.kw = kw;
+                    if(title) {
+                        if(keywords.length > 1) {
+                            title.innerText = "🔑 " + keywords[0] + " 외 " + (keywords.length - 1) + "개";
+                        } else {
+                            title.innerText = "🔑 " + keywords[0];
+                        }
+                    }
+                    menu.dataset.kw = kws_str;
                     menu.style.display="block";
                     var x = e.clientX, y = e.clientY;
                     if(x+215 > window.parent.innerWidth) x = window.parent.innerWidth-220;
@@ -3283,11 +3308,12 @@ with tab_keyword:
                     var kw = menu.dataset.kw || "";
                     if(kw && action){
                         if(action === '복사'){
+                            var copyVal = kw.split(",").join("\n");
                             if(window.parent.navigator.clipboard && window.parent.navigator.clipboard.writeText){
-                                window.parent.navigator.clipboard.writeText(kw).catch(function(){});
+                                window.parent.navigator.clipboard.writeText(copyVal).catch(function(){});
                             } else {
                                 var ta = parentDoc.createElement("textarea");
-                                ta.value = kw;
+                                ta.value = copyVal;
                                 ta.style.cssText = "position:fixed;left:-9999px;top:-9999px;";
                                 parentDoc.body.appendChild(ta);
                                 ta.select();
@@ -3346,9 +3372,38 @@ with tab_keyword:
                     
                     var row = e.target.closest("tr.keyword-row");
                     if(row) {
-                        if(selRow && selRow !== row) selRow.style.backgroundColor="#E65100";
-                        selRow = row;
-                        row.style.backgroundColor="#1d4ed8";
+                        if(e.shiftKey && selRow) {
+                            var rows = Array.from(parentDoc.querySelectorAll("tr.keyword-row"));
+                            var currIdx = rows.indexOf(row);
+                            var prevIdx = rows.indexOf(selRow);
+                            if(currIdx >= 0 && prevIdx >= 0) {
+                                var start = Math.min(currIdx, prevIdx);
+                                var end = Math.max(currIdx, prevIdx);
+                                rows.forEach(function(r, idx){
+                                    if(idx >= start && idx <= end) {
+                                        r.dataset.selected = "1";
+                                        r.style.backgroundColor = "#1d4ed8";
+                                    }
+                                });
+                            }
+                        } else if(e.ctrlKey || e.metaKey) {
+                            if(row.dataset.selected === "1") {
+                                delete row.dataset.selected;
+                                row.style.backgroundColor = "#E65100";
+                            } else {
+                                row.dataset.selected = "1";
+                                row.style.backgroundColor = "#1d4ed8";
+                                selRow = row;
+                            }
+                        } else {
+                            parentDoc.querySelectorAll("tr.keyword-row").forEach(function(r){
+                                delete r.dataset.selected;
+                                r.style.backgroundColor = "#E65100";
+                            });
+                            row.dataset.selected = "1";
+                            row.style.backgroundColor = "#1d4ed8";
+                            selRow = row;
+                        }
                     }
                     
                     var th = e.target.closest("#orange-keyword-table th");

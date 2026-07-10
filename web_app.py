@@ -146,6 +146,10 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# ── 키워드 분류 파일 경로 (trigger 핸들러보다 먼저 정의) ──
+_EARLY_BASE = os.path.dirname(os.path.abspath(__file__))
+CLASSES_FILE_EARLY = os.path.join(_EARLY_BASE, "keyword_classes.json")
+
 # ── 우클릭 메뉴 통신용 완벽 숨김 입력창 핸들러 ──
 st.markdown("<style>div[data-testid='stTextInput']:has(input[aria-label='kw_mover_secret_trigger']) { width: 0px !important; height: 0px !important; opacity: 0 !important; position: absolute !important; overflow: hidden !important; pointer-events: none !important; }</style>", unsafe_allow_html=True)
 trigger_val = st.text_input("kw_mover_secret_trigger", key="kw_mover_trigger", label_visibility="collapsed")
@@ -164,11 +168,10 @@ if trigger_val:
             st.session_state["processed_trigger_t"] = q_t
             if q_target and q_action in ("타겟", "수동", "제외"):
                 import json, os
-                classes_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "keyword_classes.json")
                 _kw_classes_early = {}
-                if os.path.exists(classes_file):
+                if os.path.exists(CLASSES_FILE_EARLY):
                     try:
-                        with open(classes_file, "r", encoding="utf-8") as f:
+                        with open(CLASSES_FILE_EARLY, "r", encoding="utf-8") as f:
                             content = f.read().strip()
                             if content:
                                 _kw_classes_early = json.loads(content)
@@ -184,7 +187,7 @@ if trigger_val:
                 
                 # 원자적 쓰기(Atomic Write) 모방 및 에러 방어
                 try:
-                    with open(classes_file, "w", encoding="utf-8") as f:
+                    with open(CLASSES_FILE_EARLY, "w", encoding="utf-8") as f:
                         json.dump(_kw_classes_early, f, ensure_ascii=False, indent=4)
                 except Exception:
                     pass

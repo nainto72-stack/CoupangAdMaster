@@ -10,3 +10,6 @@ dist/
 *.spec
 *.log
 *.png
+keyword_classes.json
+ad_memos.json
+patch_*.py

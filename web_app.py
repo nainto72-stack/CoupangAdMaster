@@ -1599,7 +1599,7 @@ def _draw_memo_vlines(axes, date_labels, pe, memos, fontsize=12):
                    color=color, fontsize=fontsize, weight='bold', alpha=0.85,
                    path_effects=pe, fontfamily='NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic')
             txt.set_gid(f"memo_text_{memo_date}_{safe_text}")
-            if getattr(ax.figure, '_mag_chart', False) or getattr(ax.figure, '_perf_chart', False):
+            if getattr(ax.figure, '_mag_chart', False) or getattr(ax.figure, '_perf_chart', False) or getattr(ax.figure, '_region_chart', False):
                 txt.set_in_layout(False)
 
 
@@ -2242,7 +2242,8 @@ def render_region_trend_charts_streamlit(df, by_region, memos):
     plt.rcParams['font.family'] = 'NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic'
     pe = [path_effects.withStroke(linewidth=2.5, foreground='black')]
     
-    fig = plt.figure(figsize=(12, 10), dpi=100)
+    fig = plt.figure(figsize=(14, 11), dpi=100)
+    fig._region_chart = True
     fig.df_json = df.to_json(orient='records')
     fig.patch.set_facecolor('#0B0B1A')
     
@@ -2348,7 +2349,7 @@ def render_region_trend_charts_streamlit(df, by_region, memos):
     ax2.tick_params(axis='y', labelcolor='#94A3B8', labelsize=18)
     ax2.legend(loc='upper left', fontsize=12.5, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
     
-    _draw_memo_vlines([ax1, ax2], dates, pe, memos, fontsize=12)
+    _draw_memo_vlines([ax1, ax2], dates, pe, memos, fontsize=8)
     
     fig.tight_layout(pad=3.0)
     show_pyplot_with_tooltip(fig)

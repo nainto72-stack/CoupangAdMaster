@@ -1743,16 +1743,16 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
             rc = region_colors.get(region_name, '#FFFFFF')
             
             l_imp, = ax.plot(dates, rdata['imp_idx'], color='#00E5FF', marker='o', markersize=4, linewidth=1.8, 
-                    label='💎 노출수 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+                    label='— 노출수 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
 
             l_ctr, = ax.plot(dates, rdata['ctr_idx'], color='#FB923C', marker='s', markersize=4, linewidth=1.8, 
-                    label='🍊 클릭률(CTR) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+                    label='— 클릭률(CTR) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
 
             l_cvr, = ax.plot(dates, rdata['cvr_idx'], color='#10B981', marker='^', markersize=4, linewidth=1.8, 
-                    label='🍋 전환율(CVR) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+                    label='— 전환율(CVR) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
 
             l_roas, = ax.plot(dates, rdata['roas_idx'], color='#FF00FF', marker='D', markersize=5, linewidth=2.5, 
-                    label='🌸 광고효율(ROAS) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+                    label='— 광고효율(ROAS) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
             
             ax.axhline(y=100, color='#FFFFFF', linestyle='--', linewidth=1.0, alpha=0.5, label='— 첫 날 기준선 (100%)')
             ax.set_title(f"【{region_name}】 노출·클릭률·전환율·ROAS 상대 지수 추이", color=rc, pad=30, fontdict={'size': 28, 'weight': 'bold'})
@@ -1796,13 +1796,13 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
         dates = df_copy['date_s'].tolist()
         
         ax.plot(dates, df_copy['imp_idx'], color='#00E5FF', marker='o', markersize=4, linewidth=1.8, 
-                label='💎 노출수 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+                label='— 노출수 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
         ax.plot(dates, df_copy['ctr_idx'], color='#FB923C', marker='s', markersize=4, linewidth=1.8, 
-                label='🍊 클릭률(CTR) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+                label='— 클릭률(CTR) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
         ax.plot(dates, df_copy['cvr_idx'], color='#10B981', marker='^', markersize=4, linewidth=1.8, 
-                label='🍋 전환율(CVR) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+                label='— 전환율(CVR) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
         ax.plot(dates, df_copy['roas_idx'], color='#FF00FF', marker='D', markersize=5, linewidth=2.5, 
-                label='🌸 광고효율(ROAS) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
+                label='— 광고효율(ROAS) 지수', path_effects=[path_effects.SimpleLineShadow(), path_effects.Normal()])
         ax.axhline(y=100, color='#FFFFFF', linestyle='--', linewidth=1.0, alpha=0.5, label='— 첫 날 기준선 (100%)')
         
         ax.set_ylabel('상대 지수 (%)', color='white', size=22, weight='bold')

@@ -3261,15 +3261,6 @@ with tab_keyword:
                     });
                 }
 
-                function bindHeaders(){
-                    parentDoc.querySelectorAll("#orange-keyword-table th").forEach(function(th,i){
-                        if(th.dataset.sortBound)return;
-                        th.dataset.sortBound="1";
-                        th.style.cursor="pointer";
-                        th.addEventListener("click",function(){sortTable(i);});
-                    });
-                }
-
                 var selRow = null;
                 function showMenu(e, kw, row){
                     e.preventDefault();
@@ -3299,33 +3290,32 @@ with tab_keyword:
                     if(m) m.style.display="none";
                 }
                 
-                function bindRows(){
-                    parentDoc.querySelectorAll("tr.keyword-row").forEach(function(row){
-                        if(row.dataset.bound)return;
-                        row.dataset.bound="1";
-                        row.addEventListener("click",function(){
+                if(!parentDoc.body.dataset.kwMenuBound){
+                    parentDoc.body.dataset.kwMenuBound = "1";
+                    
+                    parentDoc.body.addEventListener("contextmenu", function(e){
+                        var row = e.target.closest("tr.keyword-row");
+                        if(row) {
+                            showMenu(e, row.dataset.keyword||"", row);
+                        }
+                    });
+                    
+                    parentDoc.body.addEventListener("click", function(e){
+                        var row = e.target.closest("tr.keyword-row");
+                        if(row) {
                             if(selRow && selRow !== row) selRow.style.backgroundColor="#E65100";
                             selRow = row;
                             row.style.backgroundColor="#1d4ed8";
-                        });
-                        row.addEventListener("contextmenu",function(e){
-                            showMenu(e, row.dataset.keyword||"", row);
-                        });
+                        }
+                        
+                        var th = e.target.closest("#orange-keyword-table th");
+                        if(th) {
+                            var ths = Array.from(th.parentNode.children);
+                            var idx = ths.indexOf(th);
+                            if(idx >= 0) sortTable(idx);
+                        }
                     });
                 }
-                
-                var attempts = 0;
-                function tryBind(){
-                    var tb = parentDoc.querySelector("#orange-keyword-table tbody");
-                    if(tb){
-                        bindRows();
-                        bindHeaders();
-                    } else if(attempts < 10){
-                        attempts++;
-                        setTimeout(tryBind, 200);
-                    }
-                }
-                setTimeout(tryBind, 500);
             })();
             </script>
             """

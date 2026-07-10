@@ -994,7 +994,7 @@ def show_pyplot_with_tooltip(fig):
         native_height_px = height_pt * 1.333
         
         # Streamlit container is typically max 1150px wide in wide mode
-        displayed_width_px = min(1800.0, native_width_px)
+        displayed_width_px = min(1150.0, native_width_px)
         displayed_height_px = native_height_px * (displayed_width_px / native_width_px)
         
         height_val = int(displayed_height_px) + 20
@@ -1694,7 +1694,7 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
             available_regions = region_labels[:1]
         
         n_regions = len(available_regions)
-        fig = plt.figure(figsize=(26, 8.5 * n_regions + 1.5))
+        fig = plt.figure(figsize=(26, 5.5 * n_regions + 1.5))
         fig.df_json = df.to_json(orient='records')
         fig._mag_chart = True
         fig.patch.set_facecolor('#0B0B1A')

@@ -831,7 +831,7 @@ def show_pyplot_with_tooltip(fig):
     memos_json_str = json.dumps(memos_list, ensure_ascii=False)
     
     f = io.BytesIO()
-    fig.savefig(f, format='svg')  # Removed bbox_inches='tight' because it crops Korean text!
+    fig.savefig(f, format='svg', bbox_inches='tight')
     svg_str = f.getvalue().decode('utf-8')
     plt.close(fig)
     
@@ -2612,7 +2612,7 @@ with tab_perf:
             spend_vals = df_perf['spend'].tolist()
             sales_vals = df_perf['sales'].tolist()
             
-            fig_trend, ax1 = plt.subplots(figsize=(14, 8))
+            fig_trend, ax1 = plt.subplots(figsize=(14, 4))
             fig_trend.df_json = df_perf.to_json(orient='records')
             fig_trend.patch.set_facecolor('#0B0B1A')
             ax1.set_facecolor('#0B0B1A')

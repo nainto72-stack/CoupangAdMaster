@@ -131,8 +131,8 @@ def get_cached_keyword_html(df_display_dict, search_q=""):
             html_table += f'<td style="padding:3px 6px;color:#FFFFFF;border:0.5px solid #BF360C;white-space:nowrap;">{val}</td>'
         html_table += "</tr>"
     html_table += "</tbody></table></div>"
-    # 우클릭 팝업 메뉴 HTML 구조 복구
-    html_table += '<div id="ctx-menu" style="display:none;position:fixed;z-index:99999;width:210px;background:#1a1f35;border:1px solid rgba(255,255,255,0.12);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,0.7);font-family: \'Malgun Gothic\', \'NanumGothic\',sans-serif;padding:6px 0;"><div id="ctx-kw-title" style="padding:9px 14px 8px;font-size:12px;color:#a78bfa;border-bottom:1px solid rgba(255,255,255,0.09);font-weight:bold;background:#111627;border-radius:10px 10px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🔑 키워드</div><div class="ctx-item" onclick="doAction(\'타겟\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="width:22px;height:22px;background:#f97316;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;">🎯</span>타겟 키워드로 이동</div><div class="ctx-item" onclick="doAction(\'수동\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="width:22px;height:22px;background:#f97316;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;">⚙️</span>수동 관리로 이동</div><div class="ctx-item" onclick="doAction(\'제외\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="width:22px;height:22px;background:#ef4444;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;">🚫</span>제외 키워드로 이동</div><div style="height:1px;background:rgba(255,255,255,0.08);margin:4px 0;"></div><div class="ctx-item" onclick="doAction(\'복사\')" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="font-size:16px;">📋</span>키워드 복사</div></div><style>.ctx-item:hover{background:rgba(99,102,241,0.3)!important;}</style>'
+    # 우클릭 팝업 메뉴 HTML 구조 (data-action 속성 사용 - Streamlit이 onclick을 제거하므로)
+    html_table += '<div id="ctx-menu" style="display:none;position:fixed;z-index:99999;width:210px;background:#1a1f35;border:1px solid rgba(255,255,255,0.12);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,0.7);font-family: \'Malgun Gothic\', \'NanumGothic\',sans-serif;padding:6px 0;"><div id="ctx-kw-title" style="padding:9px 14px 8px;font-size:12px;color:#a78bfa;border-bottom:1px solid rgba(255,255,255,0.09);font-weight:bold;background:#111627;border-radius:10px 10px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🔑 키워드</div><div class="ctx-item" data-action="타겟" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="width:22px;height:22px;background:#f97316;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;">🎯</span>타겟 키워드로 이동</div><div class="ctx-item" data-action="수동" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="width:22px;height:22px;background:#f97316;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;">⚙️</span>수동 관리로 이동</div><div class="ctx-item" data-action="제외" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="width:22px;height:22px;background:#ef4444;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;">🚫</span>제외 키워드로 이동</div><div style="height:1px;background:rgba(255,255,255,0.08);margin:4px 0;"></div><div class="ctx-item" data-action="복사" style="padding:10px 16px;font-size:13px;color:#e2e8f0;cursor:pointer;display:flex;align-items:center;gap:8px;"><span style="font-size:16px;">📋</span>키워드 복사</div></div><style>.ctx-item:hover{background:rgba(99,102,241,0.3)!important;}</style>'
     
     return html_table, len(formatted_rows)
 
@@ -3212,36 +3212,7 @@ with tab_keyword:
             (function(){
                 var parentDoc = window.parent.document;
 
-                window.parent.doAction = function(action){
-                    var menu = parentDoc.getElementById("ctx-menu");
-                    if(!menu) return;
-                    var kw = menu.dataset.kw || "";
-                    if(kw && action){
-                        if(action === '복사'){
-                            var tempInput = parentDoc.createElement("input");
-                            tempInput.value = kw;
-                            parentDoc.body.appendChild(tempInput);
-                            tempInput.select();
-                            try { parentDoc.execCommand("copy"); } catch(e){}
-                            parentDoc.body.removeChild(tempInput);
-                        } else {
-                            try {
-                                var inputs = parentDoc.querySelectorAll('input[aria-label="kw_mover_secret_trigger"]');
-                            if(inputs.length > 0) {
-                                var input = inputs[inputs.length - 1];
-                                var nativeSetter = Object.getOwnPropertyDescriptor(window.parent.HTMLInputElement.prototype, "value").set;
-                                nativeSetter.call(input, action + "|||" + kw + "|||" + Date.now());
-                                input.dispatchEvent(new Event("input", { bubbles: true }));
-                                input.dispatchEvent(new Event("change", { bubbles: true }));
-                                input.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true}));
-                                input.focus({preventScroll: true});
-                                setTimeout(function(){ input.blur(); }, 100);
-                            }
-                        }catch(e){console.error(e);}
-                        }
-                    }
-                    menu.style.display="none";
-                };
+                // doAction is now defined in the event delegation block below
 
                 var sortState={};
                 function sortTable(ci){
@@ -3303,6 +3274,40 @@ with tab_keyword:
                     if(m) m.style.display="none";
                 }
                 
+                function doAction(action){
+                    var menu = parentDoc.getElementById("ctx-menu");
+                    if(!menu) return;
+                    var kw = menu.dataset.kw || "";
+                    if(kw && action){
+                        if(action === '복사'){
+                            if(window.parent.navigator.clipboard && window.parent.navigator.clipboard.writeText){
+                                window.parent.navigator.clipboard.writeText(kw).catch(function(){});
+                            } else {
+                                var ta = parentDoc.createElement("textarea");
+                                ta.value = kw;
+                                ta.style.cssText = "position:fixed;left:-9999px;top:-9999px;";
+                                parentDoc.body.appendChild(ta);
+                                ta.select();
+                                try { parentDoc.execCommand("copy"); } catch(ex){}
+                                parentDoc.body.removeChild(ta);
+                            }
+                        } else {
+                            var inputs = parentDoc.querySelectorAll('input[aria-label="kw_mover_secret_trigger"]');
+                            if(inputs.length > 0) {
+                                var input = inputs[inputs.length - 1];
+                                var nativeSetter = Object.getOwnPropertyDescriptor(window.parent.HTMLInputElement.prototype, "value").set;
+                                nativeSetter.call(input, action + "|||" + kw + "|||" + Date.now());
+                                input.dispatchEvent(new Event("input", { bubbles: true }));
+                                input.dispatchEvent(new Event("change", { bubbles: true }));
+                                input.focus({preventScroll: true});
+                                setTimeout(function(){ input.blur(); }, 150);
+                            }
+                        }
+                    }
+                    menu.style.display="none";
+                }
+                window.parent.doAction = doAction;
+
                 if(!parentDoc.body.dataset.kwMenuBound){
                     parentDoc.body.dataset.kwMenuBound = "1";
                     
@@ -3314,6 +3319,15 @@ with tab_keyword:
                     });
                     
                     parentDoc.body.addEventListener("click", function(e){
+                        // 메뉴 아이템 클릭 처리 (data-action 속성 사용)
+                        var menuItem = e.target.closest(".ctx-item[data-action]");
+                        if(menuItem) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            doAction(menuItem.getAttribute("data-action"));
+                            return;
+                        }
+                        
                         var row = e.target.closest("tr.keyword-row");
                         if(row) {
                             if(selRow && selRow !== row) selRow.style.backgroundColor="#E65100";

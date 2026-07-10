@@ -751,6 +751,42 @@ if not st.session_state["logged_in"]:
                 st.error("❌ 아이디 또는 비밀번호가 올바르지 않습니다.")
     st.stop()
 
+# ── 사용자별 이용 시간(하트비트) 트래킹 ──
+ACTIVITY_FILE = os.path.join(BASE_DIR, "user_activity.json")
+
+def track_user_activity(username):
+    if not username or username == "admin":
+        return
+    import time
+    from datetime import date
+    current_time = time.time()
+    today_str = date.today().isoformat()
+    
+    last_ping = st.session_state.get("activity_last_ping", None)
+    st.session_state["activity_last_ping"] = current_time
+    
+    if last_ping is None:
+        return
+        
+    elapsed = current_time - last_ping
+    if elapsed > 1800:  # 30분 초과 미활동 시 세션 만료로 간주하여 누적 제외
+        return
+        
+    try:
+        activity = {}
+        if os.path.exists(ACTIVITY_FILE):
+            with open(ACTIVITY_FILE, 'r', encoding='utf-8') as f:
+                activity = json.load(f)
+        if today_str not in activity:
+            activity[today_str] = {}
+        activity[today_str][username] = activity[today_str].get(username, 0) + elapsed
+        with open(ACTIVITY_FILE, 'w', encoding='utf-8') as f:
+            json.dump(activity, f, indent=4, ensure_ascii=False)
+    except:
+        pass
+
+track_user_activity(st.session_state["username"])
+
 # -----------------------------------------------------------------------------
 # 3. 데이터 및 메모 로드 공통 헬퍼
 # -----------------------------------------------------------------------------
@@ -2252,6 +2288,41 @@ if st.session_state["username"] == "admin":
                 save_users(users)
                 st.success("계정이 삭제되었습니다.")
                 st.rerun()
+                
+    with st.sidebar.expander("📊 사용자 이용 시간 통계"):
+        activity = {}
+        if os.path.exists(ACTIVITY_FILE):
+            try:
+                with open(ACTIVITY_FILE, 'r', encoding='utf-8') as f:
+                    activity = json.load(f)
+            except:
+                pass
+        
+        if activity:
+            dates = sorted(activity.keys(), reverse=True)
+            selected_date = st.selectbox("조회할 날짜 선택", dates, key="activity_date_select")
+            
+            day_data = activity.get(selected_date, {})
+            if day_data:
+                sorted_users = sorted(day_data.items(), key=lambda x: x[1], reverse=True)
+                table_html = "<table style='width:100%; border-collapse: collapse; font-size:0.85rem; color:#e2e8f0;'>"
+                table_html += "<tr style='border-bottom:1px solid #475569; text-align:left;'><th style='padding:6px;'>아이디</th><th style='padding:6px; text-align:right;'>이용 시간</th></tr>"
+                for u, sec in sorted_users:
+                    m, s = divmod(int(sec), 60)
+                    h, m = divmod(m, 60)
+                    if h > 0:
+                        time_str = f"{h}시간 {m}분"
+                    elif m > 0:
+                        time_str = f"{m}분"
+                    else:
+                        time_str = f"{s}초"
+                    table_html += f"<tr style='border-bottom:1px solid #334155;'><td style='padding:6px;'>{u}</td><td style='padding:6px; text-align:right; font-weight:bold; color:#38bdf8;'>{time_str}</td></tr>"
+                table_html += "</table>"
+                st.markdown(table_html, unsafe_allow_html=True)
+            else:
+                st.info("해당 날짜의 활동 기록이 없습니다.")
+        else:
+            st.info("수집된 이용 시간 통계가 없습니다.")
     
     # 사이드바 하단 여백 추가 (드롭다운 리스트 잘림 방지)
     st.sidebar.markdown("<div style='height: 250px;'></div>", unsafe_allow_html=True)

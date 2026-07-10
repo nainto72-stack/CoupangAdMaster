@@ -12,4 +12,5 @@ dist/
 *.png
 keyword_classes.json
 ad_memos.json
+user_activity.json
 patch_*.py

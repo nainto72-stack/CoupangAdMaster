@@ -3400,6 +3400,7 @@ with tab_keyword:
                         st.warning("제외할 키워드를 선택해 주세요.")
             with col_act2:
                 st.markdown("📋 **클립보드 복사 영역**")
+                st.markdown("<style>textarea { color: #1a1a2e !important; }</style>", unsafe_allow_html=True)
                 st.text_area("키워드 복사 (아래 텍스트를 복사하세요)", value="\n".join(cls_kws), height=100, key=f"copy_area_{cls_name}_web_unique")
         else:
             st.info(f"등록된 {cls_name} 키워드가 없습니다.")

@@ -2252,6 +2252,9 @@ if st.session_state["username"] == "admin":
                 save_users(users)
                 st.success("계정이 삭제되었습니다.")
                 st.rerun()
+    
+    # 사이드바 하단 여백 추가 (드롭다운 리스트 잘림 방지)
+    st.sidebar.markdown("<div style='height: 250px;'></div>", unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
 # 4. 영역별 및 실판매 대조 차트 렌더링 헬퍼 함수

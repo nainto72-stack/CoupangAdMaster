@@ -1692,7 +1692,7 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
             available_regions = region_labels[:1]
         
         n_regions = len(available_regions)
-        fig = plt.figure(figsize=(26, 12.0 * n_regions + 1.5))
+        fig = plt.figure(figsize=(26, 8.5 * n_regions + 1.5))
         fig.df_json = df.to_json(orient='records')
         fig.patch.set_facecolor('#0B0B1A')
         

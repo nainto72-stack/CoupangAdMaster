@@ -1599,7 +1599,7 @@ def _draw_memo_vlines(axes, date_labels, pe, memos, fontsize=12):
                    color=color, fontsize=fontsize, weight='bold', alpha=0.85,
                    path_effects=pe, fontfamily='NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic')
             txt.set_gid(f"memo_text_{memo_date}_{safe_text}")
-            if getattr(ax.figure, '_mag_chart', False):
+            if getattr(ax.figure, '_mag_chart', False) or getattr(ax.figure, '_perf_chart', False):
                 txt.set_in_layout(False)
 
 
@@ -1791,7 +1791,7 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
             ax.set_ylabel('상대 지수 (%)', color='white', size=22, weight='bold')
             ax.legend(loc='upper left', fontsize=18, markerscale=1.5, handletextpad=0.5, facecolor='#1A1A2E', edgecolor='#333', labelcolor='white', framealpha=0.8)
             
-            _draw_memo_vlines([ax], dates, pe, memos, fontsize=13)
+            _draw_memo_vlines([ax], dates, pe, memos, fontsize=8)
         
         fig.tight_layout(rect=[0, 0, 1, 0.96])
         show_pyplot_with_tooltip(fig)
@@ -2612,7 +2612,8 @@ with tab_perf:
             spend_vals = df_perf['spend'].tolist()
             sales_vals = df_perf['sales'].tolist()
             
-            fig_trend, ax1 = plt.subplots(figsize=(14, 4))
+            fig_trend, ax1 = plt.subplots(figsize=(14, 5.5))
+            fig_trend._perf_chart = True
             fig_trend.df_json = df_perf.to_json(orient='records')
             fig_trend.patch.set_facecolor('#0B0B1A')
             ax1.set_facecolor('#0B0B1A')
@@ -2649,7 +2650,7 @@ with tab_perf:
                 import matplotlib.patheffects as path_effects
                 pe = [path_effects.withStroke(linewidth=2, foreground='black')]
                 memos = load_json(MEMOS_FILE, [])
-                _draw_memo_vlines([ax1], dates, pe, memos, fontsize=12)
+                _draw_memo_vlines([ax1], dates, pe, memos, fontsize=8)
             except Exception:
                 pass
                 

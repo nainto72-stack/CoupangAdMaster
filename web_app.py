@@ -2264,6 +2264,14 @@ if st.session_state["username"] == "admin":
     st.sidebar.markdown("---")
     st.sidebar.markdown("### ⚙️ 계정 관리 (Admin 전용)")
     
+    with st.sidebar.expander("👥 등록된 계정 목록"):
+        user_list = [u for u in users.keys() if u != "admin"]
+        if user_list:
+            for u in user_list:
+                st.write(f"👤 {u}")
+        else:
+            st.info("등록된 계정이 없습니다.")
+            
     with st.sidebar.expander("👤 계정 추가"):
         new_id = st.text_input("새 아이디", key="new_id")
         new_pw = st.text_input("새 비밀번호", type="password", key="new_pw")

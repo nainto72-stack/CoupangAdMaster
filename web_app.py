@@ -1570,6 +1570,8 @@ def _draw_memo_vlines(axes, date_labels, pe, memos, fontsize=12):
                    color=color, fontsize=fontsize, weight='bold', alpha=0.85,
                    path_effects=pe, fontfamily='NanumGothic' if __import__('platform').system() == 'Linux' else 'Malgun Gothic')
             txt.set_gid(f"memo_text_{memo_date}_{safe_text}")
+            if getattr(ax.figure, '_mag_chart', False):
+                txt.set_in_layout(False)
 
 
 def render_kpi_summary_cards_streamlit(overall, region_summary):
@@ -1694,6 +1696,7 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
         n_regions = len(available_regions)
         fig = plt.figure(figsize=(26, 8.5 * n_regions + 1.5))
         fig.df_json = df.to_json(orient='records')
+        fig._mag_chart = True
         fig.patch.set_facecolor('#0B0B1A')
         
         fig.suptitle("0. 영역별 광고효율 돋보기 상대 지수 분석 (첫 날 = 100% 기준)", 
@@ -1767,6 +1770,7 @@ def render_magnifier_chart_streamlit(df, by_region_df, memos):
     else:
         fig = plt.figure(figsize=(14, 4))
         fig.df_json = df.to_json(orient='records')
+        fig._mag_chart = True
         fig.patch.set_facecolor('#0B0B1A')
         ax = fig.add_subplot(1, 1, 1)
         ax.set_facecolor('#0B0B1A')

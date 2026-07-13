@@ -174,10 +174,18 @@ def get_user_data_paths(username):
                 
     return user_classes_file, user_memos_file
 
+class DynamicUserPath:
+    def __init__(self, index):
+        self.index = index
+    def __fspath__(self):
+        username = st.session_state.get("username", "guest")
+        return get_user_data_paths(username)[self.index]
+    def __str__(self):
+        return self.__fspath__()
+
 # ── 키워드 분류 파일 경로 (trigger 핸들러보다 먼저 정의) ──
 _EARLY_BASE = os.path.dirname(os.path.abspath(__file__))
-_current_username = st.session_state.get("username", "guest")
-CLASSES_FILE_EARLY, _ = get_user_data_paths(_current_username)
+CLASSES_FILE_EARLY = DynamicUserPath(0)
 
 # ── 우클릭 메뉴 통신용 완벽 숨김 입력창 핸들러 ──
 st.markdown("<style>div[data-testid='stTextInput']:has(input[aria-label='kw_mover_secret_trigger']) { width: 0px !important; height: 0px !important; opacity: 0 !important; position: absolute !important; overflow: hidden !important; pointer-events: none !important; }</style>", unsafe_allow_html=True)
@@ -816,9 +824,9 @@ def track_user_activity(username):
 
 track_user_activity(st.session_state["username"])
 
-# ── 사용자별 격리된 파일 경로 로드 ──
-_current_username = st.session_state.get("username", "guest")
-CLASSES_FILE, MEMOS_FILE = get_user_data_paths(_current_username)
+# ── 사용자별 격리된 파일 경로 로드 (동적 스레드 안전성 보장) ──
+CLASSES_FILE = DynamicUserPath(0)
+MEMOS_FILE = DynamicUserPath(1)
 
 def load_json(file_path, default):
     if os.path.exists(file_path):

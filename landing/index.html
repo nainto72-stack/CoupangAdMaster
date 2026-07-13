@@ -698,6 +698,14 @@
                     <label for="user_email">이메일 주소 (계정 수신용) *</label>
                     <input type="email" id="user_email" placeholder="example@naver.com" required>
                 </div>
+                <div class="form-group">
+                    <label for="desired_id">생성할 희망 아이디 (ID) *</label>
+                    <input type="text" id="desired_id" placeholder="영문/숫자 조합 4자 이상" required>
+                </div>
+                <div class="form-group">
+                    <label for="desired_pw">생성할 희망 비밀번호 (Password) *</label>
+                    <input type="text" id="desired_pw" placeholder="비밀번호 설정" required>
+                </div>
                 
                 <div class="deposit-info-box">
                     <div class="deposit-title">💰 입금 계좌 안내</div>
@@ -769,6 +777,8 @@
             var name = document.getElementById("user_name").value.trim();
             var phone = document.getElementById("user_phone").value.trim();
             var email = document.getElementById("user_email").value.trim();
+            var desiredId = document.getElementById("desired_id").value.trim();
+            var desiredPw = document.getElementById("desired_pw").value.trim();
             
             // ── [구글 스프레드시트 연동 웹앱 URL] ──
             // 대표님이 구글 스프레드시트 Apps Script로 배포하신 웹앱 주소를 아래 따옴표 안에 붙여넣으시면 실시간 기록됩니다.
@@ -779,6 +789,8 @@
                 formData.append("name", name);
                 formData.append("phone", phone);
                 formData.append("email", email);
+                formData.append("id", desiredId);
+                formData.append("pw", desiredPw);
                 formData.append("date", new Date().toLocaleString("ko-KR"));
                 
                 fetch(WEB_APP_URL, {

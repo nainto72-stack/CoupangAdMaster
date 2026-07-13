@@ -2633,6 +2633,56 @@ if st.session_state.get("pending_tab_focus"):
     components.html(js_code, height=0)
 
 
+# ── 탭 간 간섭 및 중복 렌더링(레이아웃 혼재) 방지용 강제 격리 스크립트 ──
+tab_isolation_js = """
+<script>
+(function() {
+    var parentDoc = window.parent.document;
+    function forceTabIsolation() {
+        var tabLists = parentDoc.querySelectorAll('[role="tablist"]');
+        tabLists.forEach(function(tabList) {
+            var tabs = Array.prototype.slice.call(tabList.querySelectorAll('[role="tab"]'));
+            if (tabs.length === 0) return;
+            
+            var activeIdx = -1;
+            for (var i = 0; i < tabs.length; i++) {
+                if (tabs[i].getAttribute('aria-selected') === 'true') {
+                    activeIdx = i;
+                    break;
+                }
+            }
+            if (activeIdx === -1) activeIdx = 0;
+            
+            var parentContainer = tabList.closest('.stTabs');
+            if (!parentContainer) return;
+            
+            // 이 탭 그룹에 직접 속한 패널들만 필터링 (중첩 탭의 패널 제외)
+            var allPanels = parentContainer.querySelectorAll('[role="tabpanel"]');
+            var panels = Array.prototype.slice.call(allPanels).filter(function(panel) {
+                return panel.closest('.stTabs') === parentContainer;
+            });
+            
+            panels.forEach(function(panel, idx) {
+                if (idx === activeIdx) {
+                    panel.style.setProperty('display', 'block', 'important');
+                    panel.style.setProperty('visibility', 'visible', 'important');
+                    panel.style.setProperty('opacity', '1', 'important');
+                } else {
+                    panel.style.setProperty('display', 'none', 'important');
+                    panel.style.setProperty('visibility', 'hidden', 'important');
+                    panel.style.setProperty('opacity', '0', 'important');
+                }
+            });
+        });
+    }
+    
+    // 주기적으로 실행하여 스트림릿 리런 시에도 레이아웃 격리 유지
+    setInterval(forceTabIsolation, 300);
+})();
+</script>
+"""
+components.html(tab_isolation_js, height=0)
+
 
 tab_perf, tab_keyword, tab_tools, tab_memo = st.tabs([
     "📊 종합 성과", "⚙️ 키워드/입찰", "🛡️ AI분석/도구", "📝 일별 메모"

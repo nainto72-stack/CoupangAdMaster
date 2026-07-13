@@ -784,18 +784,21 @@
             var WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzcl2sGFgW-75cSjySrSbwJM3S6jfMac4fKpBzWqpgzN8ufp3qv0FOUVDnfm-NfMC3W/exec";
             
             if (WEB_APP_URL && WEB_APP_URL.indexOf("구글") === -1) {
-                var formData = new FormData();
-                formData.append("name", name);
-                formData.append("phone", phone);
-                formData.append("email", email);
-                formData.append("id", desiredId);
-                formData.append("pw", desiredPw);
-                formData.append("date", new Date().toLocaleString("ko-KR"));
+                var searchParams = new URLSearchParams();
+                searchParams.append("name", name);
+                searchParams.append("phone", phone);
+                searchParams.append("email", email);
+                searchParams.append("id", desiredId);
+                searchParams.append("pw", desiredPw);
+                searchParams.append("date", new Date().toLocaleString("ko-KR"));
                 
                 fetch(WEB_APP_URL, {
                     method: "POST",
-                    body: formData,
-                    mode: "no-cors"
+                    mode: "no-cors",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded"
+                    },
+                    body: searchParams.toString()
                 }).then(function() {
                     showSuccessModal(name);
                 }).catch(function() {

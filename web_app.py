@@ -791,6 +791,9 @@ if not st.session_state["logged_in"]:
 # ── 사용자별 이용 시간(하트비트) 트래킹 ──
 ACTIVITY_FILE = os.path.join(BASE_DIR, "user_activity.json")
 
+import threading
+activity_lock = threading.Lock()
+
 def track_user_activity(username):
     if not username or username == "admin":
         return
@@ -809,18 +812,19 @@ def track_user_activity(username):
     if elapsed > 1800:  # 30분 초과 미활동 시 세션 만료로 간주하여 누적 제외
         return
         
-    try:
-        activity = {}
-        if os.path.exists(ACTIVITY_FILE):
-            with open(ACTIVITY_FILE, 'r', encoding='utf-8') as f:
-                activity = json.load(f)
-        if today_str not in activity:
-            activity[today_str] = {}
-        activity[today_str][username] = activity[today_str].get(username, 0) + elapsed
-        with open(ACTIVITY_FILE, 'w', encoding='utf-8') as f:
-            json.dump(activity, f, indent=4, ensure_ascii=False)
-    except:
-        pass
+    with activity_lock:
+        try:
+            activity = {}
+            if os.path.exists(ACTIVITY_FILE):
+                with open(ACTIVITY_FILE, 'r', encoding='utf-8') as f:
+                    activity = json.load(f)
+            if today_str not in activity:
+                activity[today_str] = {}
+            activity[today_str][username] = activity[today_str].get(username, 0) + elapsed
+            with open(ACTIVITY_FILE, 'w', encoding='utf-8') as f:
+                json.dump(activity, f, indent=4, ensure_ascii=False)
+        except:
+            pass
 
 track_user_activity(st.session_state["username"])
 

@@ -146,9 +146,38 @@ st.set_page_config(
     initial_sidebar_state="auto"
 )
 
+def get_user_data_paths(username):
+    import os, shutil
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    if not username:
+        username = "guest"
+    
+    # 1) 키워드 분류 파일 경로 설정 및 마이그레이션(기존 데이터 유지)
+    user_classes_file = os.path.join(base_dir, f"keyword_classes_{username}.json")
+    if not os.path.exists(user_classes_file) and username == "admin":
+        old_classes_file = os.path.join(base_dir, "keyword_classes.json")
+        if os.path.exists(old_classes_file):
+            try:
+                shutil.copy(old_classes_file, user_classes_file)
+            except:
+                pass
+                
+    # 2) 메모 파일 경로 설정 및 마이그레이션
+    user_memos_file = os.path.join(base_dir, f"ad_memos_{username}.json")
+    if not os.path.exists(user_memos_file) and username == "admin":
+        old_memos_file = os.path.join(base_dir, "ad_memos.json")
+        if os.path.exists(old_memos_file):
+            try:
+                shutil.copy(old_memos_file, user_memos_file)
+            except:
+                pass
+                
+    return user_classes_file, user_memos_file
+
 # ── 키워드 분류 파일 경로 (trigger 핸들러보다 먼저 정의) ──
 _EARLY_BASE = os.path.dirname(os.path.abspath(__file__))
-CLASSES_FILE_EARLY = os.path.join(_EARLY_BASE, "keyword_classes.json")
+_current_username = st.session_state.get("username", "guest")
+CLASSES_FILE_EARLY, _ = get_user_data_paths(_current_username)
 
 # ── 우클릭 메뉴 통신용 완벽 숨김 입력창 핸들러 ──
 st.markdown("<style>div[data-testid='stTextInput']:has(input[aria-label='kw_mover_secret_trigger']) { width: 0px !important; height: 0px !important; opacity: 0 !important; position: absolute !important; overflow: hidden !important; pointer-events: none !important; }</style>", unsafe_allow_html=True)
@@ -787,11 +816,9 @@ def track_user_activity(username):
 
 track_user_activity(st.session_state["username"])
 
-# -----------------------------------------------------------------------------
-# 3. 데이터 및 메모 로드 공통 헬퍼
-# -----------------------------------------------------------------------------
-MEMOS_FILE = os.path.join(BASE_DIR, "ad_memos.json")
-CLASSES_FILE = os.path.join(BASE_DIR, "keyword_classes.json")
+# ── 사용자별 격리된 파일 경로 로드 ──
+_current_username = st.session_state.get("username", "guest")
+CLASSES_FILE, MEMOS_FILE = get_user_data_paths(_current_username)
 
 def load_json(file_path, default):
     if os.path.exists(file_path):

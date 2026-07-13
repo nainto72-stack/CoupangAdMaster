@@ -2652,14 +2652,15 @@ tab_isolation_js = """
             var tabs = Array.prototype.slice.call(tabList.querySelectorAll('[role="tab"]'));
             if (tabs.length === 0) return;
             
-            var activeIdx = -1;
+            var activeTab = null;
             for (var i = 0; i < tabs.length; i++) {
                 if (tabs[i].getAttribute('aria-selected') === 'true') {
-                    activeIdx = i;
+                    activeTab = tabs[i];
                     break;
                 }
             }
-            if (activeIdx === -1) activeIdx = 0;
+            if (!activeTab) activeTab = tabs[0];
+            var activeTabId = activeTab ? activeTab.getAttribute('id') : '';
             
             var parentContainer = tabList.closest('.stTabs');
             if (!parentContainer) return;
@@ -2670,8 +2671,9 @@ tab_isolation_js = """
                 return panel.closest('.stTabs') === parentContainer;
             });
             
-            panels.forEach(function(panel, idx) {
-                if (idx === activeIdx) {
+            panels.forEach(function(panel) {
+                var labeledBy = panel.getAttribute('aria-labelledby');
+                if (labeledBy && activeTabId && labeledBy === activeTabId) {
                     panel.style.setProperty('display', 'block', 'important');
                     panel.style.setProperty('visibility', 'visible', 'important');
                     panel.style.setProperty('opacity', '1', 'important');
